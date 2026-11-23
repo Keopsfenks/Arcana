@@ -1,14 +1,14 @@
 # Arcana gelişmiş beceri platformu tasarımı
 
-Durum: taslak; kullanıcı tasarım onayı bekleniyor. Bu belge uygulama tamamlandı iddiası değildir.
+Durum: kullanıcı tarafından 2026-11-23 tarihinde onaylandı. Son kapsam açıklaması: yalnızca Arcana geliştirilecek; gelecekteki eklenti adları kullanım amacı örneğidir. Bu belge uygulama tamamlandı iddiası değildir.
 
 ## Amaç ve kullanıcının kararları
 
-Arcana, daha sonra geliştirilecek ArcanaItems, ArcanaRPG ve ArcanaMobs eklentilerinin ortak beceri altyapısı olacak. Amaç bu eklentilerde aynı efekt, koşul, hedefleme ve yürütme kodunu tekrar yazmadan içerik geliştirmeyi kolaylaştırmak.
+Arcana, daha sonra geliştirilecek bağımsız eklentilerin ortak beceri altyapısı olacak. Kullanıcının verdiği RPG, Items ve Mobs eklenti adları yalnızca gelecek kullanım örnekleridir; bunlar için modül, eklenti, ürün örneği veya uygulama planı oluşturulmayacak. Bu çalışmanın tek ürünü Arcana'dır.
 
 Kullanıcı Libreforge ve MythicMobs benzeri gelişmiş beceri özelliklerini istedi. Kapsamı şimdilik skill sistemiyle sınırladı: mob tanımları, boss yönetimi, AI yönetimi, spawner ve ganimet yönetimi bu çalışmanın parçası değil. Kullanıcı motor ile bileşen kataloğunun iki modüle ayrılmasını seçti. Önceki Arcana'ya özgü YAML ve bağımsız uygulama kararı sürüyor; başka eklentilerin kaynakları veya YAML ayrıştırıcıları taşınmıyor.
 
-ArcanaMobs kullanımını mümkün kılmak için oyuncu ve mob aktörlerini desteklemek tasarımcının önerisidir. Moblara beceri kullandıran API sağlanır; mob oluşturma/yönetme ürünü yapılmaz. ArcanaRPG'ye ait XP, sınıf, yetenek ağacı veya mana ekonomisi burada kurulmaz; bunları bağlayacak arayüzler sağlanır.
+Gelecekteki kullanımları mümkün kılmak için oyuncu ve mob aktörleri ortak skill API'sinde desteklenir. Moblara beceri kullandıran API sağlanır; mob oluşturma/yönetme ürünü yapılmaz. XP, sınıf, yetenek ağacı veya mana ekonomisi burada kurulmaz; dış sağlayıcıları bağlayacak arayüzler sağlanır.
 
 ## İnceleme dayanakları ve sınır
 
@@ -37,7 +37,7 @@ Mevcut motor 18 efekt, 13 koşul ve 12 tetikleyici içeriyor. YAML doğrulama, i
 | `arcana-skills` | Tanım kaynaklarını derleme, hedefleme yürütmesi, bağlam/değişkenler, kabul ve maliyetler, event aşamaları, zamanlama, yönetilen işler ve reload |
 | `arcana-skills-components` | Standart efekt, koşul, tetikleyici, hedefleyici, mutator ve interceptor sınıfları; yalnızca kayıt yapan katalog |
 | `arcana-core:core-plugin` | Arcana servisini başlatma, standart kataloğu bağlama, komutlar ve mevcut servislerle entegrasyon |
-| Gelecekteki ArcanaItems/RPG/Mobs | Kendi içerikleri, tanım kaynakları, özel bileşenleri ve veri/kaynak sağlayıcıları |
+| Harici eklentiler için genel API | Kendi tanım kaynaklarını, özel bileşenlerini ve veri/kaynak sağlayıcılarını kaydetme sözleşmeleri |
 
 Motor standart kataloğa veya gelecekteki eklentilere bağımlı olmaz. Katalog API'ye ve gerektiğinde motorun ortak yardımcılarına bağımlı olabilir; core/NMS implementation sınıflarına bağımlı olmaz. Core her iki modülü derleme sırasında görür; kök dağıtım ikisini bir kez içerir. `SkillsRuntime` katalog kurulumunu dışarıdan alır; motorda `BuiltinComponents` referansı kalmaz.
 
@@ -49,15 +49,15 @@ Eklentiler Arcana'ya bağımlılık bildirir ve `Arcana.get().getSkillEngine()` 
 
 Önerilen genişletme noktaları: `SkillActor`, `SkillTargeter`, `SkillMutator`, `SkillInterceptor`, `SkillDefinitionSource`, `SkillHolderProvider`, `SkillResourceProvider`, `SkillStatProvider` ve bileşen argüman metadata'sı. Nihai yardımcı sınıf isimleri uygulama planında kesinleştirilir; görevleri bu belgede sabittir.
 
-- ArcanaItems: eldeki/eşyalardaki aktif beceri kümelerini holder/slot sağlayıcısıyla bildirir; eşyanın gücü gibi değerleri tipli parametre olarak sunar.
-- ArcanaRPG: mana/stamina, oyuncu statları ve kendi profil değerlerini sağlar; beceri maliyetini ortak motor yürütür.
-- ArcanaMobs: yaşayan entity aktörünü ve kendi olaylarını sağlar; aynı tanım/efekt motoruyla beceri çağırır.
+- Holder/slot sağlayıcısı, aktif beceri kümelerini ve tipli içerik parametrelerini bildirebilir.
+- Kaynak/stat sağlayıcısı, mevcut dış değerleri ortak motorun maliyet ve ifade işlemlerine sunabilir.
+- Entity aktörü ve dış tetikleyici kaydı, aynı tanımı oyuncu veya yaşayan entity üzerinde çağırabilir.
 
-Bu üç kullanım ayrı test eklentisi fixture'ları ve derlenen Java örnekleriyle doğrulanır. Gerçek ArcanaItems/RPG/Mobs ürünleri bu çalışmada oluşturulmaz.
+Bu sözleşmeler Arcana'nın kendi testlerinde iki sahte kayıt sahibi ve derlenen küçük Java API uyumluluk fixture'larıyla doğrulanır. Ayrı eklenti projeleri veya gelecek ürünlere özel örnekler oluşturulmaz.
 
 ### Kimlikler, tanım kaynakları ve sahiplik
 
-Yeni kayıtlar ve beceriler namespaced kimlik kullanır: `arcanaitems:fire_sword`, `arcanarpg:dash`. Yerleşik kısa adlar `arcana` alanına çözülür. Eklentiler yalnızca kendi kayıt alanını yönetir. Aynı kısa isim farklı alanlarda çakışmaz; açıkça nitelendirilmiş başvurular alanlar arası paylaşımı sağlar.
+Yeni kayıtlar ve beceriler namespaced kimlik kullanır: `arcana:fire_sword`, `example:dash`. Yerleşik kısa adlar `arcana` alanına çözülür. Eklentiler yalnızca kendi kayıt alanını yönetir. Aynı kısa isim farklı alanlarda çakışmaz; açıkça nitelendirilmiş başvurular alanlar arası paylaşımı sağlar.
 
 Eklenti kendi yapılandırma klasörünü veya immutable tanım koleksiyonunu `SkillDefinitionSource` olarak kaydeder. Kayıt sahibi, kaynak kimliği ve namespace derleyicide korunur. Arcana başka eklentinin dosyalarını değiştirmez. Şema hataları kaynak eklenti, dosya, beceri ve alan yoluyla döner.
 
@@ -142,7 +142,7 @@ Yeni şema taslağı:
 
 ```yaml
 schema: 2
-id: arcanarpg:arcane_bolt
+id: arcana:arcane_bolt
 parameters:
   power: { type: number, default: 6 }
 triggers: [arcana:right_click]
@@ -165,7 +165,7 @@ Parametreler ifade derleyicisine tipli binding olarak verilir; bir metin yerine 
 
 Bu bölüm uygulama görev planı değil, bağımlılık sırasıdır:
 
-1. Referans özellik matrisi, API uyumluluk kontratı, modül/katalog ayrımı, sahipli namespaced tanım kaynakları ve addon örnekleri.
+1. Referans özellik matrisi, API uyumluluk kontratı, modül/katalog ayrımı ve sahipli namespaced tanım kaynakları.
 2. Genel aktör/invocation, çoklu hedef ve origin modeli, mutator, parametre/değişken ve genişletilmiş akış yürütmesi.
 3. Node kabul seçenekleri, maliyet/charges/stat sağlayıcıları, event interceptor, holder/pasif lease'leri.
 4. Aura ve projectile/ray yaşam döngüleri ile bağlı mekanikler.
@@ -179,8 +179,8 @@ Tam proje derlemesi ve yedi NMS bağlantı kontrolü sürer. Katalogda kaynak ko
 
 Paket alt dizinleri, yardımcı sınıf isimleri, atomik veri yapıları, sorgu indeksinin iç düzeni, yük testinden çıkan varsayılan iş limitleri ve test fixture düzeni uygulayıcıya bırakılır. Bunlar public sözleşmeleri, actor desteğini, eski API uyumunu, sahiplik izolasyonunu veya kapsam matrisini küçültmek için kullanılamaz.
 
-Belge onayından sonra ayrıntılı uygulama planı hazırlanır. Bu tasarım onaylanmadan ürün kodu veya yeni modül iskeleti eklenmez.
+Tasarım onayı alındı. Sonraki adım, yalnızca Arcana'yı kapsayan ayrıntılı uygulama planıdır.
 
 ## Tasarım incelemesi
 
-2026-11-23 tarihinde bağımsız, yeni bağlamlı uygulayıcı incelemesi yapıldı. İnceleyici, plan hazırlamayı engelleyen önemli bir açık kalmadığını bildirdi. Kullanıcı tasarım onayı hâlen bekleniyor.
+2026-11-23 tarihinde bağımsız, yeni bağlamlı uygulayıcı incelemesi yapıldı. İnceleyici, plan hazırlamayı engelleyen önemli bir açık kalmadığını bildirdi. Kullanıcı tasarımı onayladı ve gelecekteki eklenti örneklerinin geliştirme kapsamına alınmamasını açıkça belirtti.
