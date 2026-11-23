@@ -19,6 +19,10 @@ import org.bukkit.plugin.Plugin
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
+import com.keopsfenks.arcana.skills.execution.ExecutionState
+import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionState
+import com.keopsfenks.arcana.skills.platform.execution.PlatformRunner
+import com.keopsfenks.arcana.skills.platform.values.InvocationFrame
 
 class DefaultSkillPlatform(
     private val engine: DefaultSkillEngine,
@@ -31,6 +35,7 @@ class DefaultSkillPlatform(
 ) : SkillPlatform {
     private val registries = ConcurrentHashMap<SkillComponentType<*>, PlatformRegistry<*>>()
     val variables = VariableStore(clock, persistence = PersistentVariableStore())
+    private val runner = PlatformRunner(engine, this)
     val repository = DefinitionRepository(lifecycle, engine::compileSourceLegacy,
         { definition -> SourceSkillCompiler(this, environment, definition.key().namespace(), environmentFactory).compile(definition) },
         engine::publishDefinitions, engine::invalidateRegistration)
@@ -56,12 +61,48 @@ class DefaultSkillPlatform(
     internal fun legacyTrigger(key: SkillKey): SkillRegistration? = if (key.namespace() == "arcana") engine.triggers.get(key.value()) else null
 
     override fun cast(key: SkillKey, invocation: SkillInvocation): CompletionStage<SkillResult> {
-        return try { engine.cast(DefinitionRevision.legacyId(key), LegacyInvocationAdapter.toLegacy(invocation)) }
-        catch (error: LegacyActorException) { CompletableFuture.completedFuture(error.result) }
+        return castInSnapshot(key, invocation, repository.snapshot())
     }
 
+    internal fun castInSnapshot(key: SkillKey, invocation: SkillInvocation, snapshot: DefinitionSnapshot): CompletableFuture<SkillResult> {
+        if (engine.stopped) return completed(SkillResult.Status.CANCELLED, "Skill engine is stopped")
+        val revision = snapshot.entries[key] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $key")
+        if (revision.legacy != null) {
+            return try { engine.castInSnapshot(DefinitionRevision.legacyId(key), LegacyInvocationAdapter.toLegacy(invocation), snapshot.legacy) }
+            catch (error: LegacyActorException) { CompletableFuture.completedFuture(error.result) }
+        }
+        val admission = lifecycle.locked {
+            if (repository.snapshot().entries[key] !== revision || !revision.isActive) return@locked SkillResult.of(SkillResult.Status.CANCELLED, "Definition changed before dispatch")
+            if (!revision.available() || !lifecycle.available(revision.owner)) return@locked SkillResult.of(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "Definition $key is unavailable")
+            val root = ExecutionState(invocation.actor().id(), snapshot.legacy)
+            root.dependencies.add(revision); root.dependencies.addAll(revision.dependencies)
+            if (!engine.enroll(root)) return@locked SkillResult.of(SkillResult.Status.CANCELLED, "Skill engine is stopped")
+            attach(root)
+        }
+        if (admission is SkillResult) return CompletableFuture.completedFuture(admission)
+        val state = admission as PlatformExecutionState
+        try {
+            runner.run(revision, invocation, state, 1).whenComplete { result, error ->
+                state.root.result.complete(if (error == null) result else PlatformExecutionState.failure(error))
+            }
+        } catch (error: Throwable) { state.root.result.complete(PlatformExecutionState.failure(error)) }
+        return state.root.result
+    }
+
+    internal fun attach(root: ExecutionState): PlatformExecutionState = synchronized(root) {
+        root.platformState ?: PlatformExecutionState(root, root.snapshot.definitions ?: repository.snapshot()).also { root.platformState = it }
+    }
+    internal fun runNested(key: SkillKey, invocation: SkillInvocation, state: PlatformExecutionState, depth: Int, parent: InvocationFrame? = null): CompletableFuture<SkillResult> {
+        state.checkActive()
+        val revision = state.snapshot.entries[key] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $key")
+        return runner.run(revision, invocation, state, depth, parent)
+    }
+    private fun completed(status: SkillResult.Status, message: String) = CompletableFuture.completedFuture(SkillResult.of(status, message))
+
     override fun trigger(key: SkillKey, invocation: SkillInvocation): CompletionStage<List<SkillResult>> {
-        return try { engine.trigger(DefinitionRevision.legacyId(key), LegacyInvocationAdapter.toLegacy(invocation)) }
-        catch (error: LegacyActorException) { CompletableFuture.completedFuture(listOf(error.result)) }
+        val snapshot = repository.snapshot()
+        val work = snapshot.entries.values.filter { revision -> revision.enabled && (revision.native?.triggers?.contains(key) == true || revision.legacy?.triggers?.contains(DefinitionRevision.legacyId(key)) == true) }
+            .map { castInSnapshot(it.key, invocation, snapshot) }
+        return CompletableFuture.allOf(*work.toTypedArray()).thenApply { java.util.List.copyOf(work.map { it.join() }) }
     }
 }

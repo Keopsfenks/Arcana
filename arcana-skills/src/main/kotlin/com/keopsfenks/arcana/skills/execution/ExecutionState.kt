@@ -10,17 +10,21 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
+class EffectStepLimitException : IllegalStateException("Skill execution exceeds 1024 effect steps")
+
 class ExecutionState(val playerId: UUID, val snapshot: SkillSnapshot) {
     val result = CompletableFuture<SkillResult>()
     private val cancelled = AtomicBoolean(false)
     private val steps = AtomicInteger(0)
+    val appliedSteps: Int get() = steps.get()
+    @Volatile var platformState: com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionState? = null
     private val work = ConcurrentHashMap.newKeySet<ScheduledWork<*>>()
     val dependencies = ConcurrentHashMap.newKeySet<SkillRegistration>()
 
     fun checkActive() { if (cancelled.get() || result.isDone) throw CancellationException("Skill execution finished or cancelled") }
     fun step() {
         checkActive()
-        check(steps.incrementAndGet() <= 1024) { "Skill execution exceeds 1024 effect steps" }
+        if (steps.incrementAndGet() > 1024) throw EffectStepLimitException()
         check(dependencies.all { it.isActive }) { "Skill component dependency is unavailable" }
     }
 

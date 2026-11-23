@@ -130,11 +130,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** `PlatformRunner.run(definition,invocation,state,depth): CompletableFuture<SkillResult>`; state owns dependencies/revisions/cancellation, 1,024 shared steps and per-root fan-out. `RegionQuery` implements public `SkillTargetQuery.entities(SkillBounds): CompletionStage<List<SkillActor>>` and `.collisions(SkillLocation from,SkillLocation to,double radius): CompletionStage<List<SkillCollision>>`; bounds store world UUID/min/max, collision stores immutable location/normal/optional actor. Partition by owning chunk without loading unloaded chunks. Public target contexts depend on SkillTargetQuery, never runtime RegionQuery.
 
-- [ ] Scheduler spies throw on actor/trigger/victim/world access from the wrong owner; cover cross-region selection, player and mob roots, invalidated target, rejected legacy mob closure and old API casting a schema 2 skill. Verify nested/parallel effects share the 1,024 limit and cancellation.
-- [ ] Verify `.\gradlew.bat :arcana-api:test :arcana-skills:test FLAGS`; expect RED.
-- [ ] Implement general runner and owner-context reads, capability gates, legacy bridge and definition-revision enrollment. Region queries schedule chunk-local entity/block enumeration and skip unloaded chunks; no global foreign-region fallback. New actor fields are snapshotted before predicates run.
-- [ ] Same Verify GREEN with all old Player admission/cooldown/status assertions retained.
-- [ ] Commit `feat(skills): execute general actors through ownership-safe invocation contexts`.
+- [x] Scheduler spies throw on actor/trigger/victim/world access from the wrong owner; cover cross-region selection, player and mob roots, invalidated target, rejected legacy mob closure and old API casting a schema 2 skill. Verify nested/parallel effects share the 1,024 limit and cancellation.
+- [x] Verify `.\gradlew.bat :arcana-api:test :arcana-skills:test FLAGS`; expect RED.
+- [x] Implement general runner and owner-context reads, capability gates, legacy bridge and definition-revision enrollment. Region queries schedule chunk-local entity/block enumeration and skip unloaded chunks; no global foreign-region fallback. New actor fields are snapshotted before predicates run.
+- [x] Same Verify GREEN with all old Player admission/cooldown/status assertions retained.
+- [x] Commit `feat(skills): execute general actors through ownership-safe invocation contexts`.
 
 ### Task 7: Entity and location targeter catalog
 

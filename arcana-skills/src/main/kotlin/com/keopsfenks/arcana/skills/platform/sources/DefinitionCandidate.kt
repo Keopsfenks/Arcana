@@ -7,7 +7,7 @@ import java.util.Collections
 
 class DefinitionSnapshot(entries: Map<SkillKey, DefinitionRevision>) {
     val entries: Map<SkillKey, DefinitionRevision> = Collections.unmodifiableMap(LinkedHashMap(entries))
-    val legacy = SkillSnapshot(entries.values.mapNotNull { it.legacy })
+    val legacy = SkillSnapshot(entries.values.mapNotNull { it.legacy }, this)
     companion object { val EMPTY = DefinitionSnapshot(emptyMap()) }
 }
 

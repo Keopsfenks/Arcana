@@ -12,6 +12,8 @@ import com.keopsfenks.arcana.skills.registry.ComponentRegistry
 import com.keopsfenks.arcana.skills.platform.DefaultSkillPlatform
 import com.keopsfenks.arcana.skills.platform.lifecycle.SkillLifecycleGate
 import com.keopsfenks.arcana.core.skills.platform.SkillDefinition
+import com.keopsfenks.arcana.core.skills.platform.SkillKey
+import com.keopsfenks.arcana.skills.platform.legacy.LegacyInvocationAdapter
 import com.keopsfenks.arcana.skills.triggers.SkillTriggerDispatch
 import org.bukkit.plugin.Plugin
 import java.nio.file.Path
@@ -43,6 +45,7 @@ class DefaultSkillEngine(
     private val current = AtomicReference(SkillSnapshot.EMPTY)
     private val executions = ConcurrentHashMap.newKeySet<ExecutionState>()
     private val closed = AtomicBoolean(false)
+    internal val stopped: Boolean get() = closed.get()
     private val runner = SkillRunner(this)
     private val reloadLock = Any()
     var filterCompiler: (SkillArguments) -> CompiledSkillCondition = SkillFilters::compile
@@ -73,10 +76,16 @@ class DefaultSkillEngine(
         return handle
     }
 
-    override fun cast(skillId: String, context: SkillContext): CompletionStage<SkillResult> = castInSnapshot(skillId, context, current.get())
+    override fun cast(skillId: String, context: SkillContext): CompletionStage<SkillResult> {
+        if (closed.get()) return completed(SkillResult.Status.CANCELLED, "Skill engine is stopped")
+        val snapshot = current.get()
+        if (skillId in snapshot.byId) return castInSnapshot(skillId, context, snapshot)
+        val key = try { SkillKey.parse(skillId, "arcana") } catch (_: IllegalArgumentException) { return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId") }
+        return generalPlatform.castInSnapshot(key, LegacyInvocationAdapter.fromLegacy(context), snapshot.definitions ?: generalPlatform.repository.snapshot())
+    }
     override fun platform() = generalPlatform
 
-    private fun castInSnapshot(skillId: String, context: SkillContext, snapshot: SkillSnapshot): CompletableFuture<SkillResult> {
+    internal fun castInSnapshot(skillId: String, context: SkillContext, snapshot: SkillSnapshot): CompletableFuture<SkillResult> {
         if (closed.get()) return completed(SkillResult.Status.CANCELLED, "Skill engine is stopped")
         val skill = snapshot.byId[skillId] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId")
         if (current.get().byId[skillId] !== skill) return completed(SkillResult.Status.CANCELLED, "Skill definition changed before dispatch")
@@ -99,10 +108,23 @@ class DefaultSkillEngine(
         return state.result
     }
 
-    fun runNested(skillId: String, context: SkillContext, state: ExecutionState, depth: Int): CompletionStage<SkillResult> {
+    fun runNested(skillId: String, context: SkillContext, state: ExecutionState, depth: Int, platformFrame: com.keopsfenks.arcana.skills.platform.values.InvocationFrame? = null): CompletionStage<SkillResult> {
         state.checkActive()
-        val skill = state.snapshot.byId[skillId] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId")
-        return runner.run(skill, context, state, depth)
+        val skill = state.snapshot.byId[skillId]
+        if (skill == null) {
+            val key = try { SkillKey.parse(skillId, "arcana") } catch (_: IllegalArgumentException) { return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId") }
+            return generalPlatform.runNested(key, LegacyInvocationAdapter.fromLegacy(context), generalPlatform.attach(state), depth, platformFrame)
+        }
+        return runner.run(skill, context, state, depth, platformFrame)
+    }
+
+    internal fun runLegacyNested(skill: CompiledSkill, context: SkillContext, state: ExecutionState, depth: Int, platformFrame: com.keopsfenks.arcana.skills.platform.values.InvocationFrame? = null) = runner.run(skill, context, state, depth, platformFrame)
+    internal fun enroll(state: ExecutionState): Boolean = synchronized(reloadLock) {
+        if (closed.get()) false else {
+            executions.add(state)
+            state.result.whenComplete { _, _ -> executions.remove(state); state.release() }
+            true
+        }
     }
 
     override fun trigger(triggerId: String, context: SkillContext): CompletionStage<List<SkillResult>> {
@@ -154,11 +176,14 @@ class DefaultSkillEngine(
     }
 
     override fun reload(): SkillReloadResult = commitReload(prepareReload())
-    override fun skills(): List<SkillInfo> = java.util.List.copyOf(current.get().byId.values.map { it.info() })
+    override fun skills(): List<SkillInfo> = java.util.List.copyOf(current.get().byId.values.map { it.info() } + generalPlatform.repository.snapshot().entries.values.mapNotNull { revision -> revision.native?.let {
+        SkillInfo(com.keopsfenks.arcana.skills.platform.sources.DefinitionRevision.legacyId(it.key), it.enabled, it.triggers.map(SkillKey::toString), it.origin, if (revision.available()) "" else "A component dependency is unavailable")
+    } })
 
     override fun cancel(playerId: UUID) {
         executions.filter { it.playerId == playerId }.forEach { it.cancel("Player left") }
         cooldowns.remove(playerId)
+        generalPlatform.variables.evictActor(playerId)
     }
 
     fun cancelPending(reason: String) = synchronized(reloadLock) {

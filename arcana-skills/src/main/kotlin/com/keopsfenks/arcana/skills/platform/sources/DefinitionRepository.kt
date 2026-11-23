@@ -23,6 +23,7 @@ class DefinitionRepository(
     private val sources = ConcurrentHashMap<SkillKey, SourceRegistration>()
     private val current = AtomicReference(DefinitionSnapshot.EMPTY)
     private var epoch = 0L
+    fun snapshot(): DefinitionSnapshot = current.get()
 
     fun register(owner: Plugin, source: SkillDefinitionSource, core: Boolean = false): SkillRegistration {
         val key = source.key()

@@ -6,7 +6,7 @@ import com.keopsfenks.arcana.skills.compile.CompiledSkill
 import java.util.concurrent.CompletableFuture
 
 class SkillRunner(private val engine: DefaultSkillEngine) {
-    fun run(skill: CompiledSkill, context: SkillContext, state: ExecutionState, depth: Int): CompletableFuture<SkillResult> {
+    fun run(skill: CompiledSkill, context: SkillContext, state: ExecutionState, depth: Int, platformFrame: com.keopsfenks.arcana.skills.platform.values.InvocationFrame? = null): CompletableFuture<SkillResult> {
         if (depth > 16) return completed(SkillResult.Status.ERROR, "Skill calls exceed 16 levels")
         state.dependencies.addAll(skill.dependencies)
         return state.track(engine.scheduler.on(context.caster) {
@@ -24,7 +24,7 @@ class SkillRunner(private val engine: DefaultSkillEngine) {
             }
         }).thenCompose { admission ->
             if (!admission.isSuccess) CompletableFuture.completedFuture(admission)
-            else SkillExecutionImpl(engine, state, context.toBuilder().value("skill", skill.id).build(), depth).execute(skill.effects).toCompletableFuture()
+            else SkillExecutionImpl(engine, state, context.toBuilder().value("skill", skill.id).build(), depth, platformFrame).execute(skill.effects).toCompletableFuture()
         }
     }
 

@@ -16,7 +16,8 @@ class SkillExecutionImpl(
     private val engine: DefaultSkillEngine,
     private val state: ExecutionState,
     private val context: SkillContext,
-    private val depth: Int
+    private val depth: Int,
+    private val platformFrame: com.keopsfenks.arcana.skills.platform.values.InvocationFrame? = null
 ) : SkillExecution {
     override fun getContext() = context
 
@@ -71,7 +72,7 @@ class SkillExecutionImpl(
     override fun cast(skillId: String): CompletionStage<SkillResult> {
         val parent = context.getText("skill")
         val resolved = if (':' !in skillId && ':' in parent) parent.substringBefore(':') + ":" + skillId else skillId
-        return engine.runNested(resolved, context, state, depth + 1)
+        return engine.runNested(resolved, context, state, depth + 1, platformFrame)
     }
     override fun format(text: String) = text.replace("{player}", context.getText("caster_name"))
         .replace("{target}", context.getText("target_name")).replace("{skill}", context.getText("skill"))
