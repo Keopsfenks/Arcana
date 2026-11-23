@@ -118,11 +118,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** `SkillVariables.get(scope,key): Optional<SkillValue>`, `set(scope,key,value,ttl): CompletionStage<Void>`, `add(scope,key,delta): CompletionStage<Double>`, `remove(scope,key): CompletionStage<Boolean>`. `ParameterBindings.bind(declarations,supplied)` validates before admission. Numeric bindings use `param_`, `var_`, `stat_` names; base snapshot names remain valid. Persistence port uses existing Arcana player/local data APIs, not a new database implementation.
 
-- [ ] Assert required/default/type/unknown parameter behavior, child readonly parameter copies, isolated fork locals, atomic concurrent actor additions, TTL expiry with injected monotonic clock, server separation, opt-in player persistence round trip and offline cleanup. Real expression exception includes field path and position; unbound reference fails compilation.
-- [ ] Verify `.\gradlew.bat :arcana-api:test :arcana-skills:test :arcana-skills-components:test FLAGS`; expect RED in new named tests.
-- [ ] Implement typed storage/serialization and parameter-aware expression environments through an injected environment builder; never substitute and reparse text. Player persisted variable keys are namespaced; entity variables remain transient.
-- [ ] Same Verify GREEN; malicious template values remain literal, and existing formula tests remain GREEN.
-- [ ] Commit `feat(skills): bind typed parameters and scoped persistent variables`.
+- [x] Assert required/default/type/unknown parameter behavior, child readonly parameter copies, isolated fork locals, atomic concurrent actor additions, TTL expiry with injected monotonic clock, server separation, opt-in player persistence round trip and offline cleanup. Real expression exception includes field path and position; unbound reference fails compilation.
+- [x] Verify `.\gradlew.bat :arcana-api:test :arcana-skills:test :arcana-skills-components:test FLAGS`; expect RED in new named tests.
+- [x] Implement typed storage/serialization and parameter-aware expression environments through an injected environment builder; never substitute and reparse text. Player persisted variable keys are namespaced; entity variables remain transient.
+- [x] Same Verify GREEN; malicious template values remain literal, and existing formula tests remain GREEN.
+- [x] Commit `feat(skills): bind typed parameters and scoped persistent variables`.
 
 ### Task 6: General actor execution and safe invocation snapshots
 

@@ -7,6 +7,8 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.compile.SkillCompilerImpl
 import com.keopsfenks.arcana.skills.config.SkillArgumentsReader
 import com.keopsfenks.arcana.skills.platform.DefaultSkillPlatform
+import com.keopsfenks.arcana.skills.platform.values.ParameterBindings
+import com.keopsfenks.arcana.skills.platform.values.VariableBinding
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
 
@@ -14,17 +16,32 @@ import java.util.concurrent.CompletableFuture
 class SourceSkillCompiler(
     private val platform: DefaultSkillPlatform,
     private val environment: ExpressionEnvironment,
-    private val namespace: String
+    private val namespace: String,
+    private val environmentFactory: ((Array<String>) -> ExpressionEnvironment)? = null
 ) : SkillCompilation {
     private val dependencies = LinkedHashSet<SkillRegistration>()
     private val references = LinkedHashMap<SkillKey, String>()
     private var nodes = 0
     private var depth = 0
+    private var numbers = PlatformExpressionCompiler(environment, environmentFactory, baseBindings())
+    override fun namespace() = namespace
 
     fun compile(definition: SkillDefinition): CompiledPlatformSkill {
         val args = SkillArguments(definition.configuration(), definition.origin())
-        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects")
+        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings")
         args.values.keys.firstOrNull { it !in allowed }?.let { throw args.error(it, "unsupported skill option") }
+        val parameters = ParameterBindings.declarations(args, namespace)
+        val variables = VariableBinding.declarations(args, namespace)
+        val numeric = LinkedHashMap(baseBindings())
+        parameters.filter { it.type() == SkillValue.Kind.NUMBER }.forEach { parameter ->
+            numeric["param_${parameter.name()}"] = { invocation ->
+                requireNotNull(invocation.parameters()[parameter.name()]) { "${args.path}.parameters.${parameter.name()}: value is unavailable" }.number()
+            }
+        }
+        variables.filter { it.type == SkillValue.Kind.NUMBER }.forEach { binding ->
+            numeric[binding.alias] = { invocation -> requireNotNull(invocation.data()[binding.alias]) { "${args.path}.bindings.${binding.alias}: value is unavailable" }.number() }
+        }
+        numbers = PlatformExpressionCompiler(environment, environmentFactory, numeric)
         val chance = args.number("chance", 100.0)
         require(chance in 0.0..100.0) { "${args.path}.chance: must be between 0 and 100" }
         val triggers = args.list("triggers", emptyList<Any>()).mapIndexed { i, value ->
@@ -44,23 +61,15 @@ class SourceSkillCompiler(
             if (args.has("permission")) args.string("permission").also { require(it.isNotBlank()) { "${args.path}.permission: must not be blank" } } else null,
             chance, SkillArgumentsReader.durationNanos(args.raw("cooldown", "0s"), "${args.path}.cooldown"),
             SkillKey.parse(args.string("cooldown-group", definition.key().value()), namespace), conditions, effects,
-            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin())
+            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables)
     }
 
-    override fun number(value: Any?, path: String): SkillNumericExpression {
-        if (value is Number) {
-            val finite = value.toDouble()
-            require(finite.isFinite()) { "$path: number must be finite" }
-            return SkillNumericExpression { finite }
-        }
-        require(value is String && value.isNotBlank() && value.length <= 4096) { "$path: expected a number or expression" }
-        val expression = try { environment.compileOrThrow(value) }
-        catch (error: ExpressionCompilationException) { throw IllegalArgumentException("$path: invalid expression at ${error.position}: ${error.message}", error) }
-        catch (error: IllegalArgumentException) { throw IllegalArgumentException("$path: invalid expression: ${error.message}", error) }
-        return SkillNumericExpression { invocation ->
-            val result = expression.evaluate(*SkillCompilerImpl.VARIABLES.map { invocation.data()[it]?.takeIf { v -> v.kind() == SkillValue.Kind.NUMBER }?.number() ?: 0.0 }.toDoubleArray())
-            require(result.isFinite()) { "$path: expression produced a non-finite result" }
-            result
+    override fun number(value: Any?, path: String) = numbers.number(value, path)
+
+    private fun baseBindings(): Map<String, (SkillInvocation) -> Double> = SkillCompilerImpl.VARIABLES.associateWith { name ->
+        { invocation: SkillInvocation ->
+            val value = invocation.data()[name]
+            if (value == null && name == "damage") 0.0 else requireNotNull(value) { "Snapshot binding $name is unavailable" }.number()
         }
     }
 

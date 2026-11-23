@@ -40,7 +40,8 @@ public final class SkillInvocation {
         public Builder location(SkillLocation location) { this.location = location; return this; }
         public Builder selection(SkillSelection selection) { this.selection = Objects.requireNonNull(selection); return this; }
         public Builder data(Map<String, ?> values) { data.putAll(values); return this; }
-        public Builder parameters(Map<String, ?> values) { parameters.putAll(values); return this; }
+        public Builder replaceData(Map<String, ?> values) { data.clear(); data.putAll(values); return this; }
+        public Builder parameters(Map<String, ?> values) { parameters.clear(); parameters.putAll(values); return this; }
         public SkillInvocation build() { return new SkillInvocation(this); }
     }
 }

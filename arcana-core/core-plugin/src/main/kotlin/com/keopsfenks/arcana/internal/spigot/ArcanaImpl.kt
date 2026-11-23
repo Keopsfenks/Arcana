@@ -147,7 +147,9 @@ class ArcanaImpl : ArcanaSpigotPlugin(), Arcana {
     private val skillsRuntimeDelegate = lazy {
         val directory = dataFolder.toPath().resolve("skills")
         val environment = createExpressionEnvironmentBuilder().variables(*SkillCompilerImpl.VARIABLES).build()
-        SkillsRuntime(this, DefaultSkillEngine(this, directory, environment), directory) { engine, owner ->
+        SkillsRuntime(this, DefaultSkillEngine(this, directory, environment, expressionEnvironmentFactory = { names ->
+            createExpressionEnvironmentBuilder().variables(*names).build()
+        }), directory) { engine, owner ->
             BuiltinComponents.install(engine, owner)
             BuiltinComponents.installTriggers(engine, owner)
         }

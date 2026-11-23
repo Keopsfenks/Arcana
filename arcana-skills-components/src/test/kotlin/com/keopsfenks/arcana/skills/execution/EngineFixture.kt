@@ -60,7 +60,7 @@ class EngineFixture(val directory: Path, immediate: Boolean = true) {
         every { victim.isValid } answers { scheduler.assertOwner(victim); true }
         every { victim.isDead } returns false
         every { victim.location } answers { scheduler.assertOwner(victim); Location(world, 3.0, 60.0, 0.0) }
-        engine = DefaultSkillEngine(plugin, directory, CompilerFixture().environment, scheduler, clock::get) { roll }
+        engine = DefaultSkillEngine(plugin, directory, CompilerFixture().environment, scheduler, clock::get, random = { roll })
         register("mark") { arguments, _ -> CompiledSkillEffect {
             marks.add(arguments.string("name", "mark"))
             CompletableFuture.completedFuture(SkillResult.success())

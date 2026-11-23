@@ -5,6 +5,8 @@ import java.util.List;
 
 /** Compilation services shared by separately registered general-actor factories. */
 public interface SkillCompilation {
+    /** Namespace of the definition being compiled, rather than the built-in component's namespace. */
+    default String namespace() { return "arcana"; }
     SkillNumericExpression number(Object value, String path);
     List<CompiledSkillMechanic> effects(List<?> definitions, String path);
     SkillPredicate predicate(SkillArguments definition);

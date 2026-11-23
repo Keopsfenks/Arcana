@@ -13,6 +13,8 @@ import com.keopsfenks.arcana.skills.config.SkillLoadResult
 import com.keopsfenks.arcana.core.ArcanaPlugin
 import com.keopsfenks.arcana.core.math.ExpressionEnvironment
 import java.nio.file.Path
+import com.keopsfenks.arcana.skills.platform.values.PersistentVariableStore
+import com.keopsfenks.arcana.skills.platform.values.VariableStore
 import org.bukkit.plugin.Plugin
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -23,11 +25,14 @@ class DefaultSkillPlatform(
     private val lifecycle: SkillLifecycleGate,
     owner: ArcanaPlugin,
     directory: Path,
-    environment: ExpressionEnvironment
+    environment: ExpressionEnvironment,
+    environmentFactory: ((Array<String>) -> ExpressionEnvironment)? = null,
+    clock: () -> Long = System::nanoTime
 ) : SkillPlatform {
     private val registries = ConcurrentHashMap<SkillComponentType<*>, PlatformRegistry<*>>()
+    val variables = VariableStore(clock, persistence = PersistentVariableStore())
     val repository = DefinitionRepository(lifecycle, engine::compileSourceLegacy,
-        { definition -> SourceSkillCompiler(this, environment, definition.key().namespace()).compile(definition) },
+        { definition -> SourceSkillCompiler(this, environment, definition.key().namespace(), environmentFactory).compile(definition) },
         engine::publishDefinitions, engine::invalidateRegistration)
 
     init { repository.register(owner, DirectoryDefinitionSource(SkillKey("arcana", "default"), directory), core = true) }
@@ -43,6 +48,7 @@ class DefaultSkillPlatform(
     override fun registerSource(owner: Plugin, source: SkillDefinitionSource) = repository.register(owner, source)
     override fun reloadSource(source: SkillKey): SkillReloadResult = repository.commit(repository.prepare(setOf(source)))
     override fun definitions() = repository.definitions()
+    internal fun close() = variables.close()
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)

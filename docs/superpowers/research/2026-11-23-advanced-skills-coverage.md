@@ -14,9 +14,9 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | API | M-S | SkillPlatform, SkillActor, SkillInvocation, legacy adaptör | 2,6 | Planlandı | PlatformCompatibilityTests |
 | OWNER | L-E | Namespaced typed registry ve owner temizliği | 3 | Tamamlandı | PlatformRegistryTests |
 | SOURCE | L-C,M-C | Sahipli directory/in-memory kaynaklar, seçici reload | 4 | Tamamlandı | DefinitionSourceTests |
-| PARAM | L-C,M-C | Tipli parametreler, varsayılan, readonly child binding | 5 | Planlandı | ParameterBindingTests |
-| VAR | M-V | Invocation/actor/target/server değişkenleri | 5 | Planlandı | VariableStoreTests |
-| VALUE | M-V | SetVariableMechanic, AddVariableMechanic, RemoveVariableMechanic | 5 | Planlandı | VariableMechanicTests |
+| PARAM | L-C,M-C | Tipli parametreler, varsayılan, readonly child binding | 5 | Tamamlandı | ParameterBindingTests |
+| VAR | M-V | Invocation/actor/target/server değişkenleri | 5 | Tamamlandı | VariableStoreTests |
+| VALUE | M-V | SetVariableMechanic, AddVariableMechanic, RemoveVariableMechanic | 5 | Tamamlandı | VariableMechanicTests |
 | CONTEXT | M-S,M-T | Origin/trigger/victim ayrımı ve snapshot | 6 | Planlandı | InvocationSchedulingTests |
 | T-SELF | M-T | SelfTargeter, VictimTargeter, TriggerTargeter | 7 | Planlandı | TargeterTests |
 | T-LOC | M-T | OriginTargeter, LocationTargeter, ForwardTargeter | 7 | Planlandı | TargeterTests |

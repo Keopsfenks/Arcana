@@ -26,11 +26,12 @@ class DefaultSkillEngine(
     private val environment: ExpressionEnvironment,
     val scheduler: SkillScheduler = ArcanaSkillScheduler(plugin),
     clock: () -> Long = System::nanoTime,
-    val random: () -> Double = { ThreadLocalRandom.current().nextDouble() }
+    val random: () -> Double = { ThreadLocalRandom.current().nextDouble() },
+    expressionEnvironmentFactory: ((Array<String>) -> ExpressionEnvironment)? = null
 ) : SkillEngine {
     val cooldowns = CooldownStore(clock)
     internal val lifecycle = SkillLifecycleGate()
-    private val generalPlatform = DefaultSkillPlatform(this, lifecycle, plugin, directory, environment)
+    private val generalPlatform = DefaultSkillPlatform(this, lifecycle, plugin, directory, environment, expressionEnvironmentFactory, clock)
     private val diagnostics = SkillRuntimeDiagnostics({ plugin.logger }, clock)
     val effects = ComponentRegistry<SkillEffect> { invalidate(it) }
     val conditions = ComponentRegistry<SkillCondition> { invalidate(it) }
@@ -184,6 +185,7 @@ class DefaultSkillEngine(
         listeners.clear()
         cooldowns.clear()
         diagnostics.clear()
+        generalPlatform.close()
     }
 
     private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot() + generalPlatform.registrations()
