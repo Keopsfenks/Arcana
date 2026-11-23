@@ -59,7 +59,7 @@ class SkillYamlLoaderTests {
     }
 
     @Test fun `unsafe tags duplicate keys and nonfinite numbers are rejected`() {
-        for (invalid in listOf("!!java.net.URL [https://example.com]", yaml + "\nid: another", yaml + "\nchance: .nan")) {
+        for (invalid in listOf("!!java.net.URL [https://example.com]", yaml + "\nid: another", yaml + "\nchance: .nan", "recursive: &loop [*loop]")) {
             Files.writeString(directory.resolve("bad.yml"), invalid)
             assertFalse(load().report.success(), invalid)
         }

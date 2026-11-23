@@ -56,24 +56,34 @@ public final class SkillArguments {
     }
 
     private static Map<String, Object> freezeMap(Map<?, ?> source, String path) {
-        var copy = new LinkedHashMap<String, Object>();
-        source.forEach((key, value) -> {
-            if (!(key instanceof String name)) throw new IllegalArgumentException(path + ": mapping keys must be strings");
-            copy.put(name, freeze(value, path + "." + name));
-        });
-        return Collections.unmodifiableMap(copy);
+        return freezeMap(source, path, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
     }
-    private static Object freeze(Object value, String path) {
+    private static Map<String, Object> freezeMap(Map<?, ?> source, String path, int depth, Set<Object> active) {
+        if (depth > 64 || !active.add(source)) throw new IllegalArgumentException(path + ": cyclic or excessively nested arguments");
+        var copy = new LinkedHashMap<String, Object>();
+        try {
+            source.forEach((key, value) -> {
+                if (!(key instanceof String name)) throw new IllegalArgumentException(path + ": mapping keys must be strings");
+                copy.put(name, freeze(value, path + "." + name, depth + 1, active));
+            });
+            return Collections.unmodifiableMap(copy);
+        } finally { active.remove(source); }
+    }
+    private static Object freeze(Object value, String path, int depth, Set<Object> active) {
+        if (depth > 64) throw new IllegalArgumentException(path + ": argument nesting exceeds 64 levels");
         if (value == null || value instanceof String || value instanceof Boolean || value instanceof Enum<?>) return value;
         if (value instanceof Number number) {
             if (!Double.isFinite(number.doubleValue())) throw new IllegalArgumentException(path + ": number must be finite");
             return number;
         }
-        if (value instanceof Map<?, ?> map) return freezeMap(map, path);
+        if (value instanceof Map<?, ?> map) return freezeMap(map, path, depth, active);
         if (value instanceof List<?> list) {
-            var copy = new ArrayList<>();
-            for (int i = 0; i < list.size(); i++) copy.add(freeze(list.get(i), path + "[" + i + "]"));
-            return Collections.unmodifiableList(copy);
+            if (!active.add(list)) throw new IllegalArgumentException(path + ": cyclic arguments");
+            try {
+                var copy = new ArrayList<>();
+                for (int i = 0; i < list.size(); i++) copy.add(freeze(list.get(i), path + "[" + i + "]", depth + 1, active));
+                return Collections.unmodifiableList(copy);
+            } finally { active.remove(list); }
         }
         throw new IllegalArgumentException(path + ": unsupported value type " + value.getClass().getSimpleName());
     }

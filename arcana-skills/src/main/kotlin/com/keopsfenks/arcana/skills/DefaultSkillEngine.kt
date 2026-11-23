@@ -1,0 +1,167 @@
+package com.keopsfenks.arcana.skills
+
+import com.keopsfenks.arcana.core.ArcanaPlugin
+import com.keopsfenks.arcana.core.math.ExpressionEnvironment
+import com.keopsfenks.arcana.core.skills.*
+import com.keopsfenks.arcana.skills.compile.*
+import com.keopsfenks.arcana.skills.config.SkillLoadResult
+import com.keopsfenks.arcana.skills.config.SkillYamlLoader
+import com.keopsfenks.arcana.skills.execution.*
+import com.keopsfenks.arcana.skills.registry.ComponentRegistry
+import com.keopsfenks.arcana.skills.registry.OwnedRegistration
+import org.bukkit.plugin.Plugin
+import java.nio.file.Path
+import java.util.UUID
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+
+class DefaultSkillEngine(
+    private val plugin: ArcanaPlugin,
+    private val directory: Path,
+    private val environment: ExpressionEnvironment,
+    val scheduler: SkillScheduler = ArcanaSkillScheduler(plugin),
+    clock: () -> Long = System::nanoTime,
+    val random: () -> Double = { ThreadLocalRandom.current().nextDouble() }
+) : SkillEngine {
+    val cooldowns = CooldownStore(clock)
+    val effects = ComponentRegistry<SkillEffect> { invalidate(it) }
+    val conditions = ComponentRegistry<SkillCondition> { invalidate(it) }
+    val triggers = ComponentRegistry<SkillTrigger> { handle ->
+        invalidate(handle)
+        listeners.remove(handle)?.let { safelyClose(it) }
+    }
+    private val listeners = ConcurrentHashMap<SkillRegistration, AutoCloseable>()
+    private val current = AtomicReference(SkillSnapshot.EMPTY)
+    private val executions = ConcurrentHashMap.newKeySet<ExecutionState>()
+    private val closed = AtomicBoolean(false)
+    private val disabledOwners = ConcurrentHashMap.newKeySet<Plugin>()
+    private val runner = SkillRunner(this)
+    private val reloadLock = Any()
+    var filterCompiler: (SkillArguments) -> CompiledSkillCondition = {
+        require(it.values.isEmpty()) { "${it.path}: no filter compiler registered" }
+        CompiledSkillCondition { true }
+    }
+    private val loader = SkillYamlLoader { SkillCompilerImpl(environment, effects, conditions, triggers, filterCompiler) }
+
+    override fun registerEffect(owner: Plugin, effect: SkillEffect): SkillRegistration {
+        checkOwner(owner)
+        return effects.register(owner, effect)
+    }
+
+    override fun registerCondition(owner: Plugin, condition: SkillCondition): SkillRegistration {
+        checkOwner(owner)
+        return conditions.register(owner, condition)
+    }
+
+    override fun registerTrigger(owner: Plugin, trigger: SkillTrigger): SkillRegistration {
+        checkOwner(owner)
+        val handle = triggers.register(owner, trigger)
+        try {
+            val listener = trigger.listen { context -> if (handle.isActive && !closed.get()) trigger(trigger.id, context) }
+            listeners[handle] = listener
+            if (!handle.isActive) listeners.remove(handle)?.let { safelyClose(it) }
+        } catch (error: Throwable) { handle.close(); throw error }
+        return handle
+    }
+
+    override fun cast(skillId: String, context: SkillContext): CompletionStage<SkillResult> = castInSnapshot(skillId, context, current.get())
+
+    private fun castInSnapshot(skillId: String, context: SkillContext, snapshot: SkillSnapshot): CompletableFuture<SkillResult> {
+        if (closed.get()) return completed(SkillResult.Status.CANCELLED, "Skill engine is stopped")
+        val skill = snapshot.byId[skillId] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId")
+        if (!skill.available()) return completed(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "A component dependency is unavailable")
+        if (!skill.enabled) return completed(SkillResult.Status.DISABLED, "Skill is disabled")
+        val playerId = context.casterId
+        val state = synchronized(reloadLock) {
+            if (closed.get() || current.get() !== snapshot) return completed(SkillResult.Status.CANCELLED, "Skills changed before the cast started")
+            ExecutionState(playerId, snapshot).also {
+                it.dependencies.addAll(skill.dependencies)
+                executions.add(it)
+            }
+        }
+        state.result.whenComplete { _, _ -> executions.remove(state); state.release() }
+        try {
+            InvocationSnapshots.capture(context, state, scheduler)
+                .thenCompose { runner.run(skill, it, state, 1) }
+                .whenComplete { result, error -> state.result.complete(if (error == null) result else failure(error)) }
+        } catch (error: Throwable) { state.result.complete(failure(error)) }
+        return state.result
+    }
+
+    fun runNested(skillId: String, context: SkillContext, state: ExecutionState, depth: Int): CompletionStage<SkillResult> {
+        state.checkActive()
+        val skill = state.snapshot.byId[skillId] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId")
+        return runner.run(skill, context, state, depth)
+    }
+
+    override fun trigger(triggerId: String, context: SkillContext): CompletionStage<List<SkillResult>> {
+        val snapshot = current.get()
+        val results = snapshot.byTrigger[triggerId].orEmpty().map { castInSnapshot(it.id, context, snapshot) }
+        return CompletableFuture.allOf(*results.toTypedArray()).thenApply { java.util.List.copyOf(results.map { it.join() }) }
+    }
+
+    // Keep staging separate so the core can validate before cancelling any tasks.
+    fun prepareReload(): SkillLoadResult = if (closed.get()) SkillLoadResult(null, SkillReloadResult(false, 0, 0, listOf("Skill engine is stopped"))) else loader.load(directory)
+
+    fun commitReload(candidate: SkillLoadResult): SkillReloadResult = synchronized(reloadLock) {
+        if (!candidate.report.success()) return@synchronized candidate.report
+        if (closed.get()) return@synchronized SkillReloadResult(false, 0, 0, listOf("Skill engine is stopped"))
+        val snapshot = requireNotNull(candidate.snapshot)
+        val missing = snapshot.byId.values.filterNot { it.available() }
+        if (missing.isNotEmpty()) return@synchronized SkillReloadResult(false, 0, 0, missing.map { "${it.source}: component was removed during reload" })
+        val previous = current.getAndSet(snapshot)
+        executions.filter { it.snapshot === previous }.forEach { it.cancel("Skills reloaded") }
+        candidate.report
+    }
+
+    override fun reload(): SkillReloadResult = commitReload(prepareReload())
+    override fun skills(): List<SkillInfo> = java.util.List.copyOf(current.get().byId.values.map { it.info() })
+
+    override fun cancel(playerId: UUID) {
+        executions.filter { it.playerId == playerId }.forEach { it.cancel("Player left") }
+        cooldowns.remove(playerId)
+    }
+
+    fun closeOwner(owner: Plugin) {
+        disabledOwners.add(owner)
+        effects.closeOwner(owner)
+        conditions.closeOwner(owner)
+        triggers.closeOwner(owner)
+    }
+
+    fun enableOwner(owner: Plugin) { disabledOwners.remove(owner) }
+
+    override fun shutdown() {
+        if (closed.compareAndSet(false, true)) {
+            executions.toList().forEach { it.cancel("Skill engine stopped") }
+            effects.close()
+            conditions.close()
+            triggers.close()
+            listeners.values.toList().forEach { safelyClose(it) }
+            listeners.clear()
+            cooldowns.clear()
+        }
+    }
+
+    private fun invalidate(handle: OwnedRegistration<*>) {
+        executions.filter { handle in it.dependencies }.forEach { it.cancel("Component ${handle.id} was removed") }
+    }
+
+    private fun checkOwner(owner: Plugin) {
+        check(!closed.get()) { "Skill engine is stopped" }
+        check(owner !in disabledOwners) { "Component owner is disabled" }
+    }
+
+    private fun safelyClose(handle: AutoCloseable) {
+        try { handle.close() } catch (error: Exception) { plugin.logger.warning("Could not close skill listener: ${error.message}") }
+    }
+
+    private fun completed(status: SkillResult.Status, message: String) = CompletableFuture.completedFuture(SkillResult.of(status, message))
+
+    private fun failure(error: Throwable): SkillResult {
+        var cause = error
+        while ((cause is CompletionException || cause is ExecutionException) && cause.cause != null) cause = cause.cause!!
+        return SkillResult.of(if (cause is CancellationException) SkillResult.Status.CANCELLED else SkillResult.Status.ERROR, cause.message ?: cause.javaClass.simpleName)
+    }
+}

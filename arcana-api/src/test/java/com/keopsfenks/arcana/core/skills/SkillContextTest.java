@@ -49,4 +49,11 @@ class SkillContextTest {
         });
         assertThrows(IllegalArgumentException.class, () -> SkillContext.builder(player()).value("damage", Double.NaN).build());
     }
+
+    @Test void cyclicArgumentTreesFailWithAPathInsteadOfOverflowingTheStack() {
+        var cycle = new LinkedHashMap<String, Object>();
+        cycle.put("again", cycle);
+        var error = assertThrows(IllegalArgumentException.class, () -> new SkillArguments(cycle, "skill.yml"));
+        assertTrue(error.getMessage().contains("skill.yml.again"));
+    }
 }

@@ -78,11 +78,11 @@ Tests mirror runtime packages under `arcana-skills/src/test/kotlin/`.
 
 **Consumes:** compiled snapshots. **Produces:** complete cast/trigger result futures, atomic admissions, bounded ordered execution and cancellable scheduling. Time/RNG/scheduler are injected through small constructor seams for deterministic tests; production uses Arcana Scheduler and `System.nanoTime`.
 
-- [ ] Write failing tests for chance=0/100, denied admission consuming no cooldown, concurrent same-key admission allowing exactly one cast, group sharing, clock changes, ordered async effects, no-target handling, repeat/cast budget exhaustion and finite numeric values.
-- [ ] Add lifecycle tests: failed reload leaves old jobs running; successful swap cancels old jobs and keeps cooldown; logout/disable cancels and releases tasks; extension removal cancels pending dependent work and prevents subsequent callbacks; callback already executing may finish.
-- [ ] Add a scheduler spy test that records caster snapshot reads on caster context, victim reads on victim context, and location effects on location context. No snapshot read occurs before its context runs.
-- [ ] Run focused tests, observe failures, implement dispatch/cooldown/cancellation without concrete game effects, then verify the whole skills suite green.
-- [ ] Commit `feat(skills): execute bounded skill chains with atomic cooldowns and lifecycle cancellation`.
+- [x] Write failing tests for chance=0/100, denied admission consuming no cooldown, concurrent same-key admission allowing exactly one cast, group sharing, clock changes, ordered async effects, no-target handling, repeat/cast budget exhaustion and finite numeric values.
+- [x] Add lifecycle tests: failed reload leaves old jobs running; successful swap cancels old jobs and keeps cooldown; logout/disable cancels and releases tasks; extension removal cancels pending dependent work and prevents subsequent callbacks; callback already executing may finish.
+- [x] Add a scheduler spy test that records caster snapshot reads on caster context, victim reads on victim context, and location effects on location context. No snapshot read occurs before its context runs.
+- [x] Run focused tests, observe failures, implement dispatch/cooldown/cancellation without concrete game effects, then verify the whole skills suite green.
+- [x] Commit `feat(skills): execute bounded skill chains with atomic cooldowns and lifecycle cancellation`.
 
 ### Task 4: Built-in effects and conditions, each in a separate class
 
