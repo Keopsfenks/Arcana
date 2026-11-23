@@ -1,0 +1,77 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+plugins {
+    id("io.papermc.paperweight.userdev")
+}
+
+group = "com.keopsfenks"
+version = rootProject.version
+
+dependencies {
+    implementation(project(":arcana-core:core-nms:common"))
+    implementation(project(":arcana-core:core-nms:v1_21_8", configuration = "shadow"))
+    paperweight.paperDevBundle("26.1.2.build.+")
+}
+
+tasks {
+    shadowJar {
+        relocate(
+            "com.keopsfenks.arcana.internal.spigot.proxy.v1_21_8",
+            "com.keopsfenks.arcana.internal.spigot.proxy.v26_1_2"
+        )
+        relocate(
+            "com.keopsfenks.arcana.internal.spigot.proxy.common",
+            "com.keopsfenks.arcana.internal.spigot.proxy.v26_1_2.common"
+        )
+
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/PlayerHandler*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/TPS*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/ItemComponents*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/ItemUse*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/CommonsInitializer*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/SNBTConverter*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/SpiderClimbing*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/EnchantmentRegistry*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/packet/PacketContainerClick*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/packet/NewItemsPacketOpenWindowMerchant*.class")
+
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/Hologram*.class")
+        // Superseded by this version's own handle, and no longer links here.
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/hologram/CommonHologramHandle*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/common/hologram/CommonHologramHandle*.class")
+
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/recipes/RecipeManager*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/ai/entity/CatLieOnBedGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/ai/entity/CatSitOnBedGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/ai/entity/FollowBoatsGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/ai/entity/IllusionerBlindnessSpellGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/ai/entity/IllusionerMirrorSpellGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/v1_21_8/common/ai/target/DefendVillageGoalFactory*.class")
+
+        // 26.1.x changes that broke `common`
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/common/ai/entity/CatLieOnBedGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/common/ai/entity/CatSitOnBedGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/common/ai/entity/FollowBoatsGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/common/ai/entity/IllusionerBlindnessSpellGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/common/ai/entity/IllusionerMirrorSpellGoalFactory*.class")
+        exclude("com/keopsfenks/arcana/internal/spigot/proxy/common/ai/target/DefendVillageGoalFactory*.class")
+
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+
+    compileJava {
+        options.release.set(25)
+    }
+
+    compileKotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_25)
+        }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}

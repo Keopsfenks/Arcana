@@ -1,0 +1,78 @@
+package com.keopsfenks.arcana.core.placeholder.templates;
+
+import com.keopsfenks.arcana.core.placeholder.InjectablePlaceholder;
+import com.keopsfenks.arcana.core.placeholder.context.PlaceholderContext;
+import com.keopsfenks.arcana.util.PatternUtils;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * A template class for simple injectable placeholders, matched against a literal identifier.
+ */
+public abstract class SimpleInjectablePlaceholder implements InjectablePlaceholder {
+    /**
+     * The identifier of the placeholder.
+     */
+    private final String identifier;
+
+    /**
+     * The placeholder pattern.
+     */
+    private final Pattern pattern;
+
+    /**
+     * The identifier wrapped in percent signs, e.g. "%identifier%".
+     */
+    private final String wrappedIdentifier;
+
+    /**
+     * Create a new simple injectable placeholder.
+     *
+     * @param identifier The identifier.
+     */
+    protected SimpleInjectablePlaceholder(@NotNull final String identifier) {
+        this.identifier = identifier;
+        this.pattern = PatternUtils.compileLiteral(identifier);
+        this.wrappedIdentifier = "%" + identifier + "%";
+    }
+
+    @Override
+    public String tryTranslateQuickly(@NotNull final String text,
+                                      @NotNull final PlaceholderContext context) {
+        return text.replace(
+                this.wrappedIdentifier,
+                Objects.requireNonNullElse(this.getValue(this.identifier, context), "")
+        );
+    }
+
+    @Override
+    public @NotNull Pattern getPattern() {
+        return pattern;
+    }
+
+    @Override
+    public String toString() {
+        return "SimpleInjectablePlaceholder{" +
+                "identifier='" + identifier + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(@NotNull final Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof SimpleInjectablePlaceholder that)) {
+            return false;
+        }
+
+        return Objects.equals(identifier, that.identifier);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(identifier);
+    }
+}

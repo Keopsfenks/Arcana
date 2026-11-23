@@ -1,0 +1,101 @@
+@file:JvmName("ConfigExtensions")
+
+package com.keopsfenks.arcana.core.config
+
+import com.keopsfenks.arcana.core.config.interfaces.Config
+import java.io.File
+import java.io.InputStream
+import org.bukkit.configuration.ConfigurationSection
+
+/**
+ * Helper class to create configs with a kotlin DSL.
+ *
+ * @param type The config type.
+ */
+class DSLConfig internal constructor(type: ConfigType) : GenericConfig(type) {
+    /**
+     * Map a key to a value.
+     *
+     * @receiver The key.
+     * @param value The value.
+     */
+    infix fun String.to(value: Any?) =
+        set(this, value)
+
+    /**
+     * Helper function to create configs with a kotlin DSL.
+     *
+     * Inherits the config type of the sub-builder.
+     *
+     * @param builder The builder.
+     * @return The config.
+     */
+    fun config(builder: DSLConfig.() -> Unit): Config =
+        DSLConfig(type).apply(builder)
+}
+
+/**
+ * Helper function to create configs with a kotlin DSL.
+ *
+ * @param type The config type, defaulting to [ConfigType.YAML].
+ * @param builder The builder.
+ * @return The config.
+ */
+fun config(type: ConfigType = ConfigType.YAML, builder: DSLConfig.() -> Unit): Config =
+    DSLConfig(type).apply(builder)
+
+/**
+ * Helper function to create JSON configs with a kotlin DSL.
+ *
+ * @param builder The builder.
+ * @return The config.
+ */
+fun json(builder: DSLConfig.() -> Unit): Config =
+    config(ConfigType.JSON, builder)
+
+/** @see Configs.empty */
+fun emptyConfig() = Configs.empty()
+
+/** @see Configs.empty */
+fun emptyConfig(type: ConfigType) = Configs.empty(type)
+
+/** @see Configs.fromBukkit */
+fun ConfigurationSection?.toConfig() = Configs.fromBukkit(this)
+
+/** @see Configs.fromStream */
+fun InputStream?.readConfig() = Configs.fromStream(this)
+
+/** @see Configs.fromFile */
+fun File?.readConfig() = Configs.fromFile(this)
+
+/** @see Configs.fromFile */
+fun File?.readConfig(type: ConfigType) = Configs.fromFile(this, type)
+
+/** @see Configs.fromMap */
+fun Map<String?, Any?>.toConfig() = Configs.fromMap(this)
+
+/** @see Configs.fromMap */
+fun Map<String?, Any?>.toConfig(type: ConfigType) = Configs.fromMap(this, type)
+
+/** @see Configs.fromString */
+fun readConfig(contents: String, type: ConfigType) = Configs.fromString(contents, type)
+
+/**
+ * Convert a config section to plain values: nested maps, lists, and scalars.
+ *
+ * Roundtrips through plaintext because wrapper configs (for example
+ * libreforge's separator-ambivalent wrapper) don't implement toMap, and must
+ * not rewrite keys that are meaningful as written, such as component ids.
+ *
+ * @receiver The config.
+ * @return The plain values.
+ */
+fun Config.toPlainValues(): Map<String, Any?> =
+    readConfig(toPlaintext(), ConfigType.YAML).toMap()
+        .mapValues { (_, value) -> value.toPlainValue() }
+
+private fun Any?.toPlainValue(): Any? = when (this) {
+    is Config -> this.toPlainValues()
+    is Iterable<*> -> this.map { it.toPlainValue() }
+    else -> this
+}

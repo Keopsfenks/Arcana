@@ -1,2 +1,2 @@
-library-modules = ["eco-api"]
-root-classes = ["com.willfp.eco.internal.spigot.proxy.**"]
+library-modules = ["arcana-api"]
+root-classes = ["com.keopsfenks.arcana.internal.spigot.proxy.**"]

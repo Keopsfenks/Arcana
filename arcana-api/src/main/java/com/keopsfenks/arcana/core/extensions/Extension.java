@@ -1,0 +1,185 @@
+package com.keopsfenks.arcana.core.extensions;
+
+import com.google.common.base.Preconditions;
+import com.keopsfenks.arcana.core.ArcanaPlugin;
+import com.keopsfenks.arcana.core.PluginLike;
+import com.keopsfenks.arcana.core.config.updating.ConfigHandler;
+import java.io.File;
+import java.util.logging.Logger;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * An extension is a separate jar file that hooks into the base plugin jar.
+ * <p>
+ * If you take PlaceholderAPI as an example, the PAPI expansions are identical to
+ * extensions.
+ * <p>
+ * Syntactically, extensions are very similar to plugins in their own right, except that
+ * they are loaded by another plugin.
+ *
+ * @see <a href="https://github.com/Keopsfenks/Arcana">Extension examples.</a>
+ */
+public abstract class Extension implements PluginLike {
+    /**
+     * The {@link ArcanaPlugin} that this extension is for.
+     */
+    private final ArcanaPlugin plugin;
+
+    /**
+     * Create a new extension for a plugin.
+     *
+     * @param plugin The plugin.
+     */
+    protected Extension(@NotNull final ArcanaPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    /**
+     * Metadata containing version and name.
+     */
+    private ExtensionMetadata metadata = null;
+
+    /**
+     * Enable the extension, calling {@link #onEnable()}.
+     */
+    public final void enable() {
+        this.onEnable();
+    }
+
+    /**
+     * Disable the extension, calling {@link #onDisable()}.
+     */
+    public final void disable() {
+        this.onDisable();
+    }
+
+    /**
+     * Validate that the metadata has been set, then run any tasks on load via {@link #onLoad()}.
+     *
+     * @throws NullPointerException If the metadata has not been set.
+     */
+    public final void loadExtension() {
+        Preconditions.checkNotNull(metadata, "Metadata cannot be null!");
+        this.onLoad();
+    }
+
+    /**
+     * Handle the base plugin having finished loading, calling {@link #onAfterLoad()}.
+     */
+    public final void handleAfterLoad() {
+        this.onAfterLoad();
+    }
+
+    /**
+     * Handle a plugin reload, calling {@link #onReload()}.
+     */
+    public final void handleReload() {
+        this.onReload();
+    }
+
+    /**
+     * Called on enabling Extension.
+     */
+    protected abstract void onEnable();
+
+    /**
+     * Called when Extension is loaded.
+     */
+    protected void onLoad() {
+        // Override if needed
+    }
+
+    /**
+     * Called when Extension is disabled.
+     */
+    protected abstract void onDisable();
+
+    /**
+     * Called once the base plugin is done loading.
+     */
+    protected void onAfterLoad() {
+        // Override if needed
+    }
+
+    /**
+     * Called on plugin reload.
+     */
+    protected void onReload() {
+        // Override if needed
+    }
+
+    /**
+     * Set the metadata of the extension.
+     * <p>
+     * Must be called before {@link #loadExtension()}, and before any of the metadata-backed
+     * getters are used.
+     *
+     * @param metadata The metadata to set.
+     */
+    public final void setMetadata(@NotNull final ExtensionMetadata metadata) {
+        this.metadata = metadata;
+    }
+
+    /**
+     * Get the name of the extension.
+     *
+     * @return The name of the metadata attached to the extension.
+     * @throws NullPointerException If the metadata has not been set.
+     */
+    public final String getName() {
+        Preconditions.checkNotNull(metadata, "Metadata cannot be null!");
+        return this.metadata.name();
+    }
+
+    /**
+     * Get the author of the extension.
+     *
+     * @return The author of the metadata attached to the extension.
+     * @throws NullPointerException If the metadata has not been set.
+     */
+    public final String getAuthor() {
+        Preconditions.checkNotNull(metadata, "Metadata cannot be null!");
+        return this.metadata.author();
+    }
+
+    /**
+     * Get the version of the extension.
+     *
+     * @return The version of the metadata attached to the extension.
+     * @throws NullPointerException If the metadata has not been set.
+     */
+    public final String getVersion() {
+        Preconditions.checkNotNull(metadata, "Metadata cannot be null!");
+        return this.metadata.version();
+    }
+
+    @Override
+    public @NotNull File getDataFolder() {
+        return this.plugin.getDataFolder();
+    }
+
+    @Override
+    public @NotNull ConfigHandler getConfigHandler() {
+        return this.plugin.getConfigHandler();
+    }
+
+    @Override
+    public @NotNull Logger getLogger() {
+        return this.plugin.getLogger();
+    }
+
+    @Override
+    public @NotNull File getFile() {
+        Preconditions.checkNotNull(metadata, "Metadata cannot be null!");
+        return this.metadata.file();
+    }
+
+    /**
+     * Get the plugin for the extension.
+     *
+     * @return The plugin.
+     */
+    protected ArcanaPlugin getPlugin() {
+        return this.plugin;
+    }
+}

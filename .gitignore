@@ -15,7 +15,7 @@ bin/
 .gradle
 **/build/
 **/out/
-!eco-api/src/**/build/
+!arcana-api/src/**/build/
 .gradletasknamecache
 !gradle-wrapper.jar
 gradle-app.setting

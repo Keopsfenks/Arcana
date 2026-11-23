@@ -1,0 +1,97 @@
+package com.keopsfenks.arcana.internal.spigot.integrations.customitems
+
+import com.keopsfenks.arcana.core.ArcanaPlugin
+import com.keopsfenks.arcana.core.integrations.customitems.CustomItemsIntegration
+import com.keopsfenks.arcana.core.items.CustomItem
+import com.keopsfenks.arcana.core.items.Items
+import com.keopsfenks.arcana.core.items.TestableItem
+import com.keopsfenks.arcana.core.items.provider.ItemProvider
+import com.keopsfenks.arcana.core.recipe.parts.EmptyTestableItem
+import com.keopsfenks.arcana.util.NamespacedKeyUtils
+import io.lumine.mythic.api.adapters.AbstractItemStack
+import io.lumine.mythic.api.config.MythicLineConfig
+import io.lumine.mythic.api.drops.DropMetadata
+import io.lumine.mythic.api.drops.IItemDrop
+import io.lumine.mythic.bukkit.BukkitAdapter
+import io.lumine.mythic.bukkit.MythicBukkit
+import io.lumine.mythic.bukkit.events.MythicDropLoadEvent
+import org.bukkit.Material
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.inventory.ItemStack
+
+
+class CustomItemsMythicMobs(
+    private val plugin: ArcanaPlugin
+) : CustomItemsIntegration, Listener {
+    init {
+        plugin.eventManager.registerListener(this)
+    }
+
+    override fun getPluginName(): String {
+        return "MythicMobs"
+    }
+
+    override fun registerProvider() {
+        Items.registerItemProvider(MythicMobsItemProvider())
+    }
+
+    @EventHandler
+    fun onLoad(event: MythicDropLoadEvent) {
+        val name = event.dropName
+        if (name.equals("arcana", ignoreCase = true)) {
+            event.register(
+                MythicMobsDrop(plugin, event.config)
+            )
+        }
+    }
+
+    private class MythicMobsItemProvider : ItemProvider("mythicmobs") {
+        override fun provideForKey(key: String): TestableItem? {
+            val itemManager = MythicBukkit.inst().getItemManager()
+
+            /*
+            Item lookup strings are lowercased, but MythicMobs stores its items in a
+            case-sensitive map keyed by the raw ID from the config, so resolve the
+            actual ID before looking the item up.
+             */
+            val id = if (itemManager.getItem(key).isPresent) {
+                key
+            } else {
+                itemManager.itemNames.firstOrNull { it.equals(key, ignoreCase = true) } ?: return null
+            }
+
+            val mythicItem = itemManager.getItem(id).orElse(null) ?: return null
+            val itemStack = BukkitAdapter.adapt(mythicItem.generateItemStack(1)) ?: return null
+            val namespacedKey = NamespacedKeyUtils.create("mythicmobs", key.lowercase())
+            return CustomItem(
+                namespacedKey,
+                { testStack: ItemStack ->
+                    val type = MythicBukkit.inst().getItemManager().getMythicTypeFromItem(testStack)
+                    !type.isNullOrBlank() && type.equals(id, ignoreCase = true)
+                },
+                itemStack
+            )
+        }
+
+        override fun getKey(itemStack: ItemStack): String? =
+            MythicBukkit.inst().getItemManager().getMythicTypeFromItem(itemStack)?.takeIf { it.isNotBlank() }
+    }
+
+    private class MythicMobsDrop(
+        private val plugin: ArcanaPlugin,
+        itemConfig: MythicLineConfig
+    ) : IItemDrop {
+        private val id = itemConfig.getString(arrayOf("type", "t", "item", "i"), "arcana")
+
+        override fun getDrop(data: DropMetadata, v: Double): AbstractItemStack {
+            val item = Items.lookup(id)
+            if (item is EmptyTestableItem) {
+                plugin.logger.warning("Item with ID $id is invalid, check your configs!")
+                return BukkitAdapter.adapt(ItemStack(Material.AIR))
+            }
+            return BukkitAdapter.adapt(item.item.apply { amount = v.toInt() })
+        }
+    }
+}
+

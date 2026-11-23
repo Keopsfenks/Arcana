@@ -1,0 +1,49 @@
+package com.keopsfenks.arcana.core.entities;
+
+import com.keopsfenks.arcana.core.entities.impl.EmptyTestableEntity;
+import com.keopsfenks.arcana.core.entities.impl.GroupedTestableEntities;
+import com.keopsfenks.arcana.core.lookup.LookupHandler;
+import java.util.Collection;
+import java.util.function.Function;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Handle entity lookup strings.
+ *
+ * @see Entities#lookup(String)
+ */
+public class EntitiesLookupHandler implements LookupHandler<TestableEntity> {
+    /**
+     * The parser.
+     */
+    private final Function<String[], @NotNull TestableEntity> parser;
+
+    /**
+     * Create a new lookup handler.
+     *
+     * @param parser The parser, taking the lookup arguments and producing a testable entity.
+     */
+    public EntitiesLookupHandler(@NotNull final Function<String[], @NotNull TestableEntity> parser) {
+        this.parser = parser;
+    }
+
+    @Override
+    public @NotNull TestableEntity parse(@NotNull final String[] args) {
+        return parser.apply(args);
+    }
+
+    @Override
+    public boolean validate(@NotNull final TestableEntity object) {
+        return !(object instanceof EmptyTestableEntity);
+    }
+
+    @Override
+    public @NotNull TestableEntity getFailsafe() {
+        return new EmptyTestableEntity();
+    }
+
+    @Override
+    public @NotNull TestableEntity join(@NotNull final Collection<TestableEntity> options) {
+        return new GroupedTestableEntities(options);
+    }
+}

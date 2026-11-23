@@ -1,0 +1,26 @@
+package com.keopsfenks.arcana.core.gui.slot.functional;
+
+import com.keopsfenks.arcana.core.gui.menu.Menu;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Interface to run on slot update.
+ */
+@FunctionalInterface
+public interface SlotUpdater {
+    /**
+     * Performs this operation on the given arguments.
+     *
+     * @param player   The player.
+     * @param menu     The menu.
+     * @param previous The previous ItemStack.
+     * @return The new ItemStack, or null to show an empty slot.
+     */
+    @Nullable
+    ItemStack update(@NotNull Player player,
+                     @NotNull Menu menu,
+                     @NotNull ItemStack previous);
+}

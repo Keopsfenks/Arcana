@@ -1,0 +1,100 @@
+package com.keopsfenks.arcana.util;
+
+import com.keopsfenks.arcana.core.Arcana;
+import com.keopsfenks.arcana.core.blocks.TestableBlock;
+import java.util.*;
+import org.bukkit.Chunk;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Utilities / API methods for blocks.
+ */
+public final class BlockUtils {
+    /**
+     * Get a set of all blocks in contact with each other of a specific type.
+     * <p>
+     * The search is a flood fill starting at the given block, and treats every {@link BlockFace}
+     * value as adjacent, so diagonally touching blocks are included in the vein.
+     * <p>
+     * On Folia the search stops at the boundary of the calling thread's region, so a vein
+     * spanning two regions is returned only in part. Off Folia there is no such bound.
+     *
+     * @param start         The initial block, which is only included if it matches one of the allowed blocks.
+     * @param allowedBlocks A list of all valid {@link TestableBlock}s.
+     * @param limit         The maximum size of vein to return.
+     * @return A set of all matching {@link Block}s, containing at most limit blocks,
+     *         or empty if the initial block does not match.
+     */
+    @NotNull
+    public static Set<Block> getVein(@NotNull final Block start,
+                                     @NotNull final List<TestableBlock> allowedBlocks,
+                                     final int limit) {
+        Set<Block> blocks = new HashSet<>();
+        Queue<Block> toProcess = new LinkedList<>();
+
+        if (allowedBlocks.stream().anyMatch(testableBlock -> testableBlock.matches(start))) {
+            toProcess.add(start);
+        }
+
+        while (!toProcess.isEmpty() && blocks.size() < limit) {
+            Block currentBlock = toProcess.poll();
+
+            if (blocks.contains(currentBlock)) {
+                continue;
+            }
+
+            blocks.add(currentBlock);
+
+            for (BlockFace face : BlockFace.values()) {
+                Block adjacentBlock = currentBlock.getRelative(face);
+
+                // On Folia a vein can cross a region boundary, and reading a block in
+                // another region is not allowed. Off Folia this is always owned, so the
+                // fill is unbounded exactly as before.
+                if (!Arcana.get().isOwnedByCurrentRegion(adjacentBlock.getLocation())) {
+                    continue;
+                }
+
+                if (!blocks.contains(adjacentBlock) &&
+                        allowedBlocks.stream().anyMatch(testableBlock -> testableBlock.matches(adjacentBlock))) {
+                    toProcess.add(adjacentBlock);
+                }
+            }
+        }
+
+        return blocks;
+    }
+
+    /**
+     * Get if a block was placed by a player.
+     * <p>
+     * This reads a marker stored by arcana in the persistent data container of the block's
+     * {@link Chunk}, so it only reports blocks placed while arcana was tracking them.
+     * <p>
+     * Markers are keyed by the block's position within its chunk. Markers written by older
+     * versions of arcana are keyed by the location hash, which several positions can share, and
+     * are still read so that blocks placed before the update stay player-placed.
+     *
+     * @param block The block.
+     * @return If placed by a player.
+     */
+    public static boolean isPlayerPlaced(@NotNull final Block block) {
+        PersistentDataContainer container = block.getChunk().getPersistentDataContainer();
+
+        return container.has(
+                NamespacedKeyUtils.createArcanaKey("placed_" + (block.getX() & 15) + "_" + block.getY() + "_" + (block.getZ() & 15)),
+                PersistentDataType.INTEGER
+        ) || container.has(
+                NamespacedKeyUtils.createArcanaKey(Integer.toString(block.getLocation().hashCode(), 16)),
+                PersistentDataType.INTEGER
+        );
+    }
+
+    private BlockUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+}

@@ -1,0 +1,47 @@
+package com.keopsfenks.arcana.internal.gui.menu
+
+import com.keopsfenks.arcana.core.gui.menu.Menu
+import com.keopsfenks.arcana.core.gui.slot.Slot
+import org.bukkit.entity.Player
+
+class LayeredComponents {
+    private val layers = mutableMapOf<Int, Map<GUIPosition, List<OffsetComponent>>>()
+    private var sortedLayerKeys = emptyList<Int>()
+
+    fun getSlotAt(row: Int, column: Int, player: Player?, menu: Menu): Slot {
+        val guiPosition = GUIPosition(row, column)
+
+        for (layer in sortedLayerKeys) {
+            val componentsAtPoints = layers[layer] ?: continue
+
+            val components = componentsAtPoints[guiPosition] ?: continue
+
+            for (component in components) {
+                val found = if (player != null) component.component.getSlotAt(
+                    component.rowOffset,
+                    component.columnOffset,
+                    player,
+                    menu
+                ) else component.component.getSlotAt(
+                    component.rowOffset,
+                    component.columnOffset
+                )
+
+                if (found != null) {
+                    return found
+                }
+            }
+        }
+
+        return emptyFillerSlot
+    }
+
+    fun addOffsetComponent(layer: Int, position: GUIPosition, component: OffsetComponent) {
+        val inLayer = layers[layer]?.toMutableMap() ?: mutableMapOf()
+        val atPosition = inLayer[position]?.toMutableList() ?: mutableListOf()
+        atPosition.add(component)
+        inLayer[position] = atPosition
+        layers[layer] = inLayer
+        sortedLayerKeys = layers.keys.sortedDescending()
+    }
+}

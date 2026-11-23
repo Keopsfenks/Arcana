@@ -1,0 +1,283 @@
+package com.keopsfenks.arcana.internal.spigot.gui
+
+import com.keopsfenks.arcana.core.ArcanaPlugin
+import com.keopsfenks.arcana.core.gui.player
+import com.keopsfenks.arcana.core.gui.slot.Slot
+import com.keopsfenks.arcana.internal.gui.menu.ArcanaMenu
+import com.keopsfenks.arcana.internal.gui.menu.MenuHandler
+import com.keopsfenks.arcana.internal.gui.menu.asRenderedInventory
+import com.keopsfenks.arcana.internal.gui.menu.getMenu
+import com.keopsfenks.arcana.internal.gui.menu.renderedInventory
+import com.keopsfenks.arcana.internal.gui.slot.ArcanaSlot
+import com.keopsfenks.arcana.util.MenuUtils
+import org.bukkit.Material
+import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.Listener
+import org.bukkit.event.inventory.ClickType
+import org.bukkit.event.inventory.InventoryAction
+import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryDragEvent
+import org.bukkit.event.player.PlayerItemHeldEvent
+import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.PlayerInventory
+
+/**
+ * The slots of this inventory that a shift-click would move [item] into, in the order vanilla
+ * fills them: partial stacks of the same item first, then as many empty slots as it needs.
+ */
+internal fun Inventory.shiftClickDestinations(item: ItemStack): List<Int> {
+    var remaining = item.amount
+    val destinations = mutableListOf<Int>()
+
+    for ((index, stack) in contents.withIndex()) {
+        if (remaining <= 0) {
+            break
+        }
+
+        if (stack != null && stack.isSimilar(item)) {
+            val stackLimit = stack.maxStackSize.coerceAtMost(maxStackSize)
+
+            if (stack.amount < stackLimit) {
+                destinations += index
+                remaining -= stackLimit - stack.amount
+            }
+        }
+    }
+
+    val emptyLimit = item.maxStackSize.coerceAtMost(maxStackSize)
+
+    for ((index, stack) in contents.withIndex()) {
+        if (remaining <= 0) {
+            break
+        }
+
+        if (stack == null || stack.type == Material.AIR) {
+            destinations += index
+            remaining -= emptyLimit
+        }
+    }
+
+    return destinations
+}
+
+class GUIListener(private val plugin: ArcanaPlugin) : Listener {
+    // Prevents StackOverflow exceptions with poorly implemented custom slots.
+    private val depthLimit = 32
+
+    private fun Slot.handle(
+        player: Player,
+        event: InventoryClickEvent,
+        menu: ArcanaMenu,
+        depth: Int = 0
+    ) {
+        // Always cancel on first depth to prevent bugs with custom slot implementations.
+        if (depth == 0) {
+            event.isCancelled = true
+        }
+
+        if (depth >= depthLimit) {
+            return
+        }
+
+        val delegate = this.getActionableSlot(player, menu)
+
+        if (delegate is ArcanaSlot) {
+            delegate.handleInventoryClick(event, menu)
+
+            if (delegate.shouldRenderOnClick(event.click)) {
+                player.renderActiveMenu()
+            }
+        } else if (delegate === this) {
+            return
+        } else {
+            delegate.handle(player, event, menu, depth + 1)
+        }
+    }
+
+    @EventHandler(
+        priority = EventPriority.HIGH
+    )
+    fun handleSlotClick(event: InventoryClickEvent) {
+        val rendered = event.clickedInventory?.asRenderedInventory() ?: return
+
+        val player = event.whoClicked as? Player ?: return
+
+        val menu = rendered.menu
+
+        val (row, column) = MenuUtils.convertSlotToRowColumn(event.slot, menu.columns)
+
+        menu.getSlot(row, column, player).handle(player, event, menu)
+    }
+
+    @EventHandler(
+        priority = EventPriority.HIGH
+    )
+    fun handleSlotClick(event: InventoryDragEvent) {
+        val rendered = event.view.topInventory.asRenderedInventory() ?: return
+
+        val player = event.whoClicked as? Player ?: return
+
+        val menu = rendered.menu
+
+        val slots = event.inventorySlots
+
+        for (slotID in slots) {
+            val (row, column) = MenuUtils.convertSlotToRowColumn(slotID, menu.columns)
+
+            val slot = menu.getSlot(row, column, player)
+
+            if (slot.isCaptive(player, menu)) {
+                if (!slot.isAllowedCaptive(player, menu, event.oldCursor)) {
+                    event.isCancelled = true
+                } else {
+                    player.renderActiveMenu()
+                }
+            } else {
+                event.isCancelled = true
+            }
+        }
+    }
+
+    @EventHandler(
+        priority = EventPriority.HIGH
+    )
+    fun handleShiftClick(event: InventoryClickEvent) {
+        if (!event.isShiftClick) {
+            return
+        }
+
+        val player = event.whoClicked as? Player ?: return
+
+        val inv = player.openInventory.topInventory
+
+        if (inv == event.clickedInventory) {
+            return
+        }
+
+        val menu = inv.getMenu() ?: return
+
+        val item = event.currentItem ?: return
+
+        val destinations = inv.shiftClickDestinations(item)
+
+        val allowed = destinations.isNotEmpty() && destinations.all { slotID ->
+            val (row, column) = MenuUtils.convertSlotToRowColumn(slotID, menu.columns)
+            val slot = menu.getSlot(row, column, player)
+            slot.isCaptive(player, menu) && slot.isAllowedCaptive(player, menu, item)
+        }
+
+        if (allowed) {
+            player.renderActiveMenu()
+        } else {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    fun handleClose(event: InventoryCloseEvent) {
+        val menu = event.inventory.getMenu() as? ArcanaMenu ?: return
+
+        menu.refresh(event.player as Player)
+
+        menu.handleClose(event)
+
+        plugin.scheduler.global().run { MenuHandler.unregisterInventory(event.inventory) }
+    }
+
+    @EventHandler(
+        priority = EventPriority.HIGHEST
+    )
+    fun preventNumberKey(event: PlayerItemHeldEvent) {
+        val player = event.player
+
+        val rendered = player.renderedInventory ?: return
+
+        if (rendered.menu.allowsChangingHeldItem()) {
+            player.renderActiveMenu()
+            return
+        }
+
+        event.isCancelled = true
+    }
+
+    @EventHandler(
+        priority = EventPriority.HIGHEST
+    )
+    fun preventMovingHeld(event: InventoryClickEvent) {
+        val player = event.player
+
+        val rendered = player.renderedInventory ?: return
+
+        if (rendered.menu.allowsChangingHeldItem()) {
+            return
+        }
+
+        if (event.clickedInventory !is PlayerInventory) {
+            return
+        }
+
+        if (event.slot == player.inventory.heldItemSlot) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(
+        priority = EventPriority.LOW
+    )
+    fun preventNumberKey2(event: PlayerItemHeldEvent) {
+        val player = event.player
+
+        val rendered = player.renderedInventory ?: return
+
+        if (rendered.menu.allowsChangingHeldItem()) {
+            return
+        }
+
+        event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    fun preventNumberKey(event: InventoryClickEvent) {
+        val player = event.player
+
+        if (event.click != ClickType.NUMBER_KEY) {
+            return
+        }
+
+        val rendered = player.renderedInventory ?: return
+
+        if (rendered.menu.allowsChangingHeldItem()) {
+            return
+        }
+
+        if (event.hotbarButton == player.inventory.heldItemSlot) {
+            event.isCancelled = true
+        }
+
+        if (event.clickedInventory is PlayerInventory) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler
+    fun temporaryExploitPatch(event: InventoryClickEvent) {
+        if (event.player.renderedInventory == null) {
+            return
+        }
+
+        if (event.action == InventoryAction.COLLECT_TO_CURSOR) {
+            event.isCancelled = true
+        }
+    }
+
+    private fun Player.renderActiveMenu() {
+        val rendered = this.renderedInventory ?: return
+
+        rendered.render()
+        plugin.scheduler.on(this).run { rendered.render() }
+    }
+}

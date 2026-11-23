@@ -1,0 +1,45 @@
+@file:Suppress("DEPRECATION")
+
+package com.keopsfenks.arcana.internal.spigot.integrations.customitems
+
+import com.keopsfenks.arcana.core.integrations.customitems.CustomItemsIntegration
+import com.keopsfenks.arcana.core.items.CustomItem
+import com.keopsfenks.arcana.core.items.Items
+import com.keopsfenks.arcana.core.items.TestableItem
+import com.keopsfenks.arcana.core.items.provider.ItemProvider
+import com.keopsfenks.arcana.util.NamespacedKeyUtils
+import java.util.function.Predicate
+import me.wolfyscript.utilities.util.NamespacedKey
+import me.wolfyscript.utilities.util.Registry
+import org.bukkit.inventory.ItemStack
+
+class CustomItemsCustomCrafting : CustomItemsIntegration {
+    override fun registerProvider() {
+        Items.registerItemProvider(CustomCraftingProvider())
+    }
+
+    override fun getPluginName(): String {
+        return "CustomCrafting"
+    }
+
+    private class CustomCraftingProvider : ItemProvider("customcrafting") {
+        override fun provideForKey(key: String): TestableItem? {
+            val nKey = key.replace("customcrafting:", "", ignoreCase = true)
+            val itemKey = NamespacedKey("customcrafting", nKey)
+            val item = Registry.CUSTOM_ITEMS.get(itemKey) ?: return null
+            val namespacedKey = NamespacedKeyUtils.create("customcrafting", key)
+            val stack = item.create(1)
+            return CustomItem(
+                namespacedKey,
+                Predicate { test: ItemStack ->
+                    val customStack =
+                        me.wolfyscript.utilities.api.inventory.custom_items.CustomItem.getByItemStack(test)
+                            ?: return@Predicate false
+                    val iKey = customStack.namespacedKey ?: return@Predicate false
+                    iKey.equals(key)
+                },
+                stack
+            )
+        }
+    }
+}

@@ -1,0 +1,145 @@
+package com.keopsfenks.arcana.core.events;
+
+import java.util.List;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Event called when an entity is killed by another entity.
+ * <p>
+ * Not sure why spigot doesn't have this event normally.
+ * <p>
+ * It is called from an {@link EntityDeathEvent} when the victim was recently damaged by
+ * another entity, so it is not called for deaths with no entity responsible (fall damage,
+ * fire, etc.).
+ * <p>
+ * The event is not cancellable, as the entity has already died. To modify the outcome,
+ * mutate the list returned by {@link #getDrops()} or use {@link #getDeathEvent()}.
+ */
+public class EntityDeathByEntityEvent extends Event {
+    /**
+     * Internal, for bukkit.
+     */
+    private static final HandlerList HANDLERS = new HandlerList();
+
+    /**
+     * The {@link LivingEntity} killed.
+     */
+    private final LivingEntity victim;
+
+    /**
+     * The {@link Entity} that killed.
+     */
+    private final Entity killer;
+
+    /**
+     * The associated {@link EntityDeathEvent}.
+     */
+    private final EntityDeathEvent deathEvent;
+
+    /**
+     * The entity drops.
+     */
+    private final List<ItemStack> drops;
+
+    /**
+     * The xp to drop.
+     */
+    private final int xp;
+
+    /**
+     * Create event based off parameters.
+     *
+     * @param victim     The killed entity.
+     * @param killer     The killer.
+     * @param drops      The item drops.
+     * @param xp         The amount of xp to drop.
+     * @param deathEvent The associated {@link EntityDeathEvent}.
+     */
+    public EntityDeathByEntityEvent(@NotNull final LivingEntity victim,
+                                    @NotNull final Entity killer,
+                                    @NotNull final List<ItemStack> drops,
+                                    final int xp,
+                                    @NotNull final EntityDeathEvent deathEvent) {
+        this.victim = victim;
+        this.killer = killer;
+        this.drops = drops;
+        this.xp = xp;
+        this.deathEvent = deathEvent;
+    }
+
+    /**
+     * Internal bukkit.
+     *
+     * @return Get the handlers.
+     */
+    @Override
+    public @NotNull HandlerList getHandlers() {
+        return HANDLERS;
+    }
+
+    /**
+     * Internal bukkit.
+     *
+     * @return The handlers.
+     */
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
+    }
+
+    /**
+     * Get the entity killed.
+     *
+     * @return The victim.
+     */
+    public LivingEntity getVictim() {
+        return this.victim;
+    }
+
+    /**
+     * Get the killer.
+     *
+     * @return The killer.
+     */
+    public Entity getKiller() {
+        return this.killer;
+    }
+
+    /**
+     * Get the death event that caused this event.
+     *
+     * @return The death event.
+     */
+    public EntityDeathEvent getDeathEvent() {
+        return this.deathEvent;
+    }
+
+    /**
+     * Get the drops.
+     * <p>
+     * This is the live drop list of the backing {@link EntityDeathEvent}, so modifying it
+     * modifies what the entity actually drops.
+     *
+     * @return The drops.
+     */
+    public List<ItemStack> getDrops() {
+        return this.drops;
+    }
+
+    /**
+     * Get the experience dropped.
+     * <p>
+     * This is a snapshot taken when the event was created; to change the dropped experience,
+     * use {@link #getDeathEvent()}.
+     *
+     * @return The experience.
+     */
+    public int getXp() {
+        return this.xp;
+    }
+}

@@ -1,0 +1,46 @@
+package com.keopsfenks.arcana.core.integrations.customblocks;
+
+import com.keopsfenks.arcana.core.integrations.IntegrationRegistry;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Class to handle custom block integrations.
+ */
+public final class CustomBlocksManager {
+    /**
+     * A set of all registered integrations.
+     */
+    private static final IntegrationRegistry<CustomBlocksIntegration> REGISTRY = new IntegrationRegistry<>();
+
+    /**
+     * Register a new integration.
+     *
+     * @param integration The integration to register.
+     */
+    public static void register(@NotNull final CustomBlocksIntegration integration) {
+        REGISTRY.register(integration);
+    }
+
+    /**
+     * Register the custom blocks of every registered integration into arcana.
+     *
+     * @see com.keopsfenks.arcana.core.blocks.Blocks
+     */
+    public static void registerAllBlocks() {
+        REGISTRY.forEachSafely(CustomBlocksIntegration::registerAllBlocks);
+    }
+
+    /**
+     * Register the {@link com.keopsfenks.arcana.core.blocks.provider.BlockProvider}s of every
+     * registered integration into arcana.
+     *
+     * @see com.keopsfenks.arcana.core.blocks.Blocks
+     */
+    public static void registerProviders() {
+        REGISTRY.forEachSafely(CustomBlocksIntegration::registerProvider);
+    }
+
+    private CustomBlocksManager() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+}

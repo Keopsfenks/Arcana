@@ -1,8 +1,5 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: Auxilor Community Discord
-    url: https://discord.gg/ZcwpSsE/
-    about: Join the Auxilor discord to get help from support staff and the general community!
-  - name: The most common issues people have
-    url: https://github.com/Auxilor/eco/issues/78
-    about: Check the list of known common issues to see if your issue has already been solved
+  - name: Arcana documentation
+    url: https://github.com/Keopsfenks/Arcana/tree/master/docs/wiki
+    about: Read the Arcana configuration and integration documentation.

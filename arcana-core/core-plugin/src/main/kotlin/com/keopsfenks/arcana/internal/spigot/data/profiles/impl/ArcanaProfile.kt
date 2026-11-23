@@ -1,0 +1,119 @@
+package com.keopsfenks.arcana.internal.spigot.data.profiles.impl
+
+import com.keopsfenks.arcana.core.data.Profile
+import com.keopsfenks.arcana.core.data.keys.PersistentDataKey
+import com.keopsfenks.arcana.internal.spigot.data.profiles.ProfileHandler
+import com.keopsfenks.arcana.internal.spigot.data.profiles.isSavedLocally
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import java.util.function.UnaryOperator
+import kotlin.concurrent.read
+import kotlin.concurrent.write
+
+abstract class ArcanaProfile(
+    val uuid: UUID,
+    private val handler: ProfileHandler
+) : Profile {
+    private val data = ConcurrentHashMap<PersistentDataKey<*>, Any>()
+
+    private val invalidations = AtomicInteger()
+
+    private val invalidationLock = ReentrantReadWriteLock()
+
+    override fun <T : Any> write(key: PersistentDataKey<T>, value: T) {
+        // Queued inside compute so writes to the same key reach the writer in the order they land.
+        this.data.compute(key) { _, _ ->
+            handler.profileWriter.write(uuid, key, value)
+            value
+        }
+    }
+
+    override fun <T : Any> compute(key: PersistentDataKey<T>, function: UnaryOperator<T>): T {
+        while (true) {
+            // Load outside compute: a fetch can block, and read() writes to the same map.
+            read(key)
+
+            @Suppress("UNCHECKED_CAST")
+            val result = this.data.computeIfPresent(key) { _, current ->
+                val value = function.apply(current as T)
+                handler.profileWriter.write(uuid, key, value)
+                value
+            } as T?
+
+            // Null only if the key was invalidated between the read and the compute; load it again.
+            if (result != null) {
+                return result
+            }
+        }
+    }
+
+    override fun <T : Any> read(key: PersistentDataKey<T>): T {
+        @Suppress("UNCHECKED_CAST")
+        if (this.data.containsKey(key)) {
+            return this.data[key] as T
+        }
+
+        // A profile still in data.yml is carried across before it is read, so a read never sees
+        // half a profile. Players are resolved on login instead, off the main thread; this is the
+        // path for everything else - offline lookups, placeholders, admin commands.
+        handler.ensureMigrated(uuid)
+
+        val invalidationsBeforeFetch = invalidations.get()
+
+        val fetched = handler.profileWriter.pendingValue(uuid, key)
+            ?: readStored(key)
+            ?: key.defaultValue
+
+        invalidationLock.read {
+            this.data.compute(key) { _, current ->
+                current ?: fetched.takeIf { invalidations.get() == invalidationsBeforeFetch }
+            }
+        }
+
+        return read(key)
+    }
+
+    private fun <T : Any> readStored(key: PersistentDataKey<T>): T? {
+        return if (key.isSavedLocally) {
+            handler.localHandler.read(uuid, key)
+        } else {
+            handler.defaultHandler.read(uuid, key)
+        }
+    }
+
+    /**
+     * Drop the cached value of [key], so the next read fetches it from the handler again. A value
+     * still waiting to be saved is kept, since the stored one is older.
+     */
+    override fun invalidate(key: PersistentDataKey<*>) {
+        invalidations.incrementAndGet()
+        this.data.computeIfPresent(key) { _, value ->
+            value.takeIf { handler.profileWriter.isPending(uuid, key) }
+        }
+    }
+
+    /**
+     * Drop every cached value that is shared with other servers, keeping the ones only this server
+     * stores and the ones still waiting to be saved.
+     */
+    fun invalidateShared() {
+        invalidationLock.write {
+            invalidations.incrementAndGet()
+            this.data.keys.removeIf { !it.isSavedLocally && !handler.profileWriter.isPending(uuid, it) }
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is ArcanaProfile) {
+            return false
+        }
+
+        return this.uuid == other.uuid
+    }
+
+    override fun hashCode(): Int {
+        return this.uuid.hashCode()
+    }
+}

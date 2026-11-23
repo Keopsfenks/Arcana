@@ -1,0 +1,183 @@
+package com.keopsfenks.arcana.internal.spigot.recipes
+
+import com.keopsfenks.arcana.core.ArcanaPlugin
+import com.keopsfenks.arcana.core.items.TestableItem
+import com.keopsfenks.arcana.core.items.isArcanaEmpty
+import com.keopsfenks.arcana.core.recipe.Recipes
+import com.keopsfenks.arcana.core.recipe.parts.GroupedTestableItems
+import com.keopsfenks.arcana.core.recipe.parts.TestableStack
+import com.keopsfenks.arcana.core.recipe.recipes.CraftingRecipe
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
+import kotlin.math.min
+import org.bukkit.Material
+import org.bukkit.entity.HumanEntity
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.Listener
+import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.PrepareItemCraftEvent
+import org.bukkit.inventory.CraftingInventory
+import org.bukkit.inventory.ItemStack
+
+class StackedRecipeListener(
+    private val plugin: ArcanaPlugin
+) : Listener {
+    private val shiftCrafting: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * Vanilla repeats a shift-click craft while the result matches, taking one item per slot each time.
+     * The stacked craft has already been paid for, so clear the result to end that loop.
+     * Runs at MONITOR so a plugin setting the result at HIGHEST cannot restart the loop.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    fun stopShiftCraftRepeat(event: PrepareItemCraftEvent) {
+        if (event.viewers.none { it.uniqueId in shiftCrafting }) {
+            return
+        }
+
+        event.inventory.result = null
+    }
+
+    /*
+    If you think you can fix this code, you're wrong.
+    Or, pray to whatever god you have that you can figure it out.
+    Best of luck, you're going to need it.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun handleStacks(event: InventoryClickEvent) {
+        val inventory = event.clickedInventory as? CraftingInventory ?: return
+        if (event.slot != 0) {
+            return
+        }
+
+        // Just in case
+        if (inventory.getItem(event.slot).isArcanaEmpty) {
+            return
+        }
+
+        val matrix = inventory.matrix
+
+        val recipe = Recipes.getMatch(matrix) ?: return
+
+        // Get the handler for the type of recipe
+        val handler = handlers.firstOrNull { recipe::class.java.isAssignableFrom(it.recipeType) } ?: return
+
+        var isStackedRecipe = false
+        var maxCraftable = Int.MAX_VALUE
+
+        // Start by calculating the maximum number of items to craft
+        val maxToCraftData = handler.makeData(recipe)
+        for (i in 0..8) {
+            val item = inventory.matrix.getOrNull(i) ?: continue
+            val part = handler.getPart(recipe, i, item, maxToCraftData).let {
+                if (it is GroupedTestableItems) {
+                    it.getMatchingChild(item)
+                } else it
+            } ?: continue
+
+            if (part is TestableStack) {
+                isStackedRecipe = true
+            }
+
+            maxCraftable = min(maxCraftable, Math.floorDiv(item.amount, part.item.amount))
+        }
+
+        if (!isStackedRecipe) {
+            return
+        }
+
+        // Don't allow crafting above the max stack size of the output
+        maxCraftable = min(maxCraftable, Math.floorDiv(recipe.output.maxStackSize, recipe.output.amount))
+
+        // Run this first before the deduction or shift-clicking breaks
+        val existingResult = inventory.result
+
+        if (event.isShiftClick) {
+            val playerId = event.whoClicked.uniqueId
+            shiftCrafting.add(playerId)
+            plugin.scheduler.on(event.whoClicked)
+                .onRetired { shiftCrafting.remove(playerId) }
+                .run { shiftCrafting.remove(playerId) }
+        }
+
+        // Deduct the correct number of items from the inventory
+
+        val deductionData = handler.makeData(recipe)
+        for (i in 0..8) {
+            val item = inventory.matrix.getOrNull(i) ?: continue
+            val part = handler.getPart(recipe, i, item, deductionData).let {
+                if (it is GroupedTestableItems) {
+                    it.getMatchingChild(item)
+                } else it
+            } ?: continue
+
+            val amount = max(
+                if (event.isShiftClick) {
+                    item.amount - (part.item.amount * maxCraftable)
+                } else {
+                    item.amount - part.item.amount
+                }, 0
+            )
+
+            // Anti-Underflow
+            if (amount == 0) {
+                @Suppress("DEPRECATION")
+                item.type = Material.AIR
+            }
+            item.amount = amount
+
+            /*
+            Everything below this point is unreadable garbage
+            If you want to modify the behaviour of stacked recipes, then
+            change the code above. The code after this just sets the items
+            in the inventory, despite spigot trying to stop me.
+             */
+
+            // Do it twice because spigot hates me
+            // Everything has to be cloned because the inventory changes the item
+            inventory.matrix[i] = item.clone() // Use un-cloned version first
+            // This isn't even funny anymore
+            runTwice(event.whoClicked) {
+                val newItem = item.clone()
+                // Just use every method possible to set the item
+                inventory.matrix[i] = newItem
+                inventory.setItem(i + 1, newItem)
+                // Just to be safe, modify the instance (safe check) Using ?. causes a warning.
+                @Suppress("SENSELESS_COMPARISON") // I hate compiler warnings
+                if (inventory.matrix[i] != null) {
+                    inventory.matrix[i]?.amount = amount
+                }
+            }
+        }
+
+        // Multiply the result by the amount to craft if shift-clicking
+        existingResult ?: return
+
+        // Modify the item and then set it
+        if (event.isShiftClick) {
+            existingResult.amount *= maxCraftable
+        }
+        inventory.result = existingResult
+    }
+
+    private fun runTwice(player: HumanEntity, block: () -> Unit) {
+        block()
+        plugin.scheduler.on(player).run(block)
+    }
+
+    companion object {
+        private val handlers = mutableListOf<StackedRecipeHandler>()
+
+        fun registerHandler(handler: StackedRecipeHandler) {
+            handlers.add(handler)
+        }
+    }
+}
+
+interface StackedRecipeHandler {
+    fun makeData(recipe: CraftingRecipe): Any?
+    fun getPart(recipe: CraftingRecipe, position: Int, item: ItemStack, data: Any?): TestableItem?
+    val recipeType: Class<out CraftingRecipe>
+}

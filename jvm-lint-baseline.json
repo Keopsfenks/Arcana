@@ -3,827 +3,827 @@
   "findings": [
     {
       "code": "CX016",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/Eco.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/Arcana.java",
       "message": "File has 1204 lines, over the limit of 600"
     },
     {
       "code": "CX016",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/EcoPlugin.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/ArcanaPlugin.java",
       "message": "File has 1416 lines, over the limit of 600"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/EcoPlugin.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/ArcanaPlugin.java",
       "message": "`ArrayList` in shared field; use `CopyOnWriteArrayList`"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/EcoPlugin.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/ArcanaPlugin.java",
       "message": "`HashSet` in shared field; use `ConcurrentHashMap.newKeySet()`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/EcoPlugin.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/ArcanaPlugin.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/EcoPlugin.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/ArcanaPlugin.java",
       "message": "Commented-out code"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/EcoPlugin.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/ArcanaPlugin.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "U006",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/EcoPlugin.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/ArcanaPlugin.java",
       "message": "Variable `before` is unused"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/PluginProps.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/PluginProps.java",
       "message": "`HashMap` in shared field; use `ConcurrentHashMap`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/blocks/Blocks.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/blocks/Blocks.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/blocks/Blocks.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/blocks/Blocks.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/blocks/Blocks.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/blocks/Blocks.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/command/CommandBase.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/command/CommandBase.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/config/Configs.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/config/Configs.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "CX016",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/config/interfaces/Config.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/config/interfaces/Config.java",
       "message": "File has 751 lines, over the limit of 600"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/config/interfaces/Config.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/config/interfaces/Config.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/config/interfaces/Config.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/config/interfaces/Config.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/config/interfaces/LoadableConfig.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/config/interfaces/LoadableConfig.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/config/updating/ConfigHandler.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/config/updating/ConfigHandler.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/config/updating/ConfigUpdater.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/config/updating/ConfigUpdater.java",
       "message": "Wildcard import `java.lang.annotation.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/data/handlers/PersistentDataHandler.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/data/handlers/PersistentDataHandler.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/data/handlers/PersistentDataHandler.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/data/handlers/PersistentDataHandler.java",
       "message": "Wildcard import `java.util.concurrent.*`"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/data/keys/PersistentDataKeyType.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/data/keys/PersistentDataKeyType.java",
       "message": "`HashMap` in shared field; use `ConcurrentHashMap`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/data/keys/PersistentDataKeyType.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/data/keys/PersistentDataKeyType.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/display/DisplayModule.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/display/DisplayModule.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/Entities.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/Entities.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/Entities.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/Entities.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/CustomGoal.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/CustomGoal.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/EntityGoals.java",
-      "message": "Wildcard import `com.willfp.eco.core.entities.ai.entity.*`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/EntityGoals.java",
+      "message": "Wildcard import `com.keopsfenks.arcana.core.entities.ai.entity.*`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/TargetGoals.java",
-      "message": "Wildcard import `com.willfp.eco.core.entities.ai.target.*`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/TargetGoals.java",
+      "message": "Wildcard import `com.keopsfenks.arcana.core.entities.ai.target.*`"
     },
     {
       "code": "U006",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/entity/EntityGoalUseItem.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/entity/EntityGoalUseItem.java",
       "message": "Variable `filter` is unused"
     },
     {
       "code": "U006",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/target/TargetGoalNearestAttackable.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/target/TargetGoalNearestAttackable.java",
       "message": "Variable `filter` is unused"
     },
     {
       "code": "U006",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/target/TargetGoalNearestAttackableWitch.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/target/TargetGoalNearestAttackableWitch.java",
       "message": "Variable `filter` is unused"
     },
     {
       "code": "U006",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/target/TargetGoalNearestHealableRaider.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/target/TargetGoalNearestHealableRaider.java",
       "message": "Variable `filter` is unused"
     },
     {
       "code": "U006",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/ai/target/TargetGoalNonTameRandom.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/ai/target/TargetGoalNonTameRandom.java",
       "message": "Variable `filter` is unused"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/entities/tag/EntityTag.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/entities/tag/EntityTag.java",
       "message": "Fully qualified type `org.bukkit.Location`; import `Location`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/extensions/Extension.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/extensions/Extension.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/gui/GUIComponent.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/gui/GUIComponent.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/gui/menu/Menu.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/gui/menu/Menu.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/gui/slot/ConfigSlot.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/gui/slot/ConfigSlot.java",
       "message": "`HashMap` in shared field; use `ConcurrentHashMap`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/gui/slot/ConfigSlot.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/gui/slot/ConfigSlot.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/gui/slot/ConfigSlot.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/gui/slot/ConfigSlot.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/customblocks/CustomBlocksIntegration.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/customblocks/CustomBlocksIntegration.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/customitems/CustomItemsIntegration.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/customitems/CustomItemsIntegration.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/hologram/Hologram.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/hologram/Hologram.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/hologram/HologramOptions.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/hologram/HologramOptions.java",
       "message": "`ArrayList` in shared field; use `CopyOnWriteArrayList`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/placeholder/PlaceholderManager.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/placeholder/PlaceholderManager.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/placeholder/PlaceholderManager.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/placeholder/PlaceholderManager.java",
       "message": "Fully qualified type `java.util.regex.Pattern`; import `Pattern`"
     },
     {
       "code": "IM002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/placeholder/PlaceholderManager.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/placeholder/PlaceholderManager.java",
       "message": "Fully qualified call through `java.util.regex.Pattern`; import `Pattern`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/placeholder/PlaceholderManager.java",
-      "message": "Wildcard import `com.willfp.eco.core.placeholder.*`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/placeholder/PlaceholderManager.java",
+      "message": "Wildcard import `com.keopsfenks.arcana.core.placeholder.*`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/placeholder/PlaceholderManager.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/placeholder/PlaceholderManager.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/integrations/shop/ShopIntegration.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/integrations/shop/ShopIntegration.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/CustomItem.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/CustomItem.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "CX016",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/Items.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/Items.java",
       "message": "File has 874 lines, over the limit of 600"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/Items.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/Items.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/Items.java",
-      "message": "Wildcard import `com.willfp.eco.core.recipe.parts.*`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/Items.java",
+      "message": "Wildcard import `com.keopsfenks.arcana.core.recipe.parts.*`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/Items.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/Items.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/Items.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/Items.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/builder/AbstractItemStackBuilder.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/builder/AbstractItemStackBuilder.java",
       "message": "`LinkedHashMap` in shared field; use `ConcurrentHashMap`"
     },
     {
       "code": "IC001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/items/builder/AbstractItemStackBuilder.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/items/builder/AbstractItemStackBuilder.java",
       "message": "Trailing comment on a code line"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/lookup/LookupHandler.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/lookup/LookupHandler.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/packet/PacketListener.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/packet/PacketListener.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/particle/impl/EmptyParticle.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/particle/impl/EmptyParticle.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/particle/impl/SimpleParticle.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/particle/impl/SimpleParticle.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/placeholder/context/MergedInjectableContext.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/placeholder/context/MergedInjectableContext.java",
       "message": "`HashSet` in shared field; use `ConcurrentHashMap.newKeySet()`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/placeholder/context/MergedInjectableContext.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/placeholder/context/MergedInjectableContext.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/placeholder/context/PlaceholderContext.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/placeholder/context/PlaceholderContext.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/placeholder/context/PlaceholderContext.java",
-      "message": "Fully qualified type `com.willfp.eco.core.math.MathContext`; import `MathContext`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/placeholder/context/PlaceholderContext.java",
+      "message": "Fully qualified type `com.keopsfenks.arcana.core.math.MathContext`; import `MathContext`"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/CombinedDisplayPrice.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/CombinedDisplayPrice.java",
       "message": "`ArrayList` in shared field; use `CopyOnWriteArrayList`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/CombinedDisplayPrice.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/CombinedDisplayPrice.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/Price.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/Price.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/PriceFactory.java",
-      "message": "Fully qualified type `com.willfp.eco.core.math.MathContext`; import `MathContext`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/PriceFactory.java",
+      "message": "Fully qualified type `com.keopsfenks.arcana.core.math.MathContext`; import `MathContext`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/Prices.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/Prices.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/Prices.java",
-      "message": "Fully qualified type `com.willfp.eco.core.math.MathContext`; import `MathContext`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/Prices.java",
+      "message": "Fully qualified type `com.keopsfenks.arcana.core.math.MathContext`; import `MathContext`"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/impl/PriceEconomy.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/impl/PriceEconomy.java",
       "message": "`HashMap` in shared field; use `ConcurrentHashMap`"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/impl/PriceEconomy.java",
-      "message": "Fully qualified type `com.willfp.eco.core.math.MathContext`; import `MathContext`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/impl/PriceEconomy.java",
+      "message": "Fully qualified type `com.keopsfenks.arcana.core.math.MathContext`; import `MathContext`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/impl/PriceFree.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/impl/PriceFree.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/impl/PriceItem.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/impl/PriceItem.java",
       "message": "`HashMap` in shared field; use `ConcurrentHashMap`"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/price/impl/PriceItem.java",
-      "message": "Fully qualified type `com.willfp.eco.core.math.MathContext`; import `MathContext`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/price/impl/PriceItem.java",
+      "message": "Fully qualified type `com.keopsfenks.arcana.core.math.MathContext`; import `MathContext`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/proxy/ProxyConstants.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/proxy/ProxyConstants.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "F008",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/Recipes.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/Recipes.java",
       "message": "Shared mutable `lastScheduledRegistration` without `volatile` or an atomic"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/Recipes.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/Recipes.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "U006",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/Recipes.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/Recipes.java",
       "message": "Variable `namespacedKey` is unused"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/recipes/ShapedCraftingRecipe.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/recipes/ShapedCraftingRecipe.java",
       "message": "`ArrayList` in shared field; use `CopyOnWriteArrayList`"
     },
     {
       "code": "IC001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/recipes/ShapedCraftingRecipe.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/recipes/ShapedCraftingRecipe.java",
       "message": "Trailing comment on a code line"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/recipes/ShapelessCraftingRecipe.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/recipes/ShapelessCraftingRecipe.java",
       "message": "`ArrayList` in shared field; use `CopyOnWriteArrayList`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/recipes/ShapelessCraftingRecipe.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/recipes/ShapelessCraftingRecipe.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/workstation/CrafterRecipe.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/workstation/CrafterRecipe.java",
       "message": "`ArrayList` in shared field; use `CopyOnWriteArrayList`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/recipe/workstation/CrafterRecipe.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/recipe/workstation/CrafterRecipe.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/registry/Registrable.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/registry/Registrable.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/registry/Registry.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/registry/Registry.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/registry/Registry.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/registry/Registry.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/core/version/Version.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/core/version/Version.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/BlockUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/BlockUtils.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/BlockUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/BlockUtils.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/BlockUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/BlockUtils.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/DurabilityUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/DurabilityUtils.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "F001",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/LegacyToMiniMessage.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/LegacyToMiniMessage.java",
       "message": "`ArrayList` in shared field; use `CopyOnWriteArrayList`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/ListUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/ListUtils.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/NumberUtils.java",
-      "message": "Fully qualified type `com.willfp.eco.core.math.MathContext`; import `MathContext`"
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/NumberUtils.java",
+      "message": "Fully qualified type `com.keopsfenks.arcana.core.math.MathContext`; import `MathContext`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/NumberUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/NumberUtils.java",
       "message": "Wildcard import `java.util.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/PlayerUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/PlayerUtils.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/PlayerUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/PlayerUtils.java",
       "message": "Wildcard import `org.bukkit.entity.*`"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/PotionUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/PotionUtils.java",
       "message": "Fully qualified type `org.bukkit.potion.PotionData`; import `PotionData`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/SoundUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/SoundUtils.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "CX016",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/StringUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/StringUtils.java",
       "message": "File has 1106 lines, over the limit of 600"
     },
     {
       "code": "IC001",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/StringUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/StringUtils.java",
       "message": "Trailing comment on a code line"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/StringUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/StringUtils.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/TeamUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/TeamUtils.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "PF012",
-      "path": "eco-api/src/main/java/com/willfp/eco/util/TeamUtils.java",
+      "path": "arcana-api/src/main/java/com/keopsfenks/arcana/util/TeamUtils.java",
       "message": "Enum `values()` in a loop; cache the array in a static field"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/HologramOptionsTest.java",
+      "path": "arcana-api/src/test/java/HologramOptionsTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/test/java/HologramOptionsTest.java",
+      "path": "arcana-api/src/test/java/HologramOptionsTest.java",
       "message": "Fully qualified type `java.util.ArrayList`; import `ArrayList`"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/test/java/HologramOptionsTest.java",
+      "path": "arcana-api/src/test/java/HologramOptionsTest.java",
       "message": "Wildcard import `org.junit.jupiter.api.Assertions.*`"
     },
     {
       "code": "IC003",
-      "path": "eco-api/src/test/java/NumberUtilsTest.java",
+      "path": "arcana-api/src/test/java/NumberUtilsTest.java",
       "message": "Commented-out code"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/PricesTest.java",
+      "path": "arcana-api/src/test/java/PricesTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM001",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/data/ExternalDataStoreTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/data/ExternalDataStoreTest.java",
       "message": "Fully qualified type `java.util.ArrayList`; import `ArrayList`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/data/handlers/PersistentDataHandlerTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/data/handlers/PersistentDataHandlerTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/display/DisplayLineTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/display/DisplayLineTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/leaderboard/LeaderboardTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/leaderboard/LeaderboardTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/leaderboard/TallyCountsTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/leaderboard/TallyCountsTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/LevelCurveTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/LevelCurveTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/LevelCurveTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/LevelCurveTest.java",
       "message": "Wildcard import `org.junit.jupiter.api.Assertions.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/LevelLadderTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/LevelLadderTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/LevelLadderTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/LevelLadderTest.java",
       "message": "Wildcard import `org.junit.jupiter.api.Assertions.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/LevelProgressionTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/LevelProgressionTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/LevelProgressionTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/LevelProgressionTest.java",
       "message": "Wildcard import `org.junit.jupiter.api.Assertions.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/ProgressionPlaceholdersTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/ProgressionPlaceholdersTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/test/java/com/willfp/eco/core/progression/ProgressionPlaceholdersTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/core/progression/ProgressionPlaceholdersTest.java",
       "message": "Wildcard import `org.junit.jupiter.api.Assertions.*`"
     },
     {
       "code": "IC002",
-      "path": "eco-api/src/test/java/com/willfp/eco/util/NumericalPermissionsTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/util/NumericalPermissionsTest.java",
       "message": "Comment inside a function body"
     },
     {
       "code": "IM003",
-      "path": "eco-api/src/test/java/com/willfp/eco/util/NumericalPermissionsTest.java",
+      "path": "arcana-api/src/test/java/com/keopsfenks/arcana/util/NumericalPermissionsTest.java",
       "message": "Wildcard import `org.junit.jupiter.api.Assertions.*`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-backend/src/main/kotlin/com/willfp/eco/internal/fast/InternalNamespacedKeyFactory.kt",
+      "path": "arcana-core/core-backend/src/main/kotlin/com/keopsfenks/arcana/internal/fast/InternalNamespacedKeyFactory.kt",
       "message": "Unused function `create`"
     },
     {
       "code": "U001",
-      "path": "eco-core/core-backend/src/main/kotlin/com/willfp/eco/internal/gui/menu/RenderedInventory.kt",
+      "path": "arcana-core/core-backend/src/main/kotlin/com/keopsfenks/arcana/internal/gui/menu/RenderedInventory.kt",
       "message": "Unused interface `TopInventoryProxy`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-nms/common/src/main/kotlin/com/willfp/eco/internal/spigot/proxy/common/NMSCommons.kt",
+      "path": "arcana-core/core-nms/common/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/proxy/common/NMSCommons.kt",
       "message": "Unused function `addBukkitRecipeNoResend`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-nms/common/src/main/kotlin/com/willfp/eco/internal/spigot/proxy/common/NMSCommons.kt",
+      "path": "arcana-core/core-nms/common/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/proxy/common/NMSCommons.kt",
       "message": "Unused function `removeBukkitRecipeNoResend`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-nms/common/src/main/kotlin/com/willfp/eco/internal/spigot/proxy/common/NMSCommons.kt",
+      "path": "arcana-core/core-nms/common/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/proxy/common/NMSCommons.kt",
       "message": "Unused function `resendBukkitRecipes`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-nms/v26_3/src/main/kotlin/com/willfp/eco/internal/spigot/proxy/v26_3/DatapackCodec.kt",
+      "path": "arcana-core/core-nms/v26_3/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/proxy/v26_3/DatapackCodec.kt",
       "message": "Unused function `canSerialize`"
     },
     {
       "code": "U001",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/mongodb/internal/diagnostics/logging/Loggers.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/mongodb/internal/diagnostics/logging/Loggers.kt",
       "message": "Unused object `Loggers`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/discord/DiscordWebhookClient.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/discord/DiscordWebhookClient.kt",
       "message": "Unused function `sendContentWithWait`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/discord/DiscordWebhookClient.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/discord/DiscordWebhookClient.kt",
       "message": "Unused function `sendContent`"
     },
     {
       "code": "U001",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/data/handlers/impl/LegacyMongoDBPersistentDataHandler.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/data/handlers/impl/LegacyMongoDBPersistentDataHandler.kt",
       "message": "Unused class `LegacyMongoDBPersistentDataHandler`"
     },
     {
       "code": "U001",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/data/handlers/impl/LegacyMySQLPersistentDataHandler.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/data/handlers/impl/LegacyMySQLPersistentDataHandler.kt",
       "message": "Unused class `LegacyMySQLPersistentDataHandler`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/data/profiles/ProfileHandler.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/data/profiles/ProfileHandler.kt",
       "message": "Unused function `unloadProfile`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/hologram/EcoHologram.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/hologram/ArcanaHologram.kt",
       "message": "Unused function `getWorldLocation`"
     },
     {
       "code": "U008",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/integrations/bstats/PublishPlatform.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/integrations/bstats/PublishPlatform.kt",
       "message": "Unused enum entry `BUILTBYBIT`"
     },
     {
       "code": "U008",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/integrations/bstats/PublishPlatform.kt",
-      "message": "Unused enum entry `ECOHUB`"
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/integrations/bstats/PublishPlatform.kt",
+      "message": "Unused enum entry `ARCANAHUB`"
     },
     {
       "code": "U008",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/integrations/bstats/PublishPlatform.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/integrations/bstats/PublishPlatform.kt",
       "message": "Unused enum entry `MCMODELS`"
     },
     {
       "code": "U008",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/integrations/bstats/PublishPlatform.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/integrations/bstats/PublishPlatform.kt",
       "message": "Unused enum entry `MODRINTH`"
     },
     {
       "code": "U008",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/integrations/bstats/PublishPlatform.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/integrations/bstats/PublishPlatform.kt",
       "message": "Unused enum entry `POLYMART`"
     },
     {
       "code": "U008",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/integrations/bstats/PublishPlatform.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/integrations/bstats/PublishPlatform.kt",
       "message": "Unused enum entry `SPIGOT`"
     },
     {
       "code": "U001",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/integrations/guidetection/GUIDetectionDeluxeMenus.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/integrations/guidetection/GUIDetectionDeluxeMenus.kt",
       "message": "Unused class `GUIDetectionDeluxeMenus`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/CompiledExpression.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/CompiledExpression.kt",
       "message": "Unused function `clone`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/Variable.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/Variable.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/data/CharTree.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/data/CharTree.kt",
       "message": "Unused function `get`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/functional/ArgumentList.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/functional/ArgumentList.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/functional/Function.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/functional/Function.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/functional/FunctionCall.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/functional/FunctionCall.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/BinaryOperation.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/BinaryOperation.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/BinaryOperator.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/BinaryOperator.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/Constant.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/Constant.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/LiteralValue.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/LiteralValue.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/Token.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/Token.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/UnaryOperation.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/UnaryOperation.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/UnaryOperator.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/UnaryOperator.kt",
       "message": "Unused function `getPriority`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/math/token/UnaryOperator.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/math/token/UnaryOperator.kt",
       "message": "Unused function `getType`"
     },
     {
       "code": "U002",
-      "path": "eco-core/core-plugin/src/main/kotlin/com/willfp/eco/internal/spigot/proxies/PlayerHandlerProxy.kt",
+      "path": "arcana-core/core-plugin/src/main/kotlin/com/keopsfenks/arcana/internal/spigot/proxies/PlayerHandlerProxy.kt",
       "message": "Unused function `applyMending`"
     }
   ]

@@ -25,7 +25,7 @@ If applicable, add screenshots to help explain your problem.
 
 **Server Information (please complete the following information):**
 - Version: (output of `/ver` command)
-- Version of plugin and eco (`/ver eco`, `/ver <plugin>`)
+- Version of plugin and arcana (`/ver arcana`, `/ver <plugin>`)
 
 **Additional context**
 Add any other context about the problem here.

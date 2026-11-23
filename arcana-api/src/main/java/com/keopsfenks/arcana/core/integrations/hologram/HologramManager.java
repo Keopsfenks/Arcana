@@ -1,0 +1,44 @@
+package com.keopsfenks.arcana.core.integrations.hologram;
+
+import com.keopsfenks.arcana.core.Arcana;
+import java.util.List;
+import org.bukkit.Location;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Class to create holograms.
+ * <p>
+ * Unlike the other classes in this package's siblings, this does not delegate to third-party
+ * plugin integrations: holograms are created by arcana itself and are always available.
+ */
+public final class HologramManager {
+    /**
+     * Create a hologram with default options.
+     *
+     * @param location The location.
+     * @param contents The contents for the hologram, one entry per line.
+     * @return The hologram.
+     */
+    @NotNull
+    public static Hologram createHologram(@NotNull final Location location,
+                                          @NotNull final List<String> contents) {
+        return createHologram(location, HologramOptions.builder().contents(contents).build());
+    }
+
+    /**
+     * Create a hologram with custom options.
+     *
+     * @param location The location.
+     * @param options  The hologram options.
+     * @return The hologram.
+     */
+    @NotNull
+    public static Hologram createHologram(@NotNull final Location location,
+                                          @NotNull final HologramOptions options) {
+        return Arcana.get().createHologram(location, options);
+    }
+
+    private HologramManager() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+}

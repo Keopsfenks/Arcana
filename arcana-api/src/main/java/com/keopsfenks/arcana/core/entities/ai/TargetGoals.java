@@ -1,0 +1,110 @@
+package com.keopsfenks.arcana.core.entities.ai;
+
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Maps;
+import com.keopsfenks.arcana.core.config.interfaces.Config;
+import com.keopsfenks.arcana.core.entities.ai.target.*;
+import com.keopsfenks.arcana.core.serialization.KeyedDeserializer;
+import java.util.Map;
+import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Mob;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Class to manage target goals.
+ */
+public final class TargetGoals {
+    /**
+     * All registered deserializers.
+     */
+    private static final Map<NamespacedKey, KeyedDeserializer<? extends TargetGoal<?>>> BY_KEY =
+            Maps.synchronizedBiMap(HashBiMap.<NamespacedKey, KeyedDeserializer<? extends TargetGoal<?>>>create());
+
+    static {
+        register(TargetGoalDefendVillage.DESERIALIZER);
+        register(TargetGoalHurtBy.DESERIALIZER);
+        register(TargetGoalNearestAttackable.DESERIALIZER);
+        register(TargetGoalNearestAttackableWitch.DESERIALIZER);
+        register(TargetGoalNearestHealableRaider.DESERIALIZER);
+        register(TargetGoalNonTameRandom.DESERIALIZER);
+        register(TargetGoalOwnerTarget.DESERIALIZER);
+        register(TargetGoalOwnerHurtBy.DESERIALIZER);
+        register(TargetGoalResetUniversalAnger.DESERIALIZER);
+    }
+
+    /**
+     * Get deserializer by key.
+     *
+     * @param key The key.
+     * @return The deserializer, or null if not found.
+     */
+    @Nullable
+    public static KeyedDeserializer<? extends TargetGoal<? extends Mob>> getByKey(@NotNull final NamespacedKey key) {
+        return BY_KEY.get(key);
+    }
+
+    /**
+     * Get deserializer by key, with a defined type (to prevent cluttering code with unsafe casts).
+     *
+     * @param key   The key.
+     * @param clazz The class of the mob that the goal can be applied to.
+     * @param <T>   The type of mob the goal can be applied to.
+     * @return The deserializer, or null if not found.
+     */
+    @Nullable
+    @SuppressWarnings({"unchecked", "unused"})
+    public static <T extends Mob> KeyedDeserializer<TargetGoal<T>> getByKeyOfType(@NotNull final NamespacedKey key,
+                                                                                  @NotNull final Class<T> clazz) {
+        return (KeyedDeserializer<TargetGoal<T>>) BY_KEY.get(key);
+    }
+
+    /**
+     * Apply goal to entity given key and config.
+     * <p>
+     * If the key or config are invalid, the goal will not be applied.
+     *
+     * @param entity   The entity.
+     * @param key      The key.
+     * @param config   The config.
+     * @param priority The priority.
+     * @param <T>      The entity type.
+     * @return The entity, modified if the goal was applied.
+     */
+    @NotNull
+    @SuppressWarnings("unchecked")
+    public static <T extends Mob> T applyToEntity(@NotNull final T entity,
+                                                  @NotNull final NamespacedKey key,
+                                                  @NotNull final Config config,
+                                                  final int priority) {
+        KeyedDeserializer<TargetGoal<T>> deserializer = getByKeyOfType(key, (Class<T>) entity.getClass());
+        if (deserializer == null) {
+            return entity;
+        }
+
+        TargetGoal<T> goal = deserializer.deserialize(config);
+
+        if (goal == null) {
+            return entity;
+        }
+
+        return goal.addToEntity(entity, priority);
+    }
+
+    /**
+     * Register a deserializer for a target goal.
+     *
+     * @param toRegister The deserializer to register.
+     * @param <T>        The type of deserializer.
+     * @return The registered deserializer.
+     */
+    @NotNull
+    public static <T extends KeyedDeserializer<? extends TargetGoal<?>>> T register(@NotNull final T toRegister) {
+        BY_KEY.put(toRegister.getKey(), toRegister);
+        return toRegister;
+    }
+
+    private TargetGoals() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+}

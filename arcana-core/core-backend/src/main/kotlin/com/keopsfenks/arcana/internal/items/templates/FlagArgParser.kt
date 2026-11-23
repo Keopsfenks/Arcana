@@ -1,0 +1,44 @@
+package com.keopsfenks.arcana.internal.items.templates
+
+import com.keopsfenks.arcana.core.items.args.LookupArgParser
+import java.util.function.Predicate
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.ItemMeta
+
+abstract class FlagArgParser(
+    protected val flag: String
+) : LookupArgParser {
+    abstract fun apply(meta: ItemMeta)
+
+    abstract fun test(meta: ItemMeta): Boolean
+
+    override fun parseArguments(args: Array<out String>, meta: ItemMeta): Predicate<ItemStack>? {
+        var has = false
+
+        for (arg in args) {
+            if (arg.equals(flag, true)) {
+                has = true
+            }
+        }
+
+        if (!has) {
+            return null
+        }
+
+        apply(meta)
+
+        return Predicate {
+            val testMeta = it.itemMeta ?: return@Predicate false
+
+            test(testMeta)
+        }
+    }
+
+    override fun serializeBack(meta: ItemMeta): String? {
+        if (!test(meta)) {
+            return null
+        }
+
+        return flag
+    }
+}

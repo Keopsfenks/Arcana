@@ -9,18 +9,18 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-rootProject.name = "eco"
+rootProject.name = "arcana"
 
 // Core
-include(":eco-api")
-include(":eco-core")
-include(":eco-core:core-nms")
-include(":eco-core:core-nms:common")
-include(":eco-core:core-nms:v1_21_8")
-include(":eco-core:core-nms:v1_21_10")
-include(":eco-core:core-nms:v1_21_11")
-include(":eco-core:core-nms:v26_1_2")
-include(":eco-core:core-nms:v26_2")
-include(":eco-core:core-nms:v26_3")
-include(":eco-core:core-plugin")
-include(":eco-core:core-backend")
+include(":arcana-api")
+include(":arcana-core")
+include(":arcana-core:core-nms")
+include(":arcana-core:core-nms:common")
+include(":arcana-core:core-nms:v1_21_8")
+include(":arcana-core:core-nms:v1_21_10")
+include(":arcana-core:core-nms:v1_21_11")
+include(":arcana-core:core-nms:v26_1_2")
+include(":arcana-core:core-nms:v26_2")
+include(":arcana-core:core-nms:v26_3")
+include(":arcana-core:core-plugin")
+include(":arcana-core:core-backend")

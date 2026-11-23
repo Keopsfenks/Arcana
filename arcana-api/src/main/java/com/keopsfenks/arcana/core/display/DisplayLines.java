@@ -1,0 +1,152 @@
+package com.keopsfenks.arcana.core.display;
+
+import com.keopsfenks.arcana.util.StringUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Identifies the lore lines added by display modules.
+ */
+final class DisplayLines {
+    /**
+     * The insertion arcana puts on the component that owns a display line.
+     */
+    static final String MARKER = "arcana:display";
+
+    /**
+     * The legacy prefix arcana has always started display lines with. Stored items still carry
+     * it, so it is recognised for good, whatever happens to the legacy prefix.
+     */
+    static final String LEGACY_PREFIX = "§z";
+
+    /**
+     * If a lore line was added by a display module.
+     * <p>
+     * Display lines are written by arcana through Adventure, so the legacy prefix always ends
+     * up at the start of a component that owns the rest of the line: either the whole line as
+     * plain text, or a parent whose children hold the coloured text after the prefix. Lore
+     * lines are also wrapped in an empty parent to force italics off, so that wrapping is
+     * unwrapped before checking.
+     * <p>
+     * Lore written through Bukkit's {@code ItemMeta#setLore(List)} is built by
+     * {@code CraftChatMessage} instead, which splits a legacy string into flat siblings, so a
+     * prefix written that way is a leaf sitting beside the rest of the line rather than owning
+     * it. Those lines belong to whichever plugin wrote them - AdvancedEnchantments writes its
+     * enchantment descriptions as {@code §z}-prefixed legacy strings - and are left alone.
+     * <p>
+     * Lines arcana renders also carry {@link #MARKER} as their insertion, which survives any
+     * component-level copy and is recognised at any level of wrapping.
+     *
+     * @param line The lore line.
+     * @return If the line is a display line.
+     */
+    static boolean isDisplayLine(@NotNull final Component line) {
+        Component component = unwrap(line);
+
+        if (MARKER.equals(component.insertion())) {
+            return true;
+        }
+
+        return component instanceof TextComponent textComponent
+                && textComponent.content().startsWith(LEGACY_PREFIX);
+    }
+
+    /**
+     * Mark content as a display line.
+     * <p>
+     * The marker goes on a new owner component rather than on the italic wrapper arcana adds when
+     * the lore is set, as that wrapper is recognised by its style.
+     *
+     * @param content      The line content.
+     * @param legacyPrefix If the legacy prefix should start the line.
+     * @return The display line.
+     */
+    @NotNull
+    static Component mark(@NotNull final Component content,
+                          final boolean legacyPrefix) {
+        return Component.text(legacyPrefix ? LEGACY_PREFIX : "")
+                .insertion(MARKER)
+                .append(content);
+    }
+
+    /**
+     * The content of a line without its marker or the legacy prefix.
+     *
+     * @param line The line.
+     * @return The content.
+     */
+    @NotNull
+    static Component withoutPrefix(@NotNull final Component line) {
+        Component component = unwrap(line);
+
+        if (component instanceof TextComponent textComponent
+                && (MARKER.equals(textComponent.insertion()) || textComponent.content().startsWith(LEGACY_PREFIX))) {
+            return textComponent.content(StringUtils.removePrefix(textComponent.content(), LEGACY_PREFIX)).insertion(null);
+        }
+
+        return StringUtils.toComponent(StringUtils.removePrefix(StringUtils.toLegacy(line), LEGACY_PREFIX));
+    }
+
+    /**
+     * If a line may start with the legacy prefix when serialised to legacy text, checked on its
+     * first text without serialising it. Lines this returns false for never start with it.
+     *
+     * @param line The line.
+     * @return If the line may start with the legacy prefix.
+     */
+    static boolean mayStartWithLegacyPrefix(@NotNull final Component line) {
+        String text = firstText(line);
+        return text != null && text.startsWith(LEGACY_PREFIX);
+    }
+
+    @Nullable
+    private static String firstText(@NotNull final Component component) {
+        if (!(component instanceof TextComponent textComponent)) {
+            return "";
+        }
+
+        if (!textComponent.content().isEmpty()) {
+            return textComponent.content();
+        }
+
+        for (Component child : component.children()) {
+            String text = firstText(child);
+
+            if (text != null) {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The component that owns a line, inside the empty parents lore lines are wrapped in to force
+     * italics off.
+     *
+     * @param line The line.
+     * @return The owner.
+     */
+    @NotNull
+    private static Component unwrap(@NotNull final Component line) {
+        Component component = line;
+
+        while (!MARKER.equals(component.insertion())
+                && component instanceof TextComponent textComponent
+                && textComponent.content().isEmpty()
+                && component.children().size() == 1) {
+            component = component.children().get(0);
+        }
+
+        return component;
+    }
+
+    /**
+     * Utility class, cannot be instantiated.
+     */
+    private DisplayLines() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+}

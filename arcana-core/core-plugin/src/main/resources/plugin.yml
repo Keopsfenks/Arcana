@@ -1,0 +1,79 @@
+name: Arcana
+version: ${projectVersion}
+main: com.keopsfenks.arcana.internal.spigot.ArcanaImpl
+api-version: 1.21.8
+authors: [ Keopsfenks ]
+description: Arcana plugin development framework maintained by Semih Gürbüz.
+website: https://github.com/Keopsfenks/Arcana
+load: STARTUP
+folia-supported: true
+
+# Fixes some plugins breaking load order
+loadbefore:
+  - Spartan
+  - CustomCrafting
+  - EconomyShopGUI
+  - EconomyShopGUI-Premium
+  - CMI
+  - DeluxeCombat
+  - ShopGUIPlus
+  - DeluxeMenus
+softdepend:
+  - ItemBridge
+  - HuskClaims
+  - HuskTowns
+  - Terra
+  - WorldGuard
+  - GriefPrevention
+  - Towny
+  - PlotSquared
+  - FactionsUUID
+  - Kingdoms
+  - Matrix
+  - Vulcan
+  - PlaceholderAPI
+  - mcMMO
+  - CombatLogX
+  - ItemsAdder
+  - Oraxen
+  - Nexo
+  - HeadDatabase
+  - Multiverse-Inventories
+  - Essentials
+  - Vault
+  - BentoBox
+  - IridiumSkyblock
+  - SuperiorSkyblock2
+  - FabledSkyBlock
+  - MythicMobs
+  - RPGHorses
+  - zShop
+  - DeluxeSellwands
+  - ModelEngine
+  - BetterModel
+  - PvPManager
+  - DeluxeMenus
+  - UltraEconomy
+  - PlayerPoints
+  - Denizen
+  - RoyaleEconomy
+  - CraftEngine
+  - ExcellentEconomy
+  - ExcellentShop
+  - RedisEconomy
+
+libraries:
+  - com.mysql:mysql-connector-j:9.6.0
+  - org.mariadb.jdbc:mariadb-java-client:2.7.12
+  - org.postgresql:postgresql:42.7.7
+  - org.xerial:sqlite-jdbc:3.51.0.0
+  - com.zaxxer:HikariCP:7.0.2
+  - net.kyori:adventure-platform-bukkit:4.4.1
+  - org.mongodb:mongodb-driver-kotlin-coroutine:5.6.2
+  - redis.clients:jedis:5.2.0
+  - io.hotmoka:toml4j:0.7.3
+  - net.kyori:adventure-api:5.0.1
+  - net.kyori:adventure-text-serializer-gson:5.0.1
+  - net.kyori:adventure-text-serializer-legacy:5.0.1
+  - net.kyori:adventure-text-minimessage:5.0.1
+  - com.github.ben-manes.caffeine:caffeine:3.2.3

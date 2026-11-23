@@ -1,0 +1,150 @@
+package com.keopsfenks.arcana.internal.spigot.proxy.common
+
+import com.keopsfenks.arcana.core.Prerequisite
+import com.keopsfenks.arcana.core.entities.ai.EntityGoal
+import com.keopsfenks.arcana.core.entities.ai.TargetGoal
+import com.keopsfenks.arcana.internal.spigot.proxy.common.ai.EntityGoalFactory
+import com.keopsfenks.arcana.internal.spigot.proxy.common.ai.TargetGoalFactory
+import io.papermc.paper.adventure.PaperAdventure
+import com.mojang.serialization.JsonOps
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.network.chat.Component as NMSComponent
+import net.minecraft.network.chat.ComponentSerialization
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.PathfinderMob
+import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack as NMSItemStack
+import org.bukkit.Bukkit
+import org.bukkit.Material
+import org.bukkit.NamespacedKey
+import org.bukkit.craftbukkit.CraftServer
+import org.bukkit.entity.LivingEntity as BukkitLivingEntity
+import org.bukkit.entity.Mob
+import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.Recipe
+import org.bukkit.persistence.PersistentDataContainer
+import java.util.concurrent.ConcurrentHashMap
+
+private lateinit var impl: CommonsProvider
+
+fun Mob.toPathfinderMob(): PathfinderMob? =
+    impl.toPathfinderMob(this)
+
+fun ItemStack.asNMSStack(): NMSItemStack =
+    impl.asNMSStack(this)
+
+fun NMSItemStack.asBukkitStack(): ItemStack =
+    impl.asBukkitStack(this)
+
+fun ItemStack.mergeIfNeeded(nmsStack: NMSItemStack) =
+    impl.mergeIfNeeded(this, nmsStack)
+
+fun LivingEntity.toBukkitEntity(): BukkitLivingEntity? =
+    impl.toBukkitEntity(this)
+
+fun <T : EntityGoal<*>> T.getVersionSpecificEntityGoalFactory(): EntityGoalFactory<T>? =
+    impl.getVersionSpecificEntityGoalFactory(this)
+
+fun <T : TargetGoal<*>> T.getVersionSpecificEntityGoalFactory(): TargetGoalFactory<T>? =
+    impl.getVersionSpecificTargetGoalFactory(this)
+
+fun addBukkitRecipeNoResend(recipe: Recipe) {
+    impl.addBukkitRecipeNoResend(recipe)
+}
+
+fun resendBukkitRecipes() {
+    impl.resendBukkitRecipes()
+}
+
+fun removeBukkitRecipeNoResend(key: NamespacedKey): Boolean {
+    return impl.removeBukkitRecipeNoResend(key)
+}
+
+private val MATERIAL_TO_ITEM = ConcurrentHashMap<Material, Item>()
+
+fun Material.toItem(): Item =
+    MATERIAL_TO_ITEM.getOrPut(this) {
+        impl.materialToItem(this)
+    }
+
+private val ITEM_TO_MATERIAL = ConcurrentHashMap<Item, Material>()
+
+fun Item.toMaterial(): Material =
+    ITEM_TO_MATERIAL.getOrPut(this) {
+        impl.itemToMaterial(this)
+    }
+
+fun CompoundTag.makePdc(base: Boolean = false): PersistentDataContainer =
+    impl.makePdc(this, base)
+
+fun CompoundTag.setPdc(pdc: PersistentDataContainer?, item: NMSItemStack? = null) =
+    impl.setPdc(this, pdc, item)
+
+fun Player.toNMS(): ServerPlayer =
+    impl.toNMS(this)
+
+fun Component.toNMS(): NMSComponent =
+    if (Prerequisite.HAS_PAPER.isMet) PaperAdventure.asVanilla(this) else impl.toNMS(this)
+
+fun NMSComponent.toAdventure(): Component {
+    if (Prerequisite.HAS_PAPER.isMet) {
+        return PaperAdventure.asAdventure(this)
+    }
+
+    val registryOps = (Bukkit.getServer() as CraftServer).server.registryAccess().createSerializationContext(JsonOps.INSTANCE)
+    val json = ComponentSerialization.CODEC.encodeStart(registryOps, this).result().get()
+    return GsonComponentSerializer.gson().deserialize(json.toString())
+}
+
+interface CommonsProvider {
+
+    fun makePdc(tag: CompoundTag, base: Boolean): PersistentDataContainer
+
+    fun setPdc(tag: CompoundTag, pdc: PersistentDataContainer?, item: NMSItemStack? = null)
+
+    fun toPathfinderMob(mob: Mob): PathfinderMob?
+
+    fun asNMSStack(itemStack: ItemStack): NMSItemStack
+
+    fun asBukkitStack(itemStack: NMSItemStack): ItemStack
+
+    fun mergeIfNeeded(itemStack: ItemStack, nmsStack: NMSItemStack)
+
+    fun toBukkitEntity(entity: LivingEntity): BukkitLivingEntity?
+
+    fun <T : EntityGoal<*>> getVersionSpecificEntityGoalFactory(goal: T): EntityGoalFactory<T>? {
+        return null
+    }
+
+    fun <T : TargetGoal<*>> getVersionSpecificTargetGoalFactory(goal: T): TargetGoalFactory<T>? {
+        return null
+    }
+
+    fun materialToItem(material: Material): Item
+
+    fun itemToMaterial(item: Item): Material
+
+    fun toNMS(player: Player): ServerPlayer
+
+    fun toNMS(component: Component): NMSComponent
+
+    fun addBukkitRecipeNoResend(recipe: Recipe)
+
+    fun removeBukkitRecipeNoResend(key: NamespacedKey): Boolean
+
+    fun resendBukkitRecipes()
+
+    companion object {
+        fun setIfNeeded(provider: CommonsProvider) {
+            if (::impl.isInitialized) {
+                return
+            }
+
+            impl = provider
+        }
+    }
+}

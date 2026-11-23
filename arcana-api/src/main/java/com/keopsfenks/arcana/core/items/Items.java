@@ -1,0 +1,874 @@
+package com.keopsfenks.arcana.core.items;
+
+import com.keopsfenks.arcana.core.cache.ArcanaCache;
+import com.keopsfenks.arcana.core.Arcana;
+import com.keopsfenks.arcana.core.fast.FastItemStack;
+import com.keopsfenks.arcana.core.items.args.LookupArgParser;
+import com.keopsfenks.arcana.core.items.provider.ItemProvider;
+import com.keopsfenks.arcana.core.items.tag.ItemTag;
+import com.keopsfenks.arcana.core.recipe.parts.*;
+import com.keopsfenks.arcana.util.NamespacedKeyUtils;
+import com.keopsfenks.arcana.util.NumberUtils;
+import net.kyori.adventure.text.Component;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.time.Duration;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * Class to manage all custom and vanilla items.
+ */
+public final class Items {
+    /**
+     * All registered custom items, keyed by their {@link NamespacedKey}.
+     */
+    private static final Map<NamespacedKey, TestableItem> REGISTRY = new ConcurrentHashMap<>();
+
+    /**
+     * The keys of registered items that came from an {@link ItemProvider}. A registered
+     * item can be built on top of one of these, so they're only used when nothing more
+     * specific matches.
+     */
+    private static final Set<NamespacedKey> PROVIDED_KEYS = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Cached custom item lookups, using {@link HashedItem}.
+     */
+    private static final ArcanaCache<HashedItem, Optional<TestableItem>> CACHE = ArcanaCache.<HashedItem, Optional<TestableItem>>builder()
+            .expireAfterAccess(Duration.ofMinutes(10))
+            .build(key -> {
+                if (!key.getItem().hasItemMeta()) {
+                    return Optional.empty();
+                }
+
+                NamespacedKey providedKey = null;
+                for (Map.Entry<NamespacedKey, TestableItem> entry : REGISTRY.entrySet()) {
+                    TestableItem item = entry.getValue();
+                    if (!item.shouldMarkAsCustom() || !item.matches(key.getItem())) {
+                        continue;
+                    }
+
+                    if (!PROVIDED_KEYS.contains(entry.getKey())) {
+                        return Optional.of(item);
+                    }
+
+                    if (providedKey == null || entry.getKey().toString().compareTo(providedKey.toString()) < 0) {
+                        providedKey = entry.getKey();
+                    }
+                }
+
+                return providedKey == null ? Optional.empty() : Optional.ofNullable(REGISTRY.get(providedKey));
+            });
+
+    /**
+     * All item providers, sorted so that reverse lookups are deterministic.
+     */
+    private static final Map<String, ItemProvider> PROVIDERS = new ConcurrentSkipListMap<>();
+
+    /**
+     * All registered arg parsers, used to parse lookup string modifiers.
+     */
+    private static final List<LookupArgParser> ARG_PARSERS = new CopyOnWriteArrayList<>();
+
+    /**
+     * The handler.
+     */
+    private static final ItemsLookupHandler ITEMS_LOOKUP_HANDLER = new ItemsLookupHandler(Items::doParse);
+
+    /**
+     * Instance of EmptyTestableItem.
+     */
+    private static final TestableItem EMPTY_TESTABLE_ITEM = new EmptyTestableItem();
+
+    /**
+     * Friendly material names (without underscores, etc.)
+     */
+    private static final Map<String, Material> FRIENDLY_MATERIAL_NAMES = new ConcurrentHashMap<>();
+
+    /**
+     * All tags.
+     */
+    private static final Map<String, ItemTag> TAGS = new ConcurrentHashMap<>();
+
+    /**
+     * Register a new custom item.
+     *
+     * @param key  The key of the item.
+     * @param item The item.
+     */
+    public static void registerCustomItem(@NotNull final NamespacedKey key,
+                                          @NotNull final TestableItem item) {
+        REGISTRY.put(key, item);
+
+        if (PROVIDED_KEYS.remove(key)) {
+            CACHE.invalidateAll();
+        }
+    }
+
+    /**
+     * Register a new item provider.
+     *
+     * @param provider The provider.
+     */
+    public static void registerItemProvider(@NotNull final ItemProvider provider) {
+        PROVIDERS.put(provider.getNamespace(), provider);
+    }
+
+    /**
+     * Register a new arg parser.
+     *
+     * @param parser The parser.
+     */
+    public static void registerArgParser(@NotNull final LookupArgParser parser) {
+        ARG_PARSERS.add(parser);
+    }
+
+    /**
+     * Remove an item.
+     *
+     * @param key The key of the item.
+     */
+    public static void removeCustomItem(@NotNull final NamespacedKey key) {
+        REGISTRY.remove(key);
+        PROVIDED_KEYS.remove(key);
+    }
+
+    /**
+     * Turn an ItemStack back into a lookup string.
+     *
+     * @param itemStack The ItemStack.
+     * @return The lookup string.
+     */
+    @NotNull
+    public static String toLookupString(@Nullable final ItemStack itemStack) {
+        if (itemStack == null) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+
+        CustomItem customItem = getCustomItem(itemStack);
+
+        String providerKey = customItem == null ? findProviderKey(itemStack) : null;
+
+        if (customItem != null) {
+            builder.append(customItem.getKey());
+        } else if (providerKey != null) {
+            builder.append(providerKey);
+        } else {
+            builder.append(itemStack.getType().name().toLowerCase());
+        }
+
+        if (itemStack.getAmount() > 1) {
+            builder.append(" ")
+                    .append(itemStack.getAmount());
+        }
+
+        ItemMeta meta = itemStack.getItemMeta();
+
+        if (meta != null) {
+            for (LookupArgParser parser : ARG_PARSERS) {
+                String parsed = parser.serializeBack(meta);
+                if (parsed != null) {
+                    builder.append(" ")
+                            .append(parsed);
+                }
+            }
+        }
+
+        return builder.toString();
+    }
+
+    /**
+     * Turn an ItemStack into a lookup string that resolves back to the same item.
+     * <p>
+     * A custom item is written as its key and amount alone, so it follows later changes
+     * to that item. Anything else is written as in {@link #toLookupString(ItemStack)},
+     * unless that would lose custom data held by the ItemStack, such as data from a plugin
+     * with no arcana integration. It is then written as SNBT, which matches by value.
+     *
+     * @param itemStack The ItemStack.
+     * @return The lookup string.
+     */
+    @NotNull
+    public static String toExactLookupString(@NotNull final ItemStack itemStack) {
+        NamespacedKey registeredKey = CACHE.get(HashedItem.of(itemStack)).map(Items::findRegisteredKey).orElse(null);
+
+        if (registeredKey != null && !PROVIDED_KEYS.contains(registeredKey)) {
+            return withAmount(registeredKey.toString(), itemStack);
+        }
+
+        String key = registeredKey != null ? registeredKey.toString() : findProviderKey(itemStack);
+        String lookup = key != null ? withAmount(key, itemStack) : toLookupString(itemStack);
+
+        return ItemCustomData.isKeptBy(lookup, itemStack) ? lookup : ItemCustomData.toCompactSNBT(itemStack);
+    }
+
+    /**
+     * Find the key an item is registered under. This isn't always the key from
+     * {@link #getOrWrap(TestableItem)}, which makes up a key for items that aren't a
+     * {@link CustomItem}.
+     *
+     * @param item The registered item.
+     * @return The key, or null if the item is no longer registered.
+     */
+    @Nullable
+    private static NamespacedKey findRegisteredKey(@NotNull final TestableItem item) {
+        for (Map.Entry<NamespacedKey, TestableItem> entry : REGISTRY.entrySet()) {
+            if (entry.getValue() == item) {
+                return entry.getKey();
+            }
+        }
+
+        return null;
+    }
+
+    @NotNull
+    private static String withAmount(@NotNull final String key,
+                                     @NotNull final ItemStack itemStack) {
+        return itemStack.getAmount() > 1 ? key + " " + itemStack.getAmount() : key;
+    }
+
+    /**
+     * Find the lookup key of an ItemStack from the item providers, for items that nothing
+     * has looked up yet.
+     *
+     * @param itemStack The ItemStack.
+     * @return The key, or null if no provider has the item.
+     */
+    @Nullable
+    private static String findProviderKey(@NotNull final ItemStack itemStack) {
+        for (ItemProvider provider : PROVIDERS.values()) {
+            String id = provider.getKey(itemStack);
+            if (id == null) {
+                continue;
+            }
+
+            String key = provider.getNamespace() + ":" + id.toLowerCase().replace(":", "__");
+            if (!(lookup(key) instanceof EmptyTestableItem)) {
+                return key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * This is the backbone of the entire arcana item system.
+     * <p>
+     * You can look up a TestableItem for any material, custom item,
+     * or item in general, and it will return it with any modifiers
+     * passed as parameters. This includes stack size (item amount)
+     * and enchantments that should be present on the item.
+     * <p>
+     * If you want to get an ItemStack instance from this, then just call
+     * {@link TestableItem#getItem()}.
+     * <p>
+     * The advantages of the testable item system are that there is the inbuilt
+     * {@link TestableItem#matches(ItemStack)} - this allows to check if any item
+     * is that testable item; which may sound negligible, but actually it allows for
+     * much more power and flexibility. For example, you can have an item with an
+     * extra metadata tag, extra lore lines, different display name - and it
+     * will still work as long as the test passes. This is very important
+     * for custom crafting recipes where other plugins may add metadata
+     * values or the play may rename the item.
+     * <p>
+     * A lookup string is a set of space-separated tokens, where a quoted
+     * section is treated as a single token (e.g. {@code name:"My Item"}).
+     * The first token selects the base item, and may be any of:
+     * <ul>
+     *     <li>{@code stone} - a vanilla material; underscores may be omitted and a
+     *     trailing {@code s} is accepted, so {@code diamond_sword},
+     *     {@code diamondsword} and {@code diamondswords} all resolve</li>
+     *     <li>{@code *stone} - the same, but matching the material even if the item
+     *     is also a registered custom item</li>
+     *     <li>{@code #tag} - an {@link ItemTag} registered with {@link #registerTag(ItemTag)}</li>
+     *     <li>{@code namespace:key} - a custom item registered under that key, or an item
+     *     resolved on demand from the {@link ItemProvider} registered for that namespace</li>
+     * </ul>
+     * If the second token is an integer, it is used as the stack size. Every remaining
+     * token is passed to the registered {@link LookupArgParser}s as a modifier; these are
+     * conventionally of the form {@code name:value}, for example {@code sharpness:5}.
+     * <p>
+     * Whole lookup strings can be combined with segment separators, which must be
+     * surrounded by spaces: {@code a || b} matches either segment, and {@code a ? b}
+     * resolves to the first segment that produces a valid item.
+     * <p>
+     * The legacy {@code material:amount} and {@code namespace:key:amount} formats are
+     * still supported, but have been superseded by passing the amount as a second token.
+     * <p>
+     * If the lookup string begins with <code>&#123;</code> it is instead parsed as SNBT.
+     *
+     * @param key The lookup string.
+     * @return The testable item, or an {@link EmptyTestableItem}.
+     */
+    @NotNull
+    public static TestableItem lookup(@NotNull final String key) {
+        if (key.startsWith("{")) {
+            return Arcana.get().testableItemFromSNBT(key);
+        }
+
+        return ITEMS_LOOKUP_HANDLER.parseKey(key);
+    }
+
+    @NotNull
+    private static TestableItem doParse(@NotNull final String[] args) {
+        if (args.length == 0) {
+            return new EmptyTestableItem();
+        }
+
+        TestableItem item = null;
+
+        int stackAmount = 1;
+
+        String[] split = args[0].toLowerCase().split(":");
+
+        String base = split[0];
+        boolean isTag = base.startsWith("#");
+
+        if (isTag) {
+            String tag = args[0].substring(1).toLowerCase();
+            ItemTag itemTag = TAGS.get(tag);
+
+            if (itemTag == null) {
+                return new EmptyTestableItem();
+            }
+            item = itemTag.toTestableItem();
+        }
+
+        if (split.length == 1 && !isTag) {
+            String itemType = args[0];
+            boolean isWildcard = itemType.startsWith("*");
+            if (isWildcard) {
+                itemType = itemType.substring(1);
+            }
+            Material material = FRIENDLY_MATERIAL_NAMES.get(itemType.toLowerCase());
+            if (material == null || material == Material.AIR) {
+                return new EmptyTestableItem();
+            }
+            item = isWildcard ? new UnrestrictedMaterialTestableItem(material) : new MaterialTestableItem(material);
+        }
+
+        if (split.length == 2 && !isTag) {
+            String namespace = split[0];
+            String keyID = split[1];
+            NamespacedKey namespacedKey = NamespacedKeyUtils.create(namespace, keyID);
+
+            TestableItem part = REGISTRY.get(namespacedKey);
+
+            if (part == null && PROVIDERS.containsKey(namespace)) {
+                ItemProvider provider = PROVIDERS.get(namespace);
+
+                String reformattedKey = keyID.replace("__", ":");
+
+                part = provider.provideForKey(reformattedKey);
+                if (part instanceof EmptyTestableItem || part == null) {
+                    return new EmptyTestableItem();
+                }
+                registerCustomItem(namespacedKey, part);
+                PROVIDED_KEYS.add(namespacedKey);
+            }
+
+            /*
+            Legacy id:amount format
+            This has been superseded by id amount
+             */
+            if (part == null) {
+                String itemType = split[0];
+                boolean isWildcard = itemType.startsWith("*");
+                if (isWildcard) {
+                    itemType = itemType.substring(1);
+                }
+                Material material = Material.getMaterial(itemType.toUpperCase());
+                if (material == null || material == Material.AIR) {
+                    return new EmptyTestableItem();
+                }
+                item = isWildcard ? new UnrestrictedMaterialTestableItem(material) : new MaterialTestableItem(material);
+                stackAmount = Integer.parseInt(split[1]);
+            } else {
+                item = part;
+            }
+        }
+
+        /*
+        Legacy namespace:id:amount format
+        This has been superseded by namespace:id amount
+         */
+        if (split.length == 3 && !isTag) {
+            TestableItem part = REGISTRY.get(NamespacedKeyUtils.create(split[0], split[1]));
+            if (part == null) {
+                return new EmptyTestableItem();
+            }
+            item = part;
+            stackAmount = Integer.parseInt(split[2]);
+        }
+
+        boolean usingNewStackFormat = false;
+
+        if (args.length >= 2) {
+            try {
+                stackAmount = Integer.parseInt(args[1]);
+                usingNewStackFormat = true;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        // Marked as redundant but I am covering all bases here
+        if (item == null || item instanceof EmptyTestableItem) {
+            return new EmptyTestableItem();
+        }
+
+        ItemStack example = item.getItem();
+        ItemMeta meta = example.getItemMeta();
+        assert meta != null;
+
+        String[] modifierArgs = Arrays.copyOfRange(args, usingNewStackFormat ? 2 : 1, args.length);
+
+        List<Predicate<ItemStack>> predicates = new ArrayList<>();
+
+        for (LookupArgParser argParser : ARG_PARSERS) {
+            Predicate<ItemStack> predicate = argParser.parseArguments(modifierArgs, meta);
+            if (predicate != null) {
+                predicates.add(predicate);
+            }
+        }
+
+        example.setItemMeta(meta);
+        if (!predicates.isEmpty()) {
+            item = new ModifiedTestableItem(
+                    item,
+                    test -> {
+                        for (Predicate<ItemStack> predicate : predicates) {
+                            if (!predicate.test(test)) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    },
+                    example
+            );
+        }
+
+        if (stackAmount <= 1) {
+            return item;
+        } else {
+            return new TestableStack(item, stackAmount);
+        }
+    }
+
+    /**
+     * Get a Testable Item from an ItemStack.
+     * <p>
+     * Will search for registered items first. If there are no matches in the registry,
+     * then it will return a {@link MaterialTestableItem} matching the item type.
+     * <p>
+     * Does not account for modifiers (arg parser data).
+     *
+     * @param item The ItemStack.
+     * @return The found Testable Item.
+     */
+    @NotNull
+    public static TestableItem getItem(@Nullable final ItemStack item) {
+        if (item == null || item.getType().isAir()) {
+            return new EmptyTestableItem();
+        }
+
+        CustomItem customItem = getCustomItem(item);
+
+        if (customItem != null) {
+            return customItem;
+        }
+
+        for (TestableItem known : REGISTRY.values()) {
+            if (known.matches(item)) {
+                return known;
+            }
+        }
+        return new MaterialTestableItem(item.getType());
+    }
+
+    /**
+     * Get if itemStack is a custom item.
+     *
+     * @param itemStack The itemStack to check.
+     * @return If the item is a custom item.
+     */
+    public static boolean isCustomItem(@Nullable final ItemStack itemStack) {
+        return getCustomItem(itemStack) != null;
+    }
+
+    /**
+     * Get custom item from item.
+     *
+     * @param itemStack The item.
+     * @return The custom item, or null if not exists.
+     */
+    @Nullable
+    public static CustomItem getCustomItem(@Nullable final ItemStack itemStack) {
+        if (itemStack == null) {
+            return null;
+        }
+
+        return CACHE.get(HashedItem.of(itemStack)).map(Items::getOrWrap).orElse(null);
+    }
+
+    /**
+     * Get all registered custom items.
+     *
+     * @return A set of all items.
+     */
+    public static Set<CustomItem> getCustomItems() {
+        return REGISTRY.values().stream().map(Items::getOrWrap).collect(Collectors.toSet());
+    }
+
+    /**
+     * Return a CustomItem instance for a given TestableItem.
+     * <p>
+     * Used internally since 6.10.0 when the registration moved from {@link CustomItem}
+     * to {@link TestableItem} for added flexibility.
+     *
+     * @param item The item.
+     * @return The CustomItem.
+     */
+    @NotNull
+    public static CustomItem getOrWrap(@NotNull final TestableItem item) {
+        if (item instanceof CustomItem) {
+            return (CustomItem) item;
+        } else {
+            return new CustomItem(
+                    NamespacedKeyUtils.createArcanaKey("wrapped_" + NumberUtils.randInt(0, 100000)),
+                    item::matches,
+                    item.getItem()
+            );
+        }
+    }
+
+    /**
+     * Convert an array of materials to an array of testable items.
+     *
+     * @param materials The materials.
+     * @return An array of functionally identical testable items.
+     */
+    @NotNull
+    public static TestableItem[] fromMaterials(@NotNull final Material... materials) {
+        return Arrays.stream(materials)
+                .map(MaterialTestableItem::new)
+                .toArray(MaterialTestableItem[]::new);
+    }
+
+    /**
+     * Convert a collection of materials into a collection of testable items.
+     *
+     * @param materials The materials.
+     * @return A collection of functionally identical testable items.
+     */
+    @NotNull
+    public static Collection<TestableItem> fromMaterials(@NotNull final Iterable<Material> materials) {
+        List<TestableItem> items = new ArrayList<>();
+        for (Material material : materials) {
+            items.add(new MaterialTestableItem(material));
+        }
+
+        return items;
+    }
+
+    /**
+     * Merge ItemStack onto another ItemStack.
+     * <p>
+     * Lore and the display name are copied as components, so items keep formatting that
+     * legacy text can't represent, and lore lines keep the shape they were written in - which
+     * {@link com.keopsfenks.arcana.core.display.Display#revert(ItemStack)} relies on to identify the
+     * lines it added.
+     *
+     * @param from The ItemStack to merge from.
+     * @param to   The ItemStack to merge onto.
+     * @return The ItemStack, merged (same instance as to).
+     */
+    @NotNull
+    public static ItemStack mergeFrom(@NotNull final ItemStack from,
+                                      @NotNull final ItemStack to) {
+        ItemMeta fromMeta = from.getItemMeta();
+        ItemMeta toMeta = to.getItemMeta();
+
+        if (fromMeta == null || toMeta == null) {
+            return to;
+        }
+
+        ItemMeta newMeta = mergeFrom(fromMeta, toMeta);
+
+        to.setItemMeta(newMeta);
+        to.setType(from.getType());
+        to.setAmount(from.getAmount());
+
+        // The ItemMeta merge copies lore and the display name through legacy strings, as
+        // that's all ItemMeta exposes, so they're copied again here as components.
+        FastItemStack fastFrom = FastItemStack.wrap(from);
+        FastItemStack fastTo = FastItemStack.wrap(to);
+
+        List<Component> lore = fastFrom.getLoreComponents();
+        fastTo.setLoreComponents(lore.isEmpty() ? null : lore);
+
+        if (fromMeta.hasDisplayName()) {
+            fastTo.setDisplayName(fastFrom.getDisplayNameComponent());
+        }
+
+        return to;
+    }
+
+    /**
+     * Merge ItemMeta onto other ItemMeta.
+     * <p>
+     * ItemMeta only exposes lore and display names as legacy strings, so both are
+     * round-tripped through legacy text here, which flattens their component tree and
+     * discards anything legacy text can't represent. Use
+     * {@link #mergeFrom(ItemStack, ItemStack)} where the items are available, as that copies
+     * them as components instead.
+     *
+     * @param from The ItemMeta to merge from.
+     * @param to   The ItemMeta to merge onto.
+     * @return The ItemMeta, merged (same instance as to).
+     */
+    @NotNull
+    public static ItemMeta mergeFrom(@NotNull final ItemMeta from,
+                                     @NotNull final ItemMeta to) {
+        if (from.hasDisplayName()) {
+            to.setDisplayName(from.getDisplayName());
+        }
+
+        to.setLore(from.getLore());
+
+        for (Enchantment enchant : to.getEnchants().keySet()) {
+            to.removeEnchant(enchant);
+        }
+
+        for (Map.Entry<Enchantment, Integer> entry : from.getEnchants().entrySet()) {
+            to.addEnchant(entry.getKey(), entry.getValue(), true);
+        }
+
+        if (from.hasCustomModelData()) {
+            to.setCustomModelData(from.getCustomModelData());
+        } else {
+            to.setCustomModelData(null);
+        }
+
+        return to;
+    }
+
+    /**
+     * Get the base NBT tag on an item.
+     *
+     * @param itemStack The ItemStack.
+     * @return The base NBT.
+     * @deprecated Items are now component-based.
+     */
+    @NotNull
+    @Deprecated(since = "6.70.0", forRemoval = true)
+    @SuppressWarnings({"removal", "DeprecatedIsStillUsed"})
+    public static PersistentDataContainer getBaseNBT(@NotNull final ItemStack itemStack) {
+        return FastItemStack.wrap(itemStack).getBaseTag();
+    }
+
+    /**
+     * Set the base NBT tag on an item.
+     *
+     * @param itemStack The ItemStack.
+     * @param container The base NBT tag.
+     * @return The ItemStack, modified. Not required to use, as this modifies the instance.
+     * @deprecated Items are now component-based.
+     */
+    @NotNull
+    @Deprecated(since = "6.70.0", forRemoval = true)
+    @SuppressWarnings({"removal", "DeprecatedIsStillUsed"})
+    public static ItemStack setBaseNBT(@NotNull final ItemStack itemStack,
+                                       @Nullable final PersistentDataContainer container) {
+        FastItemStack fis = FastItemStack.wrap(itemStack);
+        fis.setBaseTag(container);
+        return fis.unwrap();
+    }
+
+    /**
+     * Convert item to SNBT.
+     *
+     * @param itemStack The item.
+     * @return The NBT string.
+     */
+    @NotNull
+    public static String toSNBT(@NotNull final ItemStack itemStack) {
+        return Arcana.get().toSNBT(itemStack);
+    }
+
+    /**
+     * Get item from SNBT.
+     *
+     * @param snbt The NBT string.
+     * @return The ItemStack, or null if invalid.
+     */
+    @Nullable
+    public static ItemStack fromSNBT(@NotNull final String snbt) {
+        return Arcana.get().fromSNBT(snbt);
+    }
+
+    /**
+     * Apply data components to an item.
+     * <p>
+     * Components use the same format as item components in commands, keyed by
+     * component id (for example <code>minecraft:attribute_modifiers</code>) and
+     * valued with plain objects: maps, lists, strings, numbers, and booleans.
+     * <p>
+     * Setting <code>minecraft:attribute_modifiers</code> merges with the base
+     * item's own modifiers rather than replacing them outright: a configured
+     * modifier replaces the default for the same attribute and slot, and any
+     * default it says nothing about is kept. Every other component replaces the
+     * item's value for that component.
+     *
+     * @param itemStack  The item.
+     * @param components The components to apply.
+     * @return The result, holding the new item and any components that failed.
+     */
+    @NotNull
+    public static ItemComponentResult withComponents(@NotNull final ItemStack itemStack,
+                                                     @NotNull final Map<String, Object> components) {
+        return Arcana.get().withComponents(itemStack, components);
+    }
+
+    /**
+     * Get the data components on an item.
+     *
+     * @param itemStack The item.
+     * @return The components, keyed by component id.
+     */
+    @NotNull
+    public static Map<String, Object> getComponents(@NotNull final ItemStack itemStack) {
+        return Arcana.get().getComponents(itemStack);
+    }
+
+    /**
+     * Get a data component on an item.
+     *
+     * @param itemStack The item.
+     * @param key       The component id, for example <code>minecraft:food</code>.
+     * @return The component value, or null if the item does not have it.
+     */
+    @Nullable
+    public static Object getComponent(@NotNull final ItemStack itemStack,
+                                      @NotNull final String key) {
+        return Arcana.get().getComponent(itemStack, key);
+    }
+
+    /**
+     * Remove data components from an item.
+     *
+     * @param itemStack The item.
+     * @param keys      The component ids to remove.
+     * @return A copy of the item without those components.
+     */
+    @NotNull
+    public static ItemStack removeComponents(@NotNull final ItemStack itemStack,
+                                             @NotNull final Collection<String> keys) {
+        return Arcana.get().removeComponents(itemStack, keys);
+    }
+
+    /**
+     * Get if an item is empty.
+     *
+     * @param itemStack The item.
+     * @return If empty.
+     */
+    public static boolean isEmpty(@Nullable final ItemStack itemStack) {
+        return EMPTY_TESTABLE_ITEM.matches(itemStack);
+    }
+
+    /**
+     * Get if an item matches any items.
+     *
+     * @param itemStack The item.
+     * @param items     The items.
+     * @return If matches any.
+     */
+    public static boolean matchesAny(@Nullable final ItemStack itemStack,
+                                     @NotNull final Collection<TestableItem> items) {
+        for (TestableItem item : items) {
+            if (item.matches(itemStack)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get if any item matches any item.
+     *
+     * @param itemStacks The items.
+     * @param items      The items.
+     * @return If matches any.
+     */
+    public static boolean matchesAny(@NotNull final Collection<ItemStack> itemStacks,
+                                     @NotNull final Collection<TestableItem> items) {
+        for (ItemStack itemStack : itemStacks) {
+            if (matchesAny(itemStack, items)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Register a new item tag.
+     *
+     * @param tag The tag.
+     */
+    public static void registerTag(@NotNull final ItemTag tag) {
+        TAGS.put(tag.getIdentifier(), tag);
+    }
+
+    /**
+     * Get all tags.
+     *
+     * @return All tags.
+     */
+    public static Collection<ItemTag> getTags() {
+        return TAGS.values();
+    }
+
+    /**
+     * Prevent instantiation of this utility class.
+     */
+    private Items() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
+    static {
+        for (Material material : Material.values()) {
+            FRIENDLY_MATERIAL_NAMES.put(material.name().toLowerCase(), material);
+
+            String oneWord = material.name().toLowerCase().replace("_", "");
+            if (!FRIENDLY_MATERIAL_NAMES.containsKey(oneWord)) {
+                FRIENDLY_MATERIAL_NAMES.put(oneWord, material);
+            }
+
+            String plural = material.name().toLowerCase() + "s";
+            if (!FRIENDLY_MATERIAL_NAMES.containsKey(plural)) {
+                FRIENDLY_MATERIAL_NAMES.put(plural, material);
+            }
+
+            String oneWordPlural = oneWord + "s";
+            if (!FRIENDLY_MATERIAL_NAMES.containsKey(oneWordPlural)) {
+                FRIENDLY_MATERIAL_NAMES.put(oneWordPlural, material);
+            }
+        }
+    }
+}

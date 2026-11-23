@@ -1,0 +1,17 @@
+package com.keopsfenks.arcana.core.factory;
+
+import org.bukkit.metadata.FixedMetadataValue;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Factory to create metadata values for a specific plugin.
+ */
+public interface MetadataValueFactory {
+    /**
+     * Create a metadata value owned by this factory's plugin.
+     *
+     * @param value The object to store in metadata.
+     * @return The metadata value.
+     */
+    FixedMetadataValue create(@NotNull Object value);
+}

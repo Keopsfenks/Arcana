@@ -1,0 +1,65 @@
+package com.keopsfenks.arcana.core.packet;
+
+import com.keopsfenks.arcana.core.Arcana;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Represents a packet.
+ * <p>
+ * The handle is the underlying, version-specific packet object, so it should only be
+ * touched from NMS-aware code (for example a proxy implementation).
+ */
+public class Packet {
+    /**
+     * The packet handle.
+     */
+    private Object handle;
+
+    /**
+     * Create a new packet.
+     *
+     * @param handle The packet handle.
+     */
+    public Packet(@NotNull final Object handle) {
+        this.handle = handle;
+    }
+
+    /**
+     * Get the packet handle.
+     *
+     * @return The packet handle.
+     */
+    public Object getHandle() {
+        return handle;
+    }
+
+    /**
+     * Set the packet handle.
+     *
+     * @param handle The packet handle.
+     */
+    public void setHandle(@NotNull final Object handle) {
+        this.handle = handle;
+    }
+
+    /**
+     * Get the packet handle, compatible with the old record-based packet system.
+     *
+     * @return The packet handle.
+     * @deprecated Use {@link #getHandle()} instead.
+     */
+    @Deprecated
+    public Object handle() {
+        return handle;
+    }
+
+    /**
+     * Send the packet to a player.
+     *
+     * @param player The player.
+     */
+    void send(@NotNull final Player player) {
+        Arcana.get().sendPacket(player, this);
+    }
+}

@@ -1,0 +1,297 @@
+package com.keopsfenks.arcana.core;
+
+import com.keopsfenks.arcana.core.proxy.ProxyConstants;
+import com.keopsfenks.arcana.util.ClassUtils;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
+import org.bukkit.Bukkit;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * A prerequisite is a requirement for something.
+ * <p>
+ * For example, you can require the server to have paper or be a specific version,
+ * or have some other dependency.
+ */
+public class Prerequisite {
+    /**
+     * All existing prerequisites are registered on creation.
+     */
+    private static final List<Prerequisite> VALUES = new CopyOnWriteArrayList<>();
+
+    /**
+     * Requires the server to be running an implementation of paper.
+     */
+    public static final Prerequisite HAS_PAPER = new Prerequisite(
+            () -> ClassUtils.exists("com.destroystokyo.paper.event.block.BeaconEffectEvent"),
+            "Requires server to be running paper (or a fork)"
+    );
+
+    /**
+     * Requires the server to be running an implementation of Folia.
+     * <p>
+     * Probed by class name rather than by API, because arcana compiles against the Spigot
+     * API and must not name a Folia type. {@code RegionizedServer} is server-side, so it
+     * is absent on Paper, unlike everything under {@code io.papermc.paper.threadedregions}
+     * that ships in the Paper API.
+     */
+    public static final Prerequisite HAS_FOLIA = new Prerequisite(
+            () -> ClassUtils.exists("io.papermc.paper.threadedregions.RegionizedServer"),
+            "Requires server to be running Folia (or a fork)"
+    );
+
+    /**
+     * Requires the server to be running at least 26.3.
+     */
+    public static final Prerequisite HAS_26_3 = new Prerequisite(
+            () -> isAtLeast("v26_3"),
+            "Requires server to be running 26.3+"
+    );
+
+    /**
+     * Requires the server to be running at least 26.2.
+     */
+    public static final Prerequisite HAS_26_2 = new Prerequisite(
+            () -> isAtLeast("v26_2"),
+            "Requires server to be running 26.2+"
+    );
+
+    /**
+     * Requires the server to be running at least 26.1.
+     */
+    public static final Prerequisite HAS_26_1 = new Prerequisite(
+            () -> isAtLeast("v26_1_2"),
+            "Requires server to be running 26.1+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.21.11.
+     */
+    public static final Prerequisite HAS_1_21_11 = new Prerequisite(
+            () -> isAtLeast("v1_21_11"),
+            "Requires server to be running 1.21.11+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.21.9.
+     */
+    public static final Prerequisite HAS_1_21_9 = new Prerequisite(
+            () -> isAtLeast("v1_21_10"),
+            "Requires server to be running 1.21.9+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.21.3.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_21_3 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.21.3+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.21.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_21 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.21+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.20.5.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_20_5 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.20.5+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.20.3.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_20_3 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.20.3+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.20.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_20 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.20+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.19.4.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_19_4 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.19.4+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.19.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_19 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.19+"
+    );
+
+    /**
+     * Requires the server to be running at least 1.18.
+     *
+     * @deprecated arcana requires 1.21.4+, this is always true.
+     */
+    @Deprecated(since = "6.77.0", forRemoval = true)
+    public static final Prerequisite HAS_1_18 = new Prerequisite(
+            () -> true,
+            "Requires server to be running 1.18+"
+    );
+
+    /**
+     * Requires the server to be running an implementation of BungeeCord.
+     *
+     * @deprecated This will never return true.
+     */
+    @Deprecated(since = "6.49.0", forRemoval = true)
+    public static final Prerequisite HAS_BUNGEECORD = new Prerequisite(
+            () -> false,
+            "Requires server to be running BungeeCord (or a fork)"
+    );
+
+    /**
+     * Requires the server to be running an implementation of Velocity.
+     *
+     * @deprecated This will never return true.
+     */
+    @Deprecated(since = "6.49.0", forRemoval = true)
+    public static final Prerequisite HAS_VELOCITY = new Prerequisite(
+            () -> false,
+            "Requires server to be running Velocity (or a fork)"
+    );
+
+    /**
+     * If the necessary prerequisite condition has been met.
+     */
+    private boolean isMet;
+
+    /**
+     * The supplier used to retrieve if the necessary prerequisite condition is met.
+     */
+    private final Supplier<Boolean> isMetSupplier;
+
+    /**
+     * The description of the requirements of the prerequisite.
+     */
+    private final String description;
+
+    /**
+     * Create a prerequisite.
+     * <p>
+     * The supplier is polled immediately, and again every time {@link #update()} is called.
+     * The prerequisite is registered on creation, so it will be picked up by
+     * {@link #update()} for the lifetime of the server.
+     *
+     * @param isMetSupplier A {@link Supplier} that returns if the prerequisite is met.
+     * @param description   The description of the prerequisite, shown to the user if it isn't met.
+     */
+    public Prerequisite(@NotNull final Supplier<Boolean> isMetSupplier,
+                        @NotNull final String description) {
+        this.isMetSupplier = isMetSupplier;
+        this.isMet = isMetSupplier.get();
+        this.description = description;
+        VALUES.add(this);
+    }
+
+    /**
+     * Refresh the condition set in the supplier, updating the value returned by
+     * {@link #isMet()}.
+     */
+    private void refresh() {
+        this.isMet = this.isMetSupplier.get();
+    }
+
+    /**
+     * Re-evaluate every registered prerequisite, updating the value returned by
+     * {@link #isMet()} for each of them.
+     */
+    public static void update() {
+        VALUES.forEach(Prerequisite::refresh);
+    }
+
+    /**
+     * Check if all prerequisites in an array are met.
+     * <p>
+     * Calls {@link #update()} first, so the result is always up to date.
+     *
+     * @param prerequisites The prerequisites to check.
+     * @return If all the prerequisites are met.
+     */
+    public static boolean areMet(@NotNull final Prerequisite[] prerequisites) {
+        update();
+        return Arrays.stream(prerequisites).allMatch(Prerequisite::isMet);
+    }
+
+    static {
+        update();
+    }
+
+    /**
+     * Get if the prerequisite is met.
+     *
+     * @return If the condition is met.
+     */
+    public boolean isMet() {
+        return this.isMet;
+    }
+
+    /**
+     * Get the description.
+     *
+     * @return The description.
+     */
+    public String getDescription() {
+        return this.description;
+    }
+
+    /**
+     * Get if the server is running at least a supported NMS version.
+     * <p>
+     * Compares positions in {@link ProxyConstants#SUPPORTED_VERSIONS}, which is ordered oldest first.
+     *
+     * @param version The NMS version, as listed in {@link ProxyConstants#SUPPORTED_VERSIONS}.
+     * @return If the server version is the same or newer, or false with no server running.
+     */
+    private static boolean isAtLeast(@NotNull final String version) {
+        if (Bukkit.getServer() == null) {
+            return false;
+        }
+
+        List<String> supportedVersions = ProxyConstants.SUPPORTED_VERSIONS;
+        int current = supportedVersions.indexOf(ProxyConstants.NMS_VERSION);
+
+        return current != -1 && current >= supportedVersions.indexOf(version);
+    }
+}

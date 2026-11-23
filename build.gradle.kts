@@ -19,15 +19,15 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":eco-api"))
-    implementation(project(path = ":eco-core:core-plugin", configuration = "shadow"))
-    implementation(project(":eco-core:core-backend"))
-    implementation(project(path = ":eco-core:core-nms:v1_21_8", configuration = "reobf"))
-    implementation(project(path = ":eco-core:core-nms:v1_21_10", configuration = "reobf"))
-    implementation(project(path = ":eco-core:core-nms:v1_21_11", configuration = "reobf"))
-    implementation(project(path = ":eco-core:core-nms:v26_1_2", configuration = "shadow"))
-    implementation(project(path = ":eco-core:core-nms:v26_2", configuration = "shadow"))
-    implementation(project(path = ":eco-core:core-nms:v26_3", configuration = "shadow"))
+    implementation(project(":arcana-api"))
+    implementation(project(path = ":arcana-core:core-plugin", configuration = "shadow"))
+    implementation(project(":arcana-core:core-backend"))
+    implementation(project(path = ":arcana-core:core-nms:v1_21_8", configuration = "reobf"))
+    implementation(project(path = ":arcana-core:core-nms:v1_21_10", configuration = "reobf"))
+    implementation(project(path = ":arcana-core:core-nms:v1_21_11", configuration = "reobf"))
+    implementation(project(path = ":arcana-core:core-nms:v26_1_2", configuration = "shadow"))
+    implementation(project(path = ":arcana-core:core-nms:v26_2", configuration = "shadow"))
+    implementation(project(path = ":arcana-core:core-nms:v26_3", configuration = "shadow"))
 }
 
 allprojects {
@@ -134,7 +134,7 @@ allprojects {
         testImplementation("org.junit.jupiter:junit-jupiter-params:6.0.3")
         testImplementation("io.mockk:mockk-jvm:1.13.17")
 
-        // mockk cannot subclass EcoPlugin without org.slf4j.Logger, which Paper's Plugin
+        // mockk cannot subclass ArcanaPlugin without org.slf4j.Logger, which Paper's Plugin
         // interface exposes via getSLF4JLogger(). slf4j-api is excluded from the production
         // configurations below (the server provides it) and that exclusion is inherited by the
         // test configurations, so it has to be put back explicitly for tests only.
@@ -158,6 +158,11 @@ allprojects {
         options.encoding = "UTF-8"
     }
 
+    tasks.withType<Jar>().configureEach {
+        from(rootProject.file("LICENSE.md"))
+        from(rootProject.file("NOTICE.md"))
+    }
+
     configurations.all {
         exclude(group = "org.codehaus.plexus", module = "plexus-utils")
         exclude(group = "com.mojang", module = "brigadier")
@@ -173,7 +178,7 @@ allprojects {
     // production classpaths. It is NOT excluded via configurations.all, because exclude rules are
     // inherited by extending configurations and testImplementation extends compileOnly and
     // implementation -- that inherited rule stripped slf4j from the tests even when declared
-    // directly, and mockk cannot subclass EcoPlugin without org.slf4j.Logger, which Paper's Plugin
+    // directly, and mockk cannot subclass ArcanaPlugin without org.slf4j.Logger, which Paper's Plugin
     // interface exposes via getSLF4JLogger(). testRuntimeClasspath is a sibling of
     // runtimeClasspath rather than a child, so excluding here leaves the test side untouched.
     configurations.compileClasspath {
@@ -219,6 +224,10 @@ allprojects {
         test {
             useJUnitPlatform()
 
+            // Keep third-party protocol mocks deterministic on hosts with Turkish locale.
+            systemProperty("user.language", "en")
+            systemProperty("user.country", "US")
+
             // Show test results.
             testLogging {
                 events("passed", "skipped", "failed")
@@ -247,12 +256,12 @@ tasks {
         exclude("META-INF/**")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-        relocate("org.apache.commons.lang3", "com.willfp.eco.libs.lang3")
-        relocate("org.intellij", "com.willfp.eco.libs.intellij")
-        relocate("org.jetbrains.annotations", "com.willfp.eco.libs.jetbrains.annotations")
-        relocate("com.github.benmanes.caffeine", "com.willfp.eco.libs.caffeine")
+        relocate("org.apache.commons.lang3", "com.keopsfenks.arcana.libs.lang3")
+        relocate("org.intellij", "com.keopsfenks.arcana.libs.intellij")
+        relocate("org.jetbrains.annotations", "com.keopsfenks.arcana.libs.jetbrains.annotations")
+        relocate("com.github.benmanes.caffeine", "com.keopsfenks.arcana.libs.caffeine")
 
-        relocate("kotlin", "com.willfp.eco.libs.kotlin") {
+        relocate("kotlin", "com.keopsfenks.arcana.libs.kotlin") {
             exclude("kotlin.kotlin_builtins")
         }
 
@@ -262,7 +271,7 @@ tasks {
     }
 }
 
-group = "com.willfp"
+group = "com.keopsfenks"
 version = findProperty("version")!!
 
 java {
@@ -271,12 +280,7 @@ java {
 
 publishing {
     publications {
-        // maven-private: only the shaded 'all' jar
-        create<MavenPublication>("private") {
-            artifactId = rootProject.name
-            artifact(tasks.named("shadowJar"))
-        }
-        // maven-releases + GitHub: full set (none, all, sources, javadoc)
+        // Arcana plugin, shaded plugin, sources, and Javadoc.
         create<MavenPublication>("release") {
             artifactId = rootProject.name
             from(components["java"])
@@ -285,24 +289,8 @@ publishing {
     }
     repositories {
         maven {
-            name = "AuxilorPrivate"
-            url = uri("https://repo.auxilor.io/repository/maven-private/")
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-        }
-        maven {
-            name = "AuxilorReleases"
-            url = uri("https://repo.auxilor.io/repository/maven-releases/")
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-        }
-        maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/Auxilor/eco")
+            url = uri("https://maven.pkg.github.com/keopsfenks/arcana")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
@@ -316,14 +304,11 @@ tasks.matching { it.name.startsWith("generatePomFileFor") }.configureEach {
     mustRunAfter(tasks.named("clean"))
 }
 
-tasks.register("publishToAuxilor") {
+tasks.register("publishArcana") {
     dependsOn(
         // Root plugin
-        "publishPrivatePublicationToAuxilorPrivateRepository",
-        "publishReleasePublicationToAuxilorReleasesRepository",
         "publishReleasePublicationToGitHubPackagesRepository",
-        // eco-api
-        ":eco-api:publishShadowPublicationToAuxilorRepository",
-        ":eco-api:publishShadowPublicationToGitHubPackagesRepository",
+        // arcana-api
+        ":arcana-api:publishShadowPublicationToGitHubPackagesRepository",
     )
 }

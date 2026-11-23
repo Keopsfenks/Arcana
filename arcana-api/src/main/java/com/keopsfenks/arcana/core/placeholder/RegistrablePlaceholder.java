@@ -1,0 +1,38 @@
+package com.keopsfenks.arcana.core.placeholder;
+
+import com.keopsfenks.arcana.core.ArcanaPlugin;
+import com.keopsfenks.arcana.core.integrations.placeholder.PlaceholderManager;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Represents a placeholder that can be registered.
+ */
+public interface RegistrablePlaceholder extends Placeholder {
+    /**
+     * Get the plugin that owns the placeholder.
+     *
+     * @return The plugin.
+     */
+    @NotNull
+    @Override
+    ArcanaPlugin getPlugin();
+
+    /**
+     * Register the placeholder with the {@link PlaceholderManager}.
+     *
+     * @return This placeholder.
+     */
+    @NotNull
+    default RegistrablePlaceholder register() {
+        PlaceholderManager.registerPlaceholder(this);
+        return this;
+    }
+
+    /**
+     * Unregister the placeholder from the {@link PlaceholderManager}.
+     */
+    default void unregister() {
+        PlaceholderManager.unregisterPlaceholder(this);
+    }
+}
+

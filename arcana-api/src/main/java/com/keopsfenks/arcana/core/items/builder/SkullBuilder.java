@@ -1,0 +1,41 @@
+package com.keopsfenks.arcana.core.items.builder;
+
+import com.keopsfenks.arcana.util.SkullUtils;
+import java.util.function.Supplier;
+import org.bukkit.Material;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Builder for player heads.
+ */
+public class SkullBuilder extends AbstractItemStackBuilder<SkullMeta, SkullBuilder> {
+    /**
+     * Create a new SkullBuilder.
+     */
+    public SkullBuilder() {
+        super(Material.PLAYER_HEAD);
+    }
+
+    /**
+     * Set skull texture.
+     *
+     * @param texture The texture.
+     * @return The builder.
+     */
+    public SkullBuilder setSkullTexture(@NotNull final String texture) {
+        SkullUtils.setSkullTexture(this.getMeta(), texture);
+
+        return this;
+    }
+
+    /**
+     * Set skull texture.
+     *
+     * @param texture The texture.
+     * @return The builder.
+     */
+    public SkullBuilder setSkullTexture(@NotNull final Supplier<String> texture) {
+        return this.setSkullTexture(texture.get());
+    }
+}

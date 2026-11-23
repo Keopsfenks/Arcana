@@ -1,0 +1,289 @@
+package com.keopsfenks.arcana.core.registry;
+
+import com.google.common.base.Preconditions;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * A registry for {@link Registrable}s.
+ * <p>
+ * Registries are thread-safe: reads never block, and may run on any thread while another thread
+ * registers or removes elements. Mutations are serialised against each other.
+ *
+ * @param <T> The type of {@link Registrable}.
+ */
+public class Registry<T extends Registrable> implements Iterable<T> {
+    /**
+     * The ID pattern.
+     */
+    private static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9_]{1,100}");
+
+    /**
+     * The registry.
+     */
+    private final Map<String, T> registry = new ConcurrentHashMap<>();
+
+    /**
+     * If the registry is locked.
+     */
+    private volatile boolean isLocked = false;
+
+    /**
+     * Cached values set, invalidated on mutation.
+     */
+    @Nullable
+    private volatile Set<T> cachedValues = null;
+
+    /**
+     * The locker, used to 'secure' registries and prevent random unlocking.
+     */
+    @Nullable
+    private volatile Object locker = null;
+
+    /**
+     * Guards mutation of the registry, the lock state, and the cached values.
+     */
+    private final Object mutex = new Object();
+
+    /**
+     * Instantiate a new registry.
+     */
+    public Registry() {
+
+    }
+
+    /**
+     * Register a new element.
+     * <p>
+     * Any element already registered under the same ID is replaced. {@link Registrable#onRegister()}
+     * and {@link #onRegister(Registrable)} are called afterwards.
+     *
+     * @param element The element to register.
+     * @return The element that was passed in.
+     * @throws IllegalStateException    If the registry is locked.
+     * @throws IllegalArgumentException If the element ID does not match {@code [a-z0-9_]{1,100}}.
+     */
+    @NotNull
+    public T register(@NotNull final T element) {
+        Preconditions.checkArgument(ID_PATTERN.matcher(element.getID()).matches(), "ID must match pattern: " + ID_PATTERN.pattern() + " (was " + element.getID() + ")");
+
+        synchronized (mutex) {
+            if (this.isLocked) {
+                throw new IllegalStateException("Cannot add to locked registry! (ID: " + element.getID() + ")");
+            }
+
+            registry.put(element.getID(), element);
+            this.cachedValues = null;
+        }
+
+        element.onRegister();
+        onRegister(element);
+
+        return element;
+    }
+
+    /**
+     * Remove an element.
+     * <p>
+     * {@link Registrable#onRemove()} and {@link #onRemove(Registrable)} are called before the
+     * element is removed.
+     *
+     * @param element The element.
+     * @return The element that was passed in.
+     * @throws IllegalStateException If the registry is locked.
+     */
+    public T remove(@NotNull final T element) {
+        if (this.isLocked) {
+            throw new IllegalStateException("Cannot remove from locked registry! (ID: " + element.getID() + ")");
+        }
+
+        element.onRemove();
+        onRemove(element);
+
+        synchronized (mutex) {
+            if (this.isLocked) {
+                throw new IllegalStateException("Cannot remove from locked registry! (ID: " + element.getID() + ")");
+            }
+
+            registry.remove(element.getID());
+            this.cachedValues = null;
+        }
+
+        return element;
+    }
+
+    /**
+     * Remove an element by ID.
+     *
+     * @param id The ID.
+     * @return The removed element, or null if no element was registered under that ID.
+     * @throws IllegalStateException If the registry is locked.
+     */
+    @Nullable
+    public T remove(@NotNull final String id) {
+        if (this.isLocked) {
+            throw new IllegalStateException("Cannot remove from locked registry! (ID: " + id + ")");
+        }
+
+        T element = registry.get(id);
+
+        if (element != null) {
+            return remove(element);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get an element by ID.
+     *
+     * @param id The ID.
+     * @return The element, or null if not found.
+     */
+    @Nullable
+    public T get(@NotNull final String id) {
+        return registry.get(id);
+    }
+
+    /**
+     * Clear the registry, removing every element.
+     * <p>
+     * Each element is removed with {@link #remove(Registrable)}, so removal callbacks are run.
+     *
+     * @throws IllegalStateException If the registry is locked.
+     */
+    public void clear() {
+        for (T value : Set.copyOf(registry.values())) {
+            remove(value);
+        }
+    }
+
+    /**
+     * Get all elements.
+     * <p>
+     * The returned set is an immutable copy, cached until the registry is next mutated.
+     *
+     * @return All elements.
+     */
+    public Set<T> values() {
+        Set<T> cached = this.cachedValues;
+        if (cached != null) {
+            return cached;
+        }
+
+        // Rebuilt under the mutex so a copy taken before a concurrent mutation can never be
+        // stored after that mutation has invalidated the cache.
+        synchronized (mutex) {
+            cached = this.cachedValues;
+            if (cached == null) {
+                cached = Set.copyOf(registry.values());
+                this.cachedValues = cached;
+            }
+            return cached;
+        }
+    }
+
+    /**
+     * Get if the registry is locked.
+     *
+     * @return If the registry is locked.
+     */
+    public boolean isLocked() {
+        return isLocked;
+    }
+
+    /**
+     * Lock the registry, preventing elements from being registered or removed.
+     * <p>
+     * Only the same locker can subsequently unlock the registry.
+     *
+     * @param locker The locker.
+     * @throws IllegalArgumentException If the registry is already locked with a different locker.
+     */
+    public void lock(@Nullable final Object locker) {
+        synchronized (mutex) {
+            if (this.isLocked && this.locker != locker) {
+                throw new IllegalArgumentException("Registry is already locked with a different locker!");
+            }
+
+            this.locker = locker;
+            isLocked = true;
+        }
+    }
+
+    /**
+     * Unlock the registry.
+     *
+     * @param locker The locker that was used to lock the registry.
+     * @throws IllegalArgumentException If the locker is not the one used to lock the registry.
+     */
+    public void unlock(@Nullable final Object locker) {
+        synchronized (mutex) {
+            if (this.locker != locker) {
+                throw new IllegalArgumentException("Cannot unlock registry!");
+            }
+
+            this.locker = null;
+            isLocked = false;
+        }
+    }
+
+    /**
+     * Run when an element is registered.
+     *
+     * @param element The element.
+     */
+    protected void onRegister(@NotNull final T element) {
+        // Override this method to do something when an element is registered.
+    }
+
+    /**
+     * Run when an element is removed.
+     *
+     * @param element The element.
+     */
+    protected void onRemove(@NotNull final T element) {
+        // Override this method to do something when an element is removed.
+    }
+
+    /**
+     * Get if the registry is empty.
+     *
+     * @return If the registry is empty.
+     */
+    public boolean isEmpty() {
+        return registry.isEmpty();
+    }
+
+    /**
+     * Get if the registry is not empty.
+     *
+     * @return If the registry is not empty.
+     */
+    public boolean isNotEmpty() {
+        return !isEmpty();
+    }
+
+    @NotNull
+    @Override
+    public Iterator<T> iterator() {
+        return values().iterator();
+    }
+
+    /**
+     * Try to fit a string to the ID pattern.
+     *
+     * @param string The string.
+     * @return The string in lowercase, but with all spaces, dots, and dashes replaced with underscores.
+     */
+    @NotNull
+    public static String tryFitPattern(@NotNull final String string) {
+        return string.replace(" ", "_")
+                .replace(".", "_")
+                .replace("-", "_")
+                .toLowerCase(Locale.ENGLISH);
+    }
+}

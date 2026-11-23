@@ -5,12 +5,22 @@ on:
     paths:
       - '**/*.kt'
       - '**/*.kts'
+      - '**/*.java'
+      - '**/src/main/resources/**'
+      - 'gradle.properties'
+      - 'gradle/wrapper/**'
+      - '.github/workflows/build.yml'
   push:
     branches:
       - master
     paths:
       - '**/*.kt'
       - '**/*.kts'
+      - '**/*.java'
+      - '**/src/main/resources/**'
+      - 'gradle.properties'
+      - 'gradle/wrapper/**'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,3 +42,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build
         run: ./gradlew build --full-stacktrace
+      - name: Upload Arcana plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arcana
+          path: build/libs/arcana-*-all.jar
+          if-no-files-found: error

@@ -1,0 +1,6 @@
+options:
+  resource-id: 0
+  bstats-id: 0
+  proxy-package: com.keopsfenks.arcana.internal.spigot.proxy
+  color: '&a'
+  supports-extensions: false
