@@ -119,7 +119,7 @@ Oyuncu katılma, yeniden doğma, ölme; blok kırma/yerleştirme; yakın dövü�
 
 ## Yönetim ve belgeler
 
-Mevcut komutun altında `/arcana skills list`, `/arcana skills cast <id> [oyuncu]`, `/arcana skills reload` bulunur. Yönetim izni `arcana.command.skills`; isteğe bağlı beceri izni bunun yerine geçmez. Konsol çağrısında oyuncu açıkça belirtilir. Oyuncu ve beceri adları için sekme tamamlama yapılır.
+Çekirdek komut API'si kullanılarak bir `/arcana` yönetim komutu eklenir; mevcut standalone çekirdek bu kök komutu henüz kaydetmiyor. Altında `/arcana skills list`, `/arcana skills cast <id> [oyuncu]`, `/arcana skills reload` bulunur. Yönetim izni `arcana.command.skills`; isteğe bağlı beceri izni bunun yerine geçmez. Konsol çağrısında oyuncu açıkça belirtilir. Oyuncu ve beceri adları için sekme tamamlama yapılır.
 
 `/arcana reload` skills yüklemesini de çalıştırır; skills YAML hatası etkin kayıtları silmez. Reload sonucu komutu çalıştırana ve loga sayılarla bildirilir.
 
