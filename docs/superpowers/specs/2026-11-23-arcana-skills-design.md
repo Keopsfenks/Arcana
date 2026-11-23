@@ -96,6 +96,7 @@ Oyuncu katılma, yeniden doğma, ölme; blok kırma/yerleştirme; yakın dövü�
 
 ## Genişletilebilirlik
 
+- Kullanıcının tasarım onayıyla eklediği zorunluluk: her efekt, koşul ve tetikleyici ayrı sınıf ve ayrı dosyadır. Ortak Java sözleşmeleri/ana sınıfları üzerinden kaydedilir. Örneğin `ParticleEffect`, `HealEffect`, `PermissionCondition`, `HealthBelowCondition`, `MeleeAttackTrigger` ve `BlockBreakTrigger`. Yeni bir tür eklemek için merkezi `switch/when` bloğu büyütülmez; kayıt listesine sınıf eklenir veya dış eklenti kayıt API'sini çağırır.
 - Java ve Kotlin eklentileri efekt ve koşul fabrikalarını kimlikle kaydedebilir; mevcut kimliği sessizce ezmek yerine açık çakışma hatası döner.
 - Dış eklenti kendi oyun olayından motorun tetikleme veya tek beceri çağırma API'sini kullanabilir. Özel tetikleyici kimlikleri kaydedilebilir.
 - YAML derlemesinde factory argümanları doğrulanır; olay anında YAML veya matematik ifadesi yeniden derlenmez.
