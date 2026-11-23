@@ -13,6 +13,7 @@ rootProject.name = "arcana"
 
 // Core
 include(":arcana-api")
+include(":arcana-skills")
 include(":arcana-core")
 include(":arcana-core:core-nms")
 include(":arcana-core:core-nms:common")
