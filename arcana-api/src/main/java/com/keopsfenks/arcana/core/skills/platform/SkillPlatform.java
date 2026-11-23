@@ -1,0 +1,14 @@
+package com.keopsfenks.arcana.core.skills.platform;
+
+import com.keopsfenks.arcana.core.skills.SkillRegistration;
+import com.keopsfenks.arcana.core.skills.SkillResult;
+import java.util.List;
+import java.util.concurrent.CompletionStage;
+import org.bukkit.plugin.Plugin;
+
+/** Owned extension and general-actor entry point, alongside the original Player engine API. */
+public interface SkillPlatform {
+    CompletionStage<SkillResult> cast(SkillKey key, SkillInvocation invocation);
+    CompletionStage<List<SkillResult>> trigger(SkillKey key, SkillInvocation invocation);
+    <T extends SkillPlatformComponent> SkillRegistration register(Plugin owner, SkillComponentType<T> type, SkillKey key, T component);
+}

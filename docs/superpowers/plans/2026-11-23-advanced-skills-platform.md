@@ -82,11 +82,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** Produce the exact public contracts above. Descriptor holds ID/help/argument names and type/default/required/range metadata. Component tokens carry `Class<T>` for checked registration; no growing type switch.
 
-- [ ] Test `legacyDescriptorsAndConsumerRemainUnchanged()` against a checked v1 descriptor list and unchanged Java fixture; `mobCannotBecomeALegacyPlayerContext()` rejects adaptation with `UNSUPPORTED_ACTOR`; `invocationValuesCopyMutableInputs()` rejects NaN, cycles, excess depth/payload and mutable Number aliasing.
-- [ ] Verify `.\gradlew.bat :arcana-api:test :arcana-skills:test FLAGS`; expect RED for missing contracts in the named API tests and a runtime legacy-adapter test under RT `legacy/LegacyInvocationAdapterTests.kt`.
-- [ ] Implement immutable values/contracts and explicit Player legacy adapter. Add v2-only result statuses `UNSUPPORTED_ACTOR`, `UNSUPPORTED_CONTEXT`, `INSUFFICIENT_RESOURCE`, `BUDGET_EXCEEDED`, `PROVIDER_UNAVAILABLE`; retain v1 result behavior.
-- [ ] Verify the named API tests and runtime adapter tests GREEN, including a normal Player cast through the existing public API.
-- [ ] Commit `feat(skills): add general invocation contracts without breaking player API`.
+- [x] Test `legacyDescriptorsAndConsumerRemainUnchanged()` against a checked v1 descriptor list and unchanged Java fixture; `mobCannotBecomeALegacyPlayerContext()` rejects adaptation with `UNSUPPORTED_ACTOR`; `invocationValuesCopyMutableInputs()` rejects NaN, cycles, excess depth/payload and mutable Number aliasing.
+- [x] Verify `.\gradlew.bat :arcana-api:test :arcana-skills:test FLAGS`; expect RED for missing contracts in the named API tests and a runtime legacy-adapter test under RT `legacy/LegacyInvocationAdapterTests.kt`.
+- [x] Implement immutable values/contracts and explicit Player legacy adapter. Add v2-only result statuses `UNSUPPORTED_ACTOR`, `UNSUPPORTED_CONTEXT`, `INSUFFICIENT_RESOURCE`, `BUDGET_EXCEEDED`, `PROVIDER_UNAVAILABLE`; retain v1 result behavior.
+- [x] Verify the named API tests and runtime adapter tests GREEN, including a normal Player cast through the existing public API.
+- [x] Commit `feat(skills): add general invocation contracts without breaking player API`.
 
 ### Task 3: Typed namespaces and shared lifecycle gate
 

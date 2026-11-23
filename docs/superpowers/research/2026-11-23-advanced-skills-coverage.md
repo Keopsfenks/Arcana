@@ -10,7 +10,7 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 
 | Kimlik | Referans | Arcana karşılığı / dosya sınıfları | Görev | Durum | Davranış kanıtı |
 | --- | --- | --- | --- | --- | --- |
-| MOD | Mevcut Arcana | Motor/katalog ayrımı, tek dağıtım | 1 | Planlandı | ModuleBoundaryTests |
+| MOD | Mevcut Arcana | Motor/katalog ayrımı, tek dağıtım | 1 | Tamamlandı | ModuleBoundaryTests |
 | API | M-S | SkillPlatform, SkillActor, SkillInvocation, legacy adaptör | 2,6 | Planlandı | PlatformCompatibilityTests |
 | OWNER | L-E | Namespaced typed registry ve owner temizliği | 3 | Planlandı | PlatformRegistryTests |
 | SOURCE | L-C,M-C | Sahipli directory/in-memory kaynaklar, seçici reload | 4 | Planlandı | DefinitionSourceTests |
