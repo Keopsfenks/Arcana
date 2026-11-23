@@ -9,6 +9,7 @@ dependencies {
     compileOnly("org.yaml:snakeyaml:2.5")
 
     testImplementation(project(":arcana-api"))
+    testImplementation(project(":arcana-skills-components"))
     testImplementation("io.papermc.paper:paper-api:$minecraftApiVersion-R0.1-SNAPSHOT")
     testImplementation("org.yaml:snakeyaml:2.5")
 }

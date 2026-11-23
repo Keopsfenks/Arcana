@@ -1,6 +1,6 @@
 # Arcana Skills
 
-Arcana Skills, YAML ile beceri tanımlamak için Arcana'nın kendi efekt motorudur. Ayrı `arcana-skills` modülünde geliştirilir ve normal Arcana JAR'ına dahil edilir; ikinci bir eklenti kurman gerekmez. XP, seviye ve yetenek ağacı bu motorun parçası değildir.
+Arcana Skills, YAML ile beceri tanımlamak için Arcana'nın kendi efekt motorudur. Yürütme motoru `arcana-skills`, standart bileşenler `arcana-skills-components` modülünde geliştirilir. İkisi normal Arcana JAR'ına dahildir; ikinci bir eklenti kurman gerekmez. XP, seviye ve yetenek ağacı bu motorun parçası değildir.
 
 ## Dosya ve sınıf düzeni
 
@@ -11,6 +11,9 @@ arcana-api/.../core/skills/
   SkillTrigger.java         # Ortak tetikleyici sözleşmesi
   SkillEngine.java          # Dış eklentilerin kullandığı API
 arcana-skills/.../skills/
+  compile/                  # YAML'den çalışma tanımı üretir
+  execution/                # Sıra, zamanlama, iptal ve cooldown
+arcana-skills-components/.../skills/
   effects/ParticleEffect.kt
   effects/HealEffect.kt
   effects/DamageEffect.kt
@@ -19,11 +22,9 @@ arcana-skills/.../skills/
   triggers/MeleeAttackTrigger.kt
   triggers/BlockBreakTrigger.kt
   BuiltinComponents.kt      # Yalnızca kayıt listeleri
-  compile/                  # YAML'den çalışma tanımı üretir
-  execution/                # Sıra, zamanlama, iptal ve cooldown
 ```
 
-Her efekt, koşul ve tetikleyici ayrı sınıftır. YAML'deki `type: particle`, kayıt sistemi üzerinden [ParticleEffect](../../arcana-skills/src/main/kotlin/com/keopsfenks/arcana/skills/effects/ParticleEffect.kt) sınıfına gider. Yeni tür eklemek için merkezi bir `switch/when` büyütülmez. Ortak Java ana sınıfları [SkillEffect](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillEffect.java), [SkillCondition](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillCondition.java) ve [SkillTrigger](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillTrigger.java) dosyalarıdır.
+Her efekt, koşul ve tetikleyici ayrı sınıftır. YAML'deki `type: particle`, kayıt sistemi üzerinden [ParticleEffect](../../arcana-skills-components/src/main/kotlin/com/keopsfenks/arcana/skills/effects/ParticleEffect.kt) sınıfına gider. Yeni tür eklemek için merkezi bir `switch/when` büyütülmez. Ortak Java ana sınıfları [SkillEffect](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillEffect.java), [SkillCondition](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillCondition.java) ve [SkillTrigger](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillTrigger.java) dosyalarıdır.
 
 ## İlk becerini etkinleştir
 

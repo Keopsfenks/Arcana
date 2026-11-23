@@ -70,11 +70,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** `SkillsRuntime(plugin,engine,directory,installCatalog:(DefaultSkillEngine,ArcanaPlugin)->Unit)` receives its composition callback; core supplies `BuiltinComponents.install` plus `installTriggers`. Engine startup itself imports no catalog class.
 
-- [ ] Write `runtimeNeedsNoCatalogClasses()` and `coreInstallsCatalogExactlyOnce()`; assert empty-catalog runtime starts, injected install count is 1 across repeated start, and existing sample resources still compile.
-- [ ] Run `.\gradlew.bat :arcana-api:test :arcana-skills:test :arcana-skills-components:test :arcana-core:core-plugin:test --tests '*ModuleBoundaryTests' FLAGS`; expect RED for the absent module/injection seam.
-- [ ] Extract catalog and wire compileOnly dependencies/core composition; root implementation includes new module. Runtime tests may depend on catalog in test scope only. Legacy example resource paths remain unchanged and exist when starting the engine without the optional catalog.
-- [ ] Run the same Verify command; expect GREEN, then root `build FLAGS`; expect all legacy tests and seven linkage checks GREEN.
-- [ ] Commit `refactor(skills): separate built-in catalog from execution engine`.
+- [x] Write `runtimeNeedsNoCatalogClasses()` and `coreInstallsCatalogExactlyOnce()`; assert empty-catalog runtime starts, injected install count is 1 across repeated start, and existing sample resources still compile.
+- [x] Run `.\gradlew.bat :arcana-api:test :arcana-skills:test :arcana-skills-components:test :arcana-core:core-plugin:test --tests '*ModuleBoundaryTests' FLAGS`; expect RED for the absent module/injection seam.
+- [x] Extract catalog and wire compileOnly dependencies/core composition; root implementation includes new module. Runtime tests may depend on catalog in test scope only. Legacy example resource paths remain unchanged and exist when starting the engine without the optional catalog.
+- [x] Run the same Verify command; expect GREEN, then root `build FLAGS`; expect all legacy tests and seven linkage checks GREEN.
+- [x] Commit `refactor(skills): separate built-in catalog from execution engine`.
 
 ### Task 2: General invocation API and legacy ABI contract
 

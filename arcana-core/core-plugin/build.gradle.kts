@@ -93,6 +93,7 @@ tasks.sourcesJar { dependsOn(vendorBStats) }
 dependencies {
     compileOnly(project(":arcana-core:core-backend"))
     compileOnly(project(":arcana-skills"))
+    compileOnly(project(":arcana-skills-components"))
 
     // Libraries (provided at runtime via Paper library loader)
     compileOnly("com.mysql:mysql-connector-j:9.6.0")

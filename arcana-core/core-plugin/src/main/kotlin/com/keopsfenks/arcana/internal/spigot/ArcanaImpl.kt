@@ -6,6 +6,7 @@ import com.keopsfenks.arcana.core.skills.SkillEngine
 import com.keopsfenks.arcana.core.command.impl.PluginCommand
 import com.keopsfenks.arcana.internal.spigot.command.ArcanaCommand
 import com.keopsfenks.arcana.skills.DefaultSkillEngine
+import com.keopsfenks.arcana.skills.BuiltinComponents
 import com.keopsfenks.arcana.skills.SkillsRuntime
 import com.keopsfenks.arcana.skills.compile.SkillCompilerImpl
 import com.keopsfenks.arcana.core.FoliaSupport
@@ -146,7 +147,10 @@ class ArcanaImpl : ArcanaSpigotPlugin(), Arcana {
     private val skillsRuntimeDelegate = lazy {
         val directory = dataFolder.toPath().resolve("skills")
         val environment = createExpressionEnvironmentBuilder().variables(*SkillCompilerImpl.VARIABLES).build()
-        SkillsRuntime(this, DefaultSkillEngine(this, directory, environment), directory)
+        SkillsRuntime(this, DefaultSkillEngine(this, directory, environment), directory) { engine, owner ->
+            BuiltinComponents.install(engine, owner)
+            BuiltinComponents.installTriggers(engine, owner)
+        }
     }
     private val skillsRuntime by skillsRuntimeDelegate
 
