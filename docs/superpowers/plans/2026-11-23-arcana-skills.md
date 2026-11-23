@@ -56,10 +56,10 @@ Tests mirror runtime packages under `arcana-skills/src/test/kotlin/`.
 
 **Produces:** validated Java contracts; typed component registration and ownership. Runtime Gradle group `com.keopsfenks`, version from root; compileOnly API/Paper/SnakeYAML, server and parser dependencies present in tests. Do not wire core startup until task 6.
 
-- [ ] Write failing tests: duplicate IDs reject; invalid IDs reject; immutable argument/context maps reject mutation; closing a handle twice is safe; owner close deactivates every owned handle; removing a component reports the affected dependency.
-- [ ] Run `gradlew.bat :arcana-api:test :arcana-skills:test --no-parallel --max-workers=2 -x clean`; verify the new behavior fails before implementation.
-- [ ] Implement the API and registries, without event/effect behavior. New registrations cannot silently replace active components.
-- [ ] Run the same tests and verify green; commit `feat(skills): add extensible Java contracts and owned registries`.
+- [x] Write failing tests: duplicate IDs reject; invalid IDs reject; immutable argument/context maps reject mutation; closing a handle twice is safe; owner close deactivates every owned handle; removing a component reports the affected dependency.
+- [x] Run `gradlew.bat :arcana-api:test :arcana-skills:test --no-parallel --max-workers=2 -x clean`; verify the new behavior fails before implementation.
+- [x] Implement the API and registries, without event/effect behavior. New registrations cannot silently replace active components.
+- [x] Run the same tests and verify green; commit `feat(skills): add extensible Java contracts and owned registries`.
 
 ### Task 2: YAML compilation and immutable definition snapshots
 
@@ -67,10 +67,10 @@ Tests mirror runtime packages under `arcana-skills/src/test/kotlin/`.
 
 **Consumes:** Task 1 registries/factories. **Produces:** safe YAML loader and compiler yielding an immutable skill map plus trigger-to-skill index; path-qualified errors. Compiler receives the existing `ExpressionEnvironment`, predeclared with the spec's five variables.
 
-- [ ] Write failing tests for duplicate YAML IDs, unknown components, missing required IDs, invalid number/string/list types, unsafe YAML tags, duplicate mapping keys, invalid expressions, absent optional damage=0, recursive all/any/not, finite duration parsing and traversal ignoring `_` sample files.
-- [ ] Verify failures with `:arcana-skills:test --tests '*SkillYamlLoaderTests' --tests '*SkillCompilerTests'` and standard flags.
-- [ ] Implement safe parsing and full-directory candidate compilation. Disabled definitions remain listed; examples beginning `_` remain ignored. Do not publish a partial snapshot on any error.
-- [ ] Verify green and commit `feat(skills): compile validated YAML definitions and expression snapshots`.
+- [x] Write failing tests for duplicate YAML IDs, unknown components, missing required IDs, invalid number/string/list types, unsafe YAML tags, duplicate mapping keys, invalid expressions, absent optional damage=0, recursive all/any/not, finite duration parsing and traversal ignoring `_` sample files.
+- [x] Verify failures with `:arcana-skills:test --tests '*SkillYamlLoaderTests' --tests '*SkillCompilerTests'` and standard flags.
+- [x] Implement safe parsing and full-directory candidate compilation. Disabled definitions remain listed; examples beginning `_` remain ignored. Do not publish a partial snapshot on any error.
+- [x] Verify green and commit `feat(skills): compile validated YAML definitions and expression snapshots`.
 
 ### Task 3: Dispatch, cooldowns and cancellable execution
 

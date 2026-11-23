@@ -18,7 +18,10 @@ public final class SkillArguments {
     public Object raw(String key) { return values.get(key); }
     public Object raw(String key, Object fallback) { return values.getOrDefault(key, fallback); }
     public IllegalArgumentException error(String key, String message) {
-        return new IllegalArgumentException(path + (key.isEmpty() ? "" : "." + key) + ": " + message);
+        return new IllegalArgumentException(fieldPath(key) + ": " + message);
+    }
+    private String fieldPath(String key) {
+        return path + (key.isEmpty() ? "" : key.startsWith("[") ? key : "." + key);
     }
 
     public String string(String key) {
@@ -49,7 +52,7 @@ public final class SkillArguments {
             if (!(k instanceof String name)) throw error(key, "mapping keys must be strings");
             copy.put(name, v);
         });
-        return new SkillArguments(copy, path + "." + key);
+        return new SkillArguments(copy, fieldPath(key));
     }
 
     private static Map<String, Object> freezeMap(Map<?, ?> source, String path) {
