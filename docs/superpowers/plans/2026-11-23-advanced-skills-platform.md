@@ -94,11 +94,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** `PlatformRegistry<T>.register(owner:Plugin,key:SkillKey,value:T): SkillRegistration`, `.get(key): RegisteredComponent<T>?`; `SkillLifecycleGate.admit(owner,action)` and `.disable(owner)` collect handles atomically for closing outside the gate. `DefaultSkillPlatform` shares the parent engine's lifecycle gate; it does not implement a second independent owner state.
 
-- [ ] Assert two mock owners can register equal local IDs in different namespaces; wrong-owner namespace and duplicate typed key reject; closing one owner preserves the other. Pause insertion with latches and race disable/shutdown; no active late registration survives. Callback tries re-entry without deadlock.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test --tests '*PlatformRegistryTests' --tests '*ProviderLifecycleTests' FLAGS`; expect RED.
-- [ ] Implement tokens/registries, normalized owner namespace with `Locale.ROOT`, idempotent registrations and shared gate. Existing legacy registration still rejects duplicate unqualified legacy IDs.
-- [ ] Same Verify GREEN; also existing registry/execution lifecycle tests GREEN.
-- [ ] Commit `feat(skills): isolate namespaced registrations with shared owner lifecycle`.
+- [x] Assert two mock owners can register equal local IDs in different namespaces; wrong-owner namespace and duplicate typed key reject; closing one owner preserves the other. Pause insertion with latches and race disable/shutdown; no active late registration survives. Callback tries re-entry without deadlock.
+- [x] Verify `.\gradlew.bat :arcana-skills:test --tests '*PlatformRegistryTests' --tests '*ProviderLifecycleTests' FLAGS`; expect RED.
+- [x] Implement tokens/registries, normalized owner namespace with `Locale.ROOT`, idempotent registrations and shared gate. Existing legacy registration still rejects duplicate unqualified legacy IDs.
+- [x] Same Verify GREEN; also existing registry/execution lifecycle tests GREEN.
+- [x] Commit `feat(skills): isolate namespaced registrations with shared owner lifecycle`.
 
 ### Task 4: Owned definition sources and dependency-aware reload
 

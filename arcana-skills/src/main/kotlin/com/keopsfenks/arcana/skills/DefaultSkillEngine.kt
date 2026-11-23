@@ -9,7 +9,8 @@ import com.keopsfenks.arcana.skills.config.SkillYamlLoader
 import com.keopsfenks.arcana.skills.execution.*
 import com.keopsfenks.arcana.skills.filters.SkillFilters
 import com.keopsfenks.arcana.skills.registry.ComponentRegistry
-import com.keopsfenks.arcana.skills.registry.OwnedRegistration
+import com.keopsfenks.arcana.skills.platform.DefaultSkillPlatform
+import com.keopsfenks.arcana.skills.platform.lifecycle.SkillLifecycleGate
 import com.keopsfenks.arcana.skills.triggers.SkillTriggerDispatch
 import org.bukkit.plugin.Plugin
 import java.nio.file.Path
@@ -27,6 +28,8 @@ class DefaultSkillEngine(
     val random: () -> Double = { ThreadLocalRandom.current().nextDouble() }
 ) : SkillEngine {
     val cooldowns = CooldownStore(clock)
+    internal val lifecycle = SkillLifecycleGate()
+    private val generalPlatform = DefaultSkillPlatform(this, lifecycle)
     private val diagnostics = SkillRuntimeDiagnostics({ plugin.logger }, clock)
     val effects = ComponentRegistry<SkillEffect> { invalidate(it) }
     val conditions = ComponentRegistry<SkillCondition> { invalidate(it) }
@@ -38,25 +41,21 @@ class DefaultSkillEngine(
     private val current = AtomicReference(SkillSnapshot.EMPTY)
     private val executions = ConcurrentHashMap.newKeySet<ExecutionState>()
     private val closed = AtomicBoolean(false)
-    private val disabledOwners = ConcurrentHashMap.newKeySet<Plugin>()
     private val runner = SkillRunner(this)
     private val reloadLock = Any()
-    private val ownerLock = Any()
     var filterCompiler: (SkillArguments) -> CompiledSkillCondition = SkillFilters::compile
     private val loader = SkillYamlLoader { SkillCompilerImpl(environment, effects, conditions, triggers, filterCompiler) }
 
-    override fun registerEffect(owner: Plugin, effect: SkillEffect): SkillRegistration = synchronized(ownerLock) {
-        checkOwner(owner)
+    override fun registerEffect(owner: Plugin, effect: SkillEffect): SkillRegistration = lifecycle.admit(owner) {
         effects.register(owner, effect)
     }
 
-    override fun registerCondition(owner: Plugin, condition: SkillCondition): SkillRegistration = synchronized(ownerLock) {
-        checkOwner(owner)
+    override fun registerCondition(owner: Plugin, condition: SkillCondition): SkillRegistration = lifecycle.admit(owner) {
         conditions.register(owner, condition)
     }
 
     override fun registerTrigger(owner: Plugin, trigger: SkillTrigger): SkillRegistration {
-        val handle = synchronized(ownerLock) { checkOwner(owner); triggers.register(owner, trigger) }
+        val handle = lifecycle.admit(owner) { triggers.register(owner, trigger) }
         try {
             val listener = trigger.listen(object : SkillTriggerDispatch {
                 override fun prepare(context: SkillContext): Runnable? {
@@ -74,6 +73,7 @@ class DefaultSkillEngine(
     }
 
     override fun cast(skillId: String, context: SkillContext): CompletionStage<SkillResult> = castInSnapshot(skillId, context, current.get())
+    override fun platform() = generalPlatform
 
     private fun castInSnapshot(skillId: String, context: SkillContext, snapshot: SkillSnapshot): CompletableFuture<SkillResult> {
         if (closed.get()) return completed(SkillResult.Status.CANCELLED, "Skill engine is stopped")
@@ -145,20 +145,19 @@ class DefaultSkillEngine(
     }
 
     fun closeOwner(owner: Plugin) {
-        val handles = synchronized(ownerLock) {
-            disabledOwners.add(owner)
+        val handles = lifecycle.disable(owner) {
             allHandles().filter { it.owner === owner }
         }
         handles.forEach { it.close() }
     }
 
-    fun enableOwner(owner: Plugin) = synchronized(ownerLock) { disabledOwners.remove(owner) }
+    fun enableOwner(owner: Plugin) = lifecycle.enable(owner)
 
     override fun shutdown() {
-        val handles = synchronized(ownerLock) {
-            if (!closed.compareAndSet(false, true)) return
+        val handles = lifecycle.stop {
+            closed.set(true)
             allHandles()
-        }
+        } ?: return
         executions.toList().forEach { it.cancel("Skill engine stopped") }
         handles.forEach { it.close() }
         listeners.values.toList().forEach { safelyClose(it) }
@@ -167,16 +166,13 @@ class DefaultSkillEngine(
         diagnostics.clear()
     }
 
-    private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot()
+    private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot() + generalPlatform.registrations()
 
-    private fun invalidate(handle: OwnedRegistration<*>) {
+    private fun invalidate(handle: SkillRegistration) {
         executions.filter { handle in it.dependencies }.forEach { it.cancel("Component ${handle.id} was removed") }
     }
 
-    private fun checkOwner(owner: Plugin) {
-        check(!closed.get()) { "Skill engine is stopped" }
-        check(owner !in disabledOwners) { "Component owner is disabled" }
-    }
+    internal fun invalidateRegistration(handle: SkillRegistration) = invalidate(handle)
 
     private fun safelyClose(handle: AutoCloseable) {
         try { handle.close() } catch (error: Exception) { plugin.logger.warning("Could not close skill listener: ${error.message}") }
