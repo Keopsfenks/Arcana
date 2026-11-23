@@ -20,6 +20,7 @@ plugins {
 
 dependencies {
     implementation(project(":arcana-api"))
+    implementation(project(":arcana-skills"))
     implementation(project(path = ":arcana-core:core-plugin", configuration = "shadow"))
     implementation(project(":arcana-core:core-backend"))
     implementation(project(path = ":arcana-core:core-nms:v1_21_8", configuration = "reobf"))

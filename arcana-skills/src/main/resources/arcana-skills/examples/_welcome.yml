@@ -1,0 +1,7 @@
+# Rename this file to welcome.yml and enable it to activate the example.
+id: welcome
+enabled: false
+triggers: [join]
+effects:
+  - type: message
+    text: "<light_purple>Hoş geldin, <white>{player}</white>!</light_purple>"

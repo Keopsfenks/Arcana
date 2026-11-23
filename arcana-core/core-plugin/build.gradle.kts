@@ -1,3 +1,10 @@
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.FileVisitResult
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+
 group = "com.keopsfenks"
 version = rootProject.version
 
@@ -24,7 +31,26 @@ val vendorBStats by tasks.registering {
         """.trimIndent() + "\n"
 
         val cloneDir = temporaryDir.resolve("bstats-metrics")
-        cloneDir.deleteRecursively()
+        fun cleanClone() {
+            val base = temporaryDir.toPath().toAbsolutePath().normalize()
+            val target = cloneDir.toPath().toAbsolutePath().normalize()
+            check(target.startsWith(base) && target != base) { "Vendor cleanup must stay inside the task's temporary directory" }
+            if (!Files.exists(target)) return
+            Files.walkFileTree(target, object : SimpleFileVisitor<Path>() {
+                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    // Git pack files are read-only on Windows; Kotlin deleteRecursively leaves them behind.
+                    if (!attrs.isSymbolicLink) file.toFile().setWritable(true)
+                    Files.delete(file)
+                    return FileVisitResult.CONTINUE
+                }
+                override fun postVisitDirectory(dir: Path, error: IOException?): FileVisitResult {
+                    if (error != null) throw error
+                    Files.delete(dir)
+                    return FileVisitResult.CONTINUE
+                }
+            })
+        }
+        cleanClone()
 
         val clone = ProcessBuilder(
             "git", "clone", "--depth", "1", "--branch", bStatsVersion,
@@ -52,7 +78,7 @@ val vendorBStats by tasks.registering {
                 }
         }
 
-        cloneDir.deleteRecursively()
+        cleanClone()
     }
 }
 
@@ -66,6 +92,7 @@ tasks.sourcesJar { dependsOn(vendorBStats) }
 
 dependencies {
     compileOnly(project(":arcana-core:core-backend"))
+    compileOnly(project(":arcana-skills"))
 
     // Libraries (provided at runtime via Paper library loader)
     compileOnly("com.mysql:mysql-connector-j:9.6.0")

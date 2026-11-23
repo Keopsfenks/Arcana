@@ -2,6 +2,12 @@ package com.keopsfenks.arcana.internal.spigot
 
 import com.keopsfenks.arcana.core.Arcana
 import com.keopsfenks.arcana.core.ArcanaPlugin
+import com.keopsfenks.arcana.core.skills.SkillEngine
+import com.keopsfenks.arcana.core.command.impl.PluginCommand
+import com.keopsfenks.arcana.internal.spigot.command.ArcanaCommand
+import com.keopsfenks.arcana.skills.DefaultSkillEngine
+import com.keopsfenks.arcana.skills.SkillsRuntime
+import com.keopsfenks.arcana.skills.compile.SkillCompilerImpl
 import com.keopsfenks.arcana.core.FoliaSupport
 import com.keopsfenks.arcana.core.actionbar.ActionBarProvider
 import com.keopsfenks.arcana.core.actionbar.PersistentActionBar
@@ -137,6 +143,21 @@ private val DEFAULT_PROFILE_RESOLVER = PlayerProfileResolver { it.uniqueId }
 
 @Suppress("UNUSED")
 class ArcanaImpl : ArcanaSpigotPlugin(), Arcana {
+    private val skillsRuntimeDelegate = lazy {
+        val directory = dataFolder.toPath().resolve("skills")
+        val environment = createExpressionEnvironmentBuilder().variables(*SkillCompilerImpl.VARIABLES).build()
+        SkillsRuntime(this, DefaultSkillEngine(this, directory, environment), directory)
+    }
+    private val skillsRuntime by skillsRuntimeDelegate
+
+    override fun getSkillEngine(): SkillEngine {
+        check(skillsRuntime.isStarted) { "Arcana Skills is available after Arcana enables" }
+        return skillsRuntime.engine
+    }
+
+    override fun loadPluginCommands(): List<PluginCommand> = listOf(ArcanaCommand(this) { getSkillEngine() })
+
+    override fun prepareReload(cancelTasks: Boolean) = skillsRuntime.prepareReload(cancelTasks)
     // Lazy, because constructing the config recreates data.yml from the jar. A server that has
     // finished migrating never touches it, and so never grows the file back.
     override val dataYml: DataYml by lazy { DataYml(this) }
@@ -524,6 +545,7 @@ class ArcanaImpl : ArcanaSpigotPlugin(), Arcana {
 
     override fun handleEnable() {
         super.handleEnable()
+        skillsRuntime.start()
         hologramTracker.start()
 
         // Fed from the writer rather than polled: every value change on this server lands in the
@@ -547,13 +569,15 @@ class ArcanaImpl : ArcanaSpigotPlugin(), Arcana {
 
     override fun handleReload() {
         super.handleReload()
-
-        // Restarted rather than left alone, so a changed refresh-interval (or a leaderboards
-        // section that was just turned on or off) takes effect without a restart.
-        leaderboardService.start()
+        try { skillsRuntime.afterReload() }
+        finally {
+            // Independent services still restart when a staged skills dependency disappears.
+            leaderboardService.start()
+        }
     }
 
     override fun handleDisable() {
+        if (skillsRuntimeDelegate.isInitialized()) skillsRuntime.stop()
         leaderboardService.shutdown()
         super.handleDisable()
         hologramTracker.shutdown()

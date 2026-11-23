@@ -1,0 +1,15 @@
+# Rename to combo.yml, enable, then grant arcana.skill.arcane_pulse.
+id: arcane_pulse
+enabled: false
+triggers: [sneak]
+permission: arcana.skill.arcane_pulse
+cooldown: 10s
+effects:
+  - type: repeat
+    times: 3
+    interval: 10t
+    effects:
+      - type: heal
+        amount: 1
+      - type: action_bar
+        text: "<aqua>Arcane Pulse</aqua>"

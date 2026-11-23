@@ -1,0 +1,19 @@
+# Rename to vampiric_strike.yml, enable, then grant arcana.skill.vampiric_strike.
+id: vampiric_strike
+enabled: false
+triggers: [melee_attack]
+permission: arcana.skill.vampiric_strike
+chance: 25
+cooldown: 3s
+cooldown-group: vampiric
+filters:
+  entities: [ZOMBIE, SKELETON]
+conditions:
+  - type: health_below
+    ratio: 0.75
+effects:
+  - type: damage
+    target: victim
+    amount: "2 + damage * 0.1"
+  - type: heal
+    amount: 1

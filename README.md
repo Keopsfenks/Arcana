@@ -7,6 +7,7 @@ Arcana, **Semih Gürbüz (Keopsfenks)** tarafından sürdürülen bir Minecraft 
 - Eklenti adı: `Arcana`
 - Paket: `com.keopsfenks.arcana`
 - API: `com.keopsfenks:arcana-api`
+- YAML beceri/efekt motoru: ayrı `arcana-skills` modülü, aynı kurulum JAR'ı
 - Ana sınıf: `com.keopsfenks.arcana.internal.spigot.ArcanaImpl`
 - Geliştirici: [Keopsfenks](https://github.com/Keopsfenks)
 - [Belgeler](docs/wiki/home.md) · [Sürümler](https://github.com/Keopsfenks/Arcana/releases) · [Hata bildir](https://github.com/Keopsfenks/Arcana/issues)
@@ -26,6 +27,8 @@ Linux/macOS: `./gradlew build`.
 Sunucuya `build/libs/arcana-<sürüm>-all.jar` dosyasını kur. Normal JAR bağımlılıkları içermez. Sunucu API tabanı 1.21.8'dir; sürüme özel modüller `settings.gradle.kts` içinde listelenir. Hedef sunucu sürümünü kullandığın eklentilerle birlikte doğrula.
 
 ## API kullanımı
+
+`arcana-api` ortak Java sözleşmelerini, `arcana-core` sunucu uygulamasını, `arcana-skills` bağımsız YAML motorunu barındırır. Her efekt, koşul ve tetikleyici ayrı sınıftır. [Arcana Skills kılavuzu](docs/wiki/skills.md), etkinleştirme örnekleri ve Java genişletme API'sini anlatır.
 
 Önce `.\gradlew.bat :arcana-api:publishToMavenLocal` komutunu çalıştır; ardından kendi eklentinde:
 
