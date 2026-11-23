@@ -7,6 +7,7 @@ import com.keopsfenks.arcana.skills.compile.*
 import com.keopsfenks.arcana.skills.config.SkillLoadResult
 import com.keopsfenks.arcana.skills.config.SkillYamlLoader
 import com.keopsfenks.arcana.skills.execution.*
+import com.keopsfenks.arcana.skills.filters.SkillFilters
 import com.keopsfenks.arcana.skills.registry.ComponentRegistry
 import com.keopsfenks.arcana.skills.registry.OwnedRegistration
 import org.bukkit.plugin.Plugin
@@ -38,10 +39,7 @@ class DefaultSkillEngine(
     private val disabledOwners = ConcurrentHashMap.newKeySet<Plugin>()
     private val runner = SkillRunner(this)
     private val reloadLock = Any()
-    var filterCompiler: (SkillArguments) -> CompiledSkillCondition = {
-        require(it.values.isEmpty()) { "${it.path}: no filter compiler registered" }
-        CompiledSkillCondition { true }
-    }
+    var filterCompiler: (SkillArguments) -> CompiledSkillCondition = SkillFilters::compile
     private val loader = SkillYamlLoader { SkillCompilerImpl(environment, effects, conditions, triggers, filterCompiler) }
 
     override fun registerEffect(owner: Plugin, effect: SkillEffect): SkillRegistration {

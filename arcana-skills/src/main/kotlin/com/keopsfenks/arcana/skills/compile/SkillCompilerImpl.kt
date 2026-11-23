@@ -4,6 +4,7 @@ import com.keopsfenks.arcana.core.math.ExpressionEnvironment
 import com.keopsfenks.arcana.core.skills.*
 import com.keopsfenks.arcana.skills.config.SkillArgumentsReader
 import com.keopsfenks.arcana.skills.registry.ComponentRegistry
+import com.keopsfenks.arcana.skills.filters.SkillFilters
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
 
@@ -12,10 +13,7 @@ class SkillCompilerImpl(
     private val effectTypes: ComponentRegistry<SkillEffect>,
     private val conditionTypes: ComponentRegistry<SkillCondition>,
     private val triggerTypes: ComponentRegistry<SkillTrigger>,
-    private val filterCompiler: (SkillArguments) -> CompiledSkillCondition = {
-        require(it.values.isEmpty()) { "${it.path}: no filter compiler registered" }
-        CompiledSkillCondition { true }
-    }
+    private val filterCompiler: (SkillArguments) -> CompiledSkillCondition = SkillFilters::compile
 ) : SkillCompiler {
     private val dependencies = LinkedHashSet<SkillRegistration>()
     private val references = LinkedHashMap<String, String>()
