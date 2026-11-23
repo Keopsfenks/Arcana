@@ -26,6 +26,7 @@ class DefaultSkillEngine(
     val random: () -> Double = { ThreadLocalRandom.current().nextDouble() }
 ) : SkillEngine {
     val cooldowns = CooldownStore(clock)
+    private val diagnostics = SkillRuntimeDiagnostics({ plugin.logger }, clock)
     val effects = ComponentRegistry<SkillEffect> { invalidate(it) }
     val conditions = ComponentRegistry<SkillCondition> { invalidate(it) }
     val triggers = ComponentRegistry<SkillTrigger> { handle ->
@@ -95,7 +96,12 @@ class DefaultSkillEngine(
 
     override fun trigger(triggerId: String, context: SkillContext): CompletionStage<List<SkillResult>> {
         val snapshot = current.get()
-        val results = snapshot.byTrigger[triggerId].orEmpty().map { castInSnapshot(it.id, context, snapshot) }
+        val results = snapshot.byTrigger[triggerId].orEmpty().map { skill ->
+            castInSnapshot(skill.id, context, snapshot).thenApply { result ->
+                diagnostics.report(skill.id, result)
+                result
+            }
+        }
         return CompletableFuture.allOf(*results.toTypedArray()).thenApply { java.util.List.copyOf(results.map { it.join() }) }
     }
 
@@ -109,6 +115,7 @@ class DefaultSkillEngine(
         val missing = snapshot.byId.values.filterNot { it.available() }
         if (missing.isNotEmpty()) return@synchronized SkillReloadResult(false, 0, 0, missing.map { "${it.source}: component was removed during reload" })
         val previous = current.getAndSet(snapshot)
+        diagnostics.retain(snapshot.byId.keys)
         executions.filter { it.snapshot === previous }.forEach { it.cancel("Skills reloaded") }
         candidate.report
     }
@@ -119,6 +126,10 @@ class DefaultSkillEngine(
     override fun cancel(playerId: UUID) {
         executions.filter { it.playerId == playerId }.forEach { it.cancel("Player left") }
         cooldowns.remove(playerId)
+    }
+
+    fun cancelPending(reason: String) = synchronized(reloadLock) {
+        executions.toList().forEach { it.cancel(reason) }
     }
 
     fun closeOwner(owner: Plugin) {
@@ -139,6 +150,7 @@ class DefaultSkillEngine(
             listeners.values.toList().forEach { safelyClose(it) }
             listeners.clear()
             cooldowns.clear()
+            diagnostics.clear()
         }
     }
 

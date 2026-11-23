@@ -1,6 +1,6 @@
 # Arcana Skills Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Ship the approved, independent YAML skill/effect engine as an integrated `arcana-skills` module with one class per effect, condition and trigger.
 
@@ -111,13 +111,13 @@ Tests mirror runtime packages under `arcana-skills/src/test/kotlin/`.
 
 **Consumes:** tasks 1–5. **Produces:** one installed Arcana JAR, bootstrapped engine, atomic general reload, admin commands, documented native schema and examples.
 
-- [ ] Write failing lifecycle tests verifying a new boolean `tryReload(boolean cancelTasks)` checks a protected preflight hook before both config updates and scheduler cancellation; retain both existing void `reload` signatures as delegating wrappers. Existing plugins' default preflight returns true. Global reload command reports a rejection accurately.
-- [ ] Test startup samples are disabled/ignored, a file-based manual skill casts, `/arcana skills` permission gates work, console requires a player, completion suggests IDs/online players, and reload command returns compiler diagnostics without claiming success.
-- [ ] Wire `Arcana.getSkillEngine` to `DefaultSkillEngine`; stage skills reload during core preflight, commit it in reload lifecycle, cancel jobs/close registrations at owner disable/quit, and prevent duplicate listener registration across reloads. Core uses a compileOnly skills dependency; root includes the runtime implementation once. Override `ArcanaImpl.loadPluginCommands()` to register the new root `ArcanaCommand` through existing `PluginCommand`/`Subcommand` APIs; current core has no built-in root command to extend.
-- [ ] Add three independently editable sample files and Turkish schema/API docs. Explain IDs, conditions, filters, snapshot timing, cooldown/error behavior and adding a standalone `ParticleEffect`-style class.
-- [ ] Run focused integration tests, then `gradlew.bat build --no-parallel --max-workers=2 -x clean --console=plain`; require all existing/new tests and seven NMS linkage checks green.
-- [ ] Inspect root JAR for API + skills implementation + correct example paths, Arcana plugin metadata and bundled license/NOTICE. Verify no libreforge class/source entered the distribution.
-- [ ] Commit `feat(skills): integrate lifecycle commands samples and documentation`; request a whole-branch code review, fix material findings with regressions, rerun affected verification and publish the completed work to the user's fork. State whether live server startup was exercised.
+- [x] Write failing lifecycle tests verifying a new boolean `tryReload(boolean cancelTasks)` checks a protected preflight hook before both config updates and scheduler cancellation; retain both existing void `reload` signatures as delegating wrappers. Existing plugins' default preflight returns true. Global reload command reports a rejection accurately.
+- [x] Test startup samples are disabled/ignored, a file-based manual skill casts, `/arcana skills` permission gates work, console requires a player, completion suggests IDs/online players, and reload command returns compiler diagnostics without claiming success.
+- [x] Wire `Arcana.getSkillEngine` to `DefaultSkillEngine`; stage skills reload during core preflight, commit it in reload lifecycle, cancel jobs/close registrations at owner disable/quit, and prevent duplicate listener registration across reloads. Core uses a compileOnly skills dependency; root includes the runtime implementation once. Override `ArcanaImpl.loadPluginCommands()` to register the new root `ArcanaCommand` through existing `PluginCommand`/`Subcommand` APIs; current core has no built-in root command to extend.
+- [x] Add three independently editable sample files and Turkish schema/API docs. Explain IDs, conditions, filters, snapshot timing, cooldown/error behavior and adding a standalone `ParticleEffect`-style class.
+- [x] Run focused integration tests, then `gradlew.bat build --no-parallel --max-workers=2 -x clean --console=plain`; require all existing/new tests and seven NMS linkage checks green.
+- [x] Inspect root JAR for API + skills implementation + correct example paths, Arcana plugin metadata and bundled license/NOTICE. Verify no libreforge class/source entered the distribution.
+- [x] Commit `feat(skills): integrate lifecycle commands samples and documentation`; request a whole-branch code review, fix material findings with regressions, rerun affected verification and publish the completed work to the user's fork. State whether live server startup was exercised.
 
 ## Plan review record
 

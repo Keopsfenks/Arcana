@@ -723,6 +723,30 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
      * @param cancelTasks If tasks should be cancelled.
      */
     public final void reload(final boolean cancelTasks) {
+        this.tryReload(cancelTasks);
+    }
+
+    /** Try a full reload, returning false when preflight rejects it without changing active state. */
+    public final boolean tryReload() {
+        return this.tryReload(true);
+    }
+
+    /**
+     * Validate a reload before configs are changed or tasks cancelled. Override to stage optional
+     * subsystem changes. Returning false must leave existing state intact.
+     *
+     * @param cancelTasks Whether the accepted reload will cancel scheduled tasks.
+     * @return Whether the reload may proceed. Existing plugins accept by default.
+     */
+    protected boolean prepareReload(final boolean cancelTasks) {
+        return true;
+    }
+
+    /** Run the normal reload lifecycle only after successful preflight. Reloads are serialized per plugin. */
+    public final synchronized boolean tryReload(final boolean cancelTasks) {
+        if (!this.prepareReload(cancelTasks)) {
+            return false;
+        }
         this.getConfigHandler().updateConfigs();
 
         if (cancelTasks) {
@@ -748,6 +772,7 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
         }
 
         Arcana.get().requestDisplayRefresh();
+        return true;
     }
 
     /**

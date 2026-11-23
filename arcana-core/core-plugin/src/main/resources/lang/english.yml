@@ -1,5 +1,10 @@
 multiple-in-craft: '&l&c! &fThis recipe requires &a%amount%&f of this item.'
 
+messages:
+  prefix: '&5Arcana &8» &f'
+  no-permission: '&cYou do not have permission to use this command.'
+  not-player: '&cThis command requires a player.'
+
 # Specify default display names for prices made through ConfiguredPrice#create
 # These will override any custom configured price display names.
 # You can use %value% and %value_commas% as placeholders.

@@ -10,13 +10,12 @@ class CooldownStore(private val clock: () -> Long) {
 
     fun tryAcquire(player: UUID, group: String, durationNanos: Long): Boolean {
         require(durationNanos in 0..86_400_000_000_000L) { "Cooldown out of bounds" }
-        if (durationNanos == 0L) return true
         val now = clock()
         val admitted = AtomicBoolean(false)
         deadlines.compute(Key(player, group)) { _, previous ->
             if (previous == null || now - previous >= 0) {
                 admitted.set(true)
-                now + durationNanos
+                if (durationNanos == 0L) null else now + durationNanos
             } else previous
         }
         return admitted.get()

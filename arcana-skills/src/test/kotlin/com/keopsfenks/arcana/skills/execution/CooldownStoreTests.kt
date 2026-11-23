@@ -8,6 +8,17 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 
 class CooldownStoreTests {
+    @Test fun `zero duration still respects an active shared cooldown`() {
+        val now = AtomicLong(0)
+        val store = CooldownStore(now::get)
+        val player = UUID.randomUUID()
+        assertTrue(store.tryAcquire(player, "shared", 1000))
+        assertFalse(store.tryAcquire(player, "shared", 0))
+        now.set(1000)
+        assertTrue(store.tryAcquire(player, "shared", 0))
+        assertEquals(0, store.remaining(player, "shared"))
+    }
+
     @Test fun `one concurrent admission wins for the same player and group`() {
         val now = AtomicLong(0)
         val store = CooldownStore(now::get)

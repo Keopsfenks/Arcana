@@ -8,6 +8,17 @@ website: https://github.com/Keopsfenks/Arcana
 load: STARTUP
 folia-supported: true
 
+permissions:
+  arcana.command:
+    description: View Arcana command help.
+    default: true
+  arcana.command.reload:
+    description: Reload the Arcana framework.
+    default: op
+  arcana.command.skills:
+    description: List, cast and reload Arcana skills.
+    default: op
+
 # Fixes some plugins breaking load order
 loadbefore:
   - Spartan

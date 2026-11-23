@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -55,5 +56,12 @@ class SkillContextTest {
         cycle.put("again", cycle);
         var error = assertThrows(IllegalArgumentException.class, () -> new SkillArguments(cycle, "skill.yml"));
         assertTrue(error.getMessage().contains("skill.yml.again"));
+    }
+
+    @Test void mutableNumberValuesAreCopiedIntoTheSnapshot() {
+        var number = new AtomicInteger(4);
+        var context = SkillContext.builder(player()).value("damage", number).build();
+        number.set(9);
+        assertEquals(4.0, context.getNumber("damage"));
     }
 }

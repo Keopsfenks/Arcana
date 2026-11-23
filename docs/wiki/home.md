@@ -6,6 +6,7 @@ Start with the [project README](../../README.md) for builds, installation, depen
 
 ## Configuration and lookups
 
+- [Arcana Skills — YAML beceri/efekt motoru](skills.md)
 - [Data storage](general-config/data-storage.md)
 - [Text formatting](general-config/text-formatting.md)
 - [GUI pages](general-config/pages.md)

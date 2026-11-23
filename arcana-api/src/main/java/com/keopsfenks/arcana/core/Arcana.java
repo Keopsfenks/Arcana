@@ -95,6 +95,16 @@ import org.jetbrains.annotations.Nullable;
  */
 @ApiStatus.Internal
 public interface Arcana {
+    /**
+     * Get the YAML skill engine. Use after Arcana enables (dependent plugins should declare Arcana).
+     * The default preserves compatibility with older bridge implementations.
+     *
+     * @return The skill engine.
+     * @throws IllegalStateException If skills have not initialized.
+     */
+    default com.keopsfenks.arcana.core.skills.SkillEngine getSkillEngine() {
+        throw new IllegalStateException("Arcana Skills is not available before Arcana enables");
+    }
 
     /**
      * Create a scheduler.

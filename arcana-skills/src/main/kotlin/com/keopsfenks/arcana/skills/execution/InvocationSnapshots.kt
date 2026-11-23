@@ -4,6 +4,8 @@ import com.keopsfenks.arcana.core.skills.SkillContext
 import org.bukkit.entity.Player
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import java.util.concurrent.ExecutionException
 
 object InvocationSnapshots {
     @Suppress("DEPRECATION")
@@ -32,6 +34,15 @@ object InvocationSnapshots {
                 val valid = if (victim is Player) victim.isOnline else victim.isValid
                 if (!valid) context.toBuilder().victim(null).build()
                 else context.toBuilder().value("target_name", victim.name).value("entity", victim.type.name).build()
-            })
+            }).handle { captured, error ->
+                state.checkActive()
+                if (error == null) captured
+                else {
+                    var cause = error
+                    while ((cause is CompletionException || cause is ExecutionException) && cause.cause != null) cause = cause.cause!!
+                    if (cause is CancellationException) context.toBuilder().victim(null).build()
+                    else throw CompletionException(cause)
+                }
+            }
         }
 }

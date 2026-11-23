@@ -73,8 +73,13 @@ public final class SkillArguments {
         if (depth > 64) throw new IllegalArgumentException(path + ": argument nesting exceeds 64 levels");
         if (value == null || value instanceof String || value instanceof Boolean || value instanceof Enum<?>) return value;
         if (value instanceof Number number) {
-            if (!Double.isFinite(number.doubleValue())) throw new IllegalArgumentException(path + ": number must be finite");
-            return number;
+            double snapshot = number.doubleValue();
+            if (!Double.isFinite(snapshot)) throw new IllegalArgumentException(path + ": number must be finite");
+            Class<?> type = number.getClass();
+            if (type == Byte.class || type == Short.class || type == Integer.class || type == Long.class
+                    || type == Float.class || type == Double.class || type == java.math.BigInteger.class
+                    || type == java.math.BigDecimal.class) return number;
+            return snapshot;
         }
         if (value instanceof Map<?, ?> map) return freezeMap(map, path, depth, active);
         if (value instanceof List<?> list) {
