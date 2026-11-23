@@ -68,7 +68,11 @@ class SkillExecutionImpl(
         return state.track(engine.scheduler.on(context.caster, ticks) { state.checkActive(); SkillResult.success() })
     }
 
-    override fun cast(skillId: String): CompletionStage<SkillResult> = engine.runNested(skillId, context, state, depth + 1)
+    override fun cast(skillId: String): CompletionStage<SkillResult> {
+        val parent = context.getText("skill")
+        val resolved = if (':' !in skillId && ':' in parent) parent.substringBefore(':') + ":" + skillId else skillId
+        return engine.runNested(resolved, context, state, depth + 1)
+    }
     override fun format(text: String) = text.replace("{player}", context.getText("caster_name"))
         .replace("{target}", context.getText("target_name")).replace("{skill}", context.getText("skill"))
 

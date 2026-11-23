@@ -106,11 +106,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** `SkillPlatform.registerSource(Plugin,SkillDefinitionSource): SkillRegistration`, `reloadSource(SkillKey): SkillReloadResult`, `definitions(): List<SkillDefinitionInfo>`; sources expose key and immutable `load(): List<SkillDefinition>` outside locks. Repository `prepare(Set<SkillKey>)` and `commit(DefinitionCandidate)` publish immutable snapshots/revision leases.
 
-- [ ] Tests load directory/in-memory definitions from two fake owners; unqualified IDs inherit source namespace; duplicate key rejects; invalid source/global preflight preserves jobs/configs. Cyclic/static and dynamic references reject invalidated revisions, while unrelated owner work survives source reload. Source load racing unregister cannot publish.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test --tests '*DefinitionSourceTests' --tests '*SourceReloadRaceTests' FLAGS`; expect RED.
-- [ ] Implement safe existing YAML limits per source, schema dispatch (absent=1; explicit=2), source ownership/revision graph and global prepare-before-cancel integration. A callback never reads files or runs factories under the lifecycle gate. Full reload retains existing cancel-all-old-work semantics; source reload invalidates only affected graphs.
-- [ ] Same Verify GREEN plus existing reload/lifecycle tests; test qualified cross-source references and missing provider diagnostics with full source/field paths.
-- [ ] Commit `feat(skills): load owned definition sources with selective atomic reload`.
+- [x] Tests load directory/in-memory definitions from two fake owners; unqualified IDs inherit source namespace; duplicate key rejects; invalid source/global preflight preserves jobs/configs. Cyclic/static and dynamic references reject invalidated revisions, while unrelated owner work survives source reload. Source load racing unregister cannot publish.
+- [x] Verify `.\gradlew.bat :arcana-skills:test --tests '*DefinitionSourceTests' --tests '*SourceReloadRaceTests' FLAGS`; expect RED.
+- [x] Implement safe existing YAML limits per source, schema dispatch (absent=1; explicit=2), source ownership/revision graph and global prepare-before-cancel integration. A callback never reads files or runs factories under the lifecycle gate. Full reload retains existing cancel-all-old-work semantics; source reload invalidates only affected graphs.
+- [x] Same Verify GREEN plus existing reload/lifecycle tests; test qualified cross-source references and missing provider diagnostics with full source/field paths.
+- [x] Commit `feat(skills): load owned definition sources with selective atomic reload`.
 
 ### Task 5: Parameters, scoped variables and expression bindings
 

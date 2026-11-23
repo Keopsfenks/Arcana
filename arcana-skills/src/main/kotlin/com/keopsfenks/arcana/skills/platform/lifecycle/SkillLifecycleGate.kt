@@ -24,6 +24,7 @@ class SkillLifecycleGate {
     }
 
     fun <T> locked(action: () -> T): T = synchronized(monitor) { action() }
+    fun available(owner: Plugin): Boolean = synchronized(monitor) { !stopped && owner !in disabled }
 
     fun disable(owner: Plugin, collect: () -> List<SkillRegistration>): List<SkillRegistration> = synchronized(monitor) {
         disabled.add(owner)

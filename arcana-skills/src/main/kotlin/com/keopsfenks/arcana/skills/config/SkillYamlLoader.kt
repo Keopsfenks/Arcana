@@ -14,7 +14,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
 
-data class SkillLoadResult(val snapshot: SkillSnapshot?, val report: SkillReloadResult)
+data class SkillLoadResult(
+    val snapshot: SkillSnapshot?,
+    val report: SkillReloadResult,
+    val platformCandidate: com.keopsfenks.arcana.skills.platform.sources.DefinitionCandidate? = null
+)
 
 class SkillYamlLoader(private val compiler: () -> SkillCompilerImpl) {
     fun load(directory: Path): SkillLoadResult {

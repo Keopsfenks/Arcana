@@ -11,6 +11,7 @@ import com.keopsfenks.arcana.skills.filters.SkillFilters
 import com.keopsfenks.arcana.skills.registry.ComponentRegistry
 import com.keopsfenks.arcana.skills.platform.DefaultSkillPlatform
 import com.keopsfenks.arcana.skills.platform.lifecycle.SkillLifecycleGate
+import com.keopsfenks.arcana.core.skills.platform.SkillDefinition
 import com.keopsfenks.arcana.skills.triggers.SkillTriggerDispatch
 import org.bukkit.plugin.Plugin
 import java.nio.file.Path
@@ -29,7 +30,7 @@ class DefaultSkillEngine(
 ) : SkillEngine {
     val cooldowns = CooldownStore(clock)
     internal val lifecycle = SkillLifecycleGate()
-    private val generalPlatform = DefaultSkillPlatform(this, lifecycle)
+    private val generalPlatform = DefaultSkillPlatform(this, lifecycle, plugin, directory, environment)
     private val diagnostics = SkillRuntimeDiagnostics({ plugin.logger }, clock)
     val effects = ComponentRegistry<SkillEffect> { invalidate(it) }
     val conditions = ComponentRegistry<SkillCondition> { invalidate(it) }
@@ -44,7 +45,6 @@ class DefaultSkillEngine(
     private val runner = SkillRunner(this)
     private val reloadLock = Any()
     var filterCompiler: (SkillArguments) -> CompiledSkillCondition = SkillFilters::compile
-    private val loader = SkillYamlLoader { SkillCompilerImpl(environment, effects, conditions, triggers, filterCompiler) }
 
     override fun registerEffect(owner: Plugin, effect: SkillEffect): SkillRegistration = lifecycle.admit(owner) {
         effects.register(owner, effect)
@@ -62,7 +62,7 @@ class DefaultSkillEngine(
                     val snapshot = current.get()
                     if (!handle.isActive || closed.get() || snapshot.byTrigger[trigger.id].isNullOrEmpty()) return null
                     return Runnable {
-                        if (handle.isActive && !closed.get() && current.get() === snapshot) triggerInSnapshot(trigger.id, context, snapshot)
+                        if (handle.isActive && !closed.get()) triggerInSnapshot(trigger.id, context, snapshot)
                     }
                 }
             })
@@ -78,11 +78,12 @@ class DefaultSkillEngine(
     private fun castInSnapshot(skillId: String, context: SkillContext, snapshot: SkillSnapshot): CompletableFuture<SkillResult> {
         if (closed.get()) return completed(SkillResult.Status.CANCELLED, "Skill engine is stopped")
         val skill = snapshot.byId[skillId] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId")
+        if (current.get().byId[skillId] !== skill) return completed(SkillResult.Status.CANCELLED, "Skill definition changed before dispatch")
         if (!skill.available()) return completed(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "A component dependency is unavailable")
         if (!skill.enabled) return completed(SkillResult.Status.DISABLED, "Skill is disabled")
         val playerId = context.casterId
         val state = synchronized(reloadLock) {
-            if (closed.get() || current.get() !== snapshot) return completed(SkillResult.Status.CANCELLED, "Skills changed before the cast started")
+            if (closed.get() || current.get().byId[skill.id] !== skill) return completed(SkillResult.Status.CANCELLED, "Skills changed before the cast started")
             ExecutionState(playerId, snapshot).also {
                 it.dependencies.addAll(skill.dependencies)
                 executions.add(it)
@@ -118,18 +119,37 @@ class DefaultSkillEngine(
     }
 
     // Keep staging separate so the core can validate before cancelling any tasks.
-    fun prepareReload(): SkillLoadResult = if (closed.get()) SkillLoadResult(null, SkillReloadResult(false, 0, 0, listOf("Skill engine is stopped"))) else loader.load(directory)
+    fun prepareReload(): SkillLoadResult = if (closed.get()) SkillLoadResult(null, SkillReloadResult(false, 0, 0, listOf("Skill engine is stopped"))) else generalPlatform.prepareReload()
 
-    fun commitReload(candidate: SkillLoadResult): SkillReloadResult = synchronized(reloadLock) {
-        if (!candidate.report.success()) return@synchronized candidate.report
-        if (closed.get()) return@synchronized SkillReloadResult(false, 0, 0, listOf("Skill engine is stopped"))
-        val snapshot = requireNotNull(candidate.snapshot)
-        val missing = snapshot.byId.values.filterNot { it.available() }
-        if (missing.isNotEmpty()) return@synchronized SkillReloadResult(false, 0, 0, missing.map { "${it.source}: component was removed during reload" })
-        val previous = current.getAndSet(snapshot)
+    fun commitReload(candidate: SkillLoadResult): SkillReloadResult {
+        candidate.platformCandidate?.let { return generalPlatform.repository.commit(it) }
+        var cancelPrevious: () -> Unit = {}
+        val result = synchronized(reloadLock) {
+            if (!candidate.report.success()) return@synchronized candidate.report
+            if (closed.get()) return@synchronized SkillReloadResult(false, 0, 0, listOf("Skill engine is stopped"))
+            val snapshot = requireNotNull(candidate.snapshot)
+            val missing = snapshot.byId.values.filterNot { it.available() }
+            if (missing.isNotEmpty()) return@synchronized SkillReloadResult(false, 0, 0, missing.map { "${it.source}: component was removed during reload" })
+            cancelPrevious = publishDefinitions(snapshot)
+            candidate.report
+        }
+        if (result.success()) cancelPrevious()
+        return result
+    }
+
+    internal fun publishDefinitions(snapshot: SkillSnapshot): () -> Unit = synchronized(reloadLock) {
+        val previousJobs = executions.toList()
+        current.set(snapshot)
         diagnostics.retain(snapshot.byId.keys)
-        executions.filter { it.snapshot === previous }.forEach { it.cancel("Skills reloaded") }
-        candidate.report
+        return@synchronized { previousJobs.forEach { it.cancel("Skills reloaded") } }
+    }
+
+    internal fun compileSourceLegacy(definition: SkillDefinition): CompiledSkill {
+        val values = LinkedHashMap(definition.configuration())
+        values["id"]?.let { require(it is String && it.matches(Regex("[a-z0-9_]{1,100}"))) { "${definition.origin()}.id: invalid schema 1 skill ID" } }
+        values["id"] = definition.key().value()
+        values.remove("schema")
+        return SkillCompilerImpl(environment, effects, conditions, triggers, filterCompiler).compile(SkillArguments(values, definition.origin()))
     }
 
     override fun reload(): SkillReloadResult = commitReload(prepareReload())
