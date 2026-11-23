@@ -25,12 +25,19 @@ import org.bukkit.event.player.PlayerToggleSprintEvent
 import org.bukkit.plugin.PluginManager
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+import java.nio.file.Files
+import com.keopsfenks.arcana.skills.DefaultSkillEngine
+import com.keopsfenks.arcana.skills.compile.CompilerFixture
+import com.keopsfenks.arcana.skills.execution.EngineFixture
+import com.keopsfenks.arcana.core.skills.*
+import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
 class TriggerAdapterTests {
-    private class Host {
+    private class Host(val player: Player = mockk()) {
         val plugin = mockk<ArcanaPlugin>()
-        val player = mockk<Player>()
         val manager = mockk<PluginManager>(relaxed = true)
         val queued = mutableListOf<Runnable>()
         val handles = mutableListOf<ArcanaTask>()
@@ -50,6 +57,39 @@ class TriggerAdapterTests {
             }
         }
         fun flush() { val jobs = queued.toList(); queued.clear(); jobs.forEach { it.run() } }
+    }
+
+    @Test fun `queued events cannot select a replacement snapshot and empty trigger indexes schedule nothing`(@TempDir directory: Path) {
+        val f = EngineFixture(directory)
+        val host = Host(f.caster)
+        val engine = DefaultSkillEngine(host.plugin, directory, CompilerFixture().environment, f.scheduler)
+        var calls = 0
+        engine.registerEffect(host.plugin, object : SkillEffect("mark") {
+            override fun compile(arguments: SkillArguments, compiler: SkillCompiler) = CompiledSkillEffect {
+                calls++
+                CompletableFuture.completedFuture(SkillResult.success())
+            }
+        })
+        val trigger = BlockBreakTrigger(host.plugin)
+        engine.registerTrigger(host.plugin, trigger)
+        val block = mockk<Block>()
+        every { block.type } returns Material.STONE
+        val event = mockk<BlockBreakEvent>()
+        every { event.isCancelled } returns false
+        every { event.player } returns f.caster
+        every { event.block } returns block
+        f.write(options = "triggers: [block_break]")
+        assertTrue(engine.reload().success())
+        trigger.onEvent(event)
+        f.write(options = "triggers: [block_break]")
+        assertTrue(engine.reload().success())
+        host.flush()
+        assertEquals(0, calls)
+        Files.delete(directory.resolve("one.yml"))
+        assertTrue(engine.reload().success())
+        trigger.onEvent(event)
+        assertTrue(host.queued.isEmpty())
+        engine.shutdown()
     }
 
     @Test fun `block adapter copies event fields before queuing and closing prevents pending dispatch`() {

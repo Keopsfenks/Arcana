@@ -16,6 +16,28 @@ import java.util.logging.LogRecord
 class SkillBoundaryTests {
     @TempDir lateinit var directory: Path
 
+    @Test fun `victim retirement during a delayed effect returns no target for entity and location effects`() {
+        for (effect in listOf("heal\n    amount: 2", "sound\n    sound: entity.player.levelup")) {
+            val f = EngineFixture(directory)
+            var retired = false
+            val scheduler = object : SkillScheduler by f.scheduler {
+                override fun <T> on(entity: LivingEntity, delayTicks: Long, action: () -> T): ScheduledWork<T> {
+                    if (entity === f.victim && retired) return ScheduledWork(CompletableFuture<T>().apply { cancel(false) }) {}
+                    return f.scheduler.on(entity, delayTicks, action)
+                }
+            }
+            val engine = DefaultSkillEngine(f.plugin, directory, CompilerFixture().environment, scheduler)
+            com.keopsfenks.arcana.skills.BuiltinComponents.install(engine, f.plugin)
+            f.write(effects = "  - type: delay\n    duration: 1s\n  - type: $effect\n    target: victim")
+            assertTrue(engine.reload().success())
+            val cast = engine.cast("one", f.context(target = true)).toCompletableFuture()
+            assertFalse(cast.isDone)
+            retired = true
+            f.scheduler.advance(20)
+            assertEquals(SkillResult.Status.NO_TARGET, cast.join().status(), effect)
+        }
+    }
+
     @Test fun `a retired victim becomes absent without cancelling caster only effects`() {
         val f = EngineFixture(directory)
         val scheduler = object : SkillScheduler by f.scheduler {

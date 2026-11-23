@@ -204,6 +204,8 @@ Otomatik tetiklemelerde çalışma hataları beceri kimliğiyle konsola yazılı
 
 Oyuncu ayrılınca onun işleri/cooldown'ları temizlenir. Bir dış eklenti kapanınca ona ait kayıtlar kaldırılır; bağımlı işler iptal edilir ve bu beceriler yeni çağrı kabul etmez. Zaten başlamış callback tamamlanabilir; sonraki adımlar durur.
 
+YAML içindeki `cast` bağlantılarının bağımlılıkları üst beceriye de taşınır. Böylece gecikmeli bir alt becerinin bileşeni kaldırılırsa üst zincir de hemen iptal edilir. Tetikleyici olayı, oluştuğu andaki tanımlara bağlıdır; reload öncesinde kuyruğa giren bir olay yeni tanımları çalıştırmaz. Efekt sırasında kaybolan victim `NO_TARGET` sonucu verir; oyuncunun çıkışı veya reload nedeniyle bütün zincirin iptali `CANCELLED` olarak kalır.
+
 Tek yürütme en fazla 16 iç içe beceri çağrısı ve 1.024 efekt adımı kullanır. Bir tekrar en fazla 100 kez çalışır. Yapılandırma ağacı en fazla 64 seviyedir; döngülü YAML/API verisi reddedilir. Dizin en fazla 1.000 dosya, dosya başına en fazla 1 MiB kabul eder. NaN/sonsuz sayılar geçersizdir.
 
 ## Komutlar

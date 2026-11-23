@@ -2,6 +2,8 @@ package com.keopsfenks.arcana.skills.config
 
 import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.SkillReloadResult
+import com.keopsfenks.arcana.core.skills.SkillRegistration
+import java.util.Collections
 import com.keopsfenks.arcana.skills.compile.CompiledSkill
 import com.keopsfenks.arcana.skills.compile.SkillCompilerImpl
 import com.keopsfenks.arcana.skills.compile.SkillSnapshot
@@ -51,6 +53,22 @@ class SkillYamlLoader(private val compiler: () -> SkillCompilerImpl) {
             for ((id, path) in skill.references) if (id !in compiled) errors.add("$path: unknown skill $id")
         }
         if (errors.isNotEmpty()) return SkillLoadResult(null, SkillReloadResult(false, 0, 0, errors))
-        return SkillLoadResult(SkillSnapshot(compiled.values), SkillReloadResult(true, compiled.size, compiled.values.count { !it.enabled }, emptyList()))
+        // Literal cast edges are known at load time. Walk iteratively so cycles cannot overflow
+        // and owners of any reachable component invalidate the entire pending root invocation.
+        val resolved = compiled.values.map { skill ->
+            val dependencies = LinkedHashSet<SkillRegistration>()
+            val visited = HashSet<String>()
+            val pending = ArrayDeque<String>()
+            pending.add(skill.id)
+            while (pending.isNotEmpty()) {
+                val id = pending.removeLast()
+                if (!visited.add(id)) continue
+                val child = compiled.getValue(id)
+                dependencies.addAll(child.dependencies)
+                pending.addAll(child.references.keys)
+            }
+            skill.copy(dependencies = Collections.unmodifiableSet(dependencies))
+        }
+        return SkillLoadResult(SkillSnapshot(resolved), SkillReloadResult(true, compiled.size, compiled.values.count { !it.enabled }, emptyList()))
     }
 }

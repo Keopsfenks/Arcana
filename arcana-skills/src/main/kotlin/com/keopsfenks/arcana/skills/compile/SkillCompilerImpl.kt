@@ -1,6 +1,7 @@
 package com.keopsfenks.arcana.skills.compile
 
 import com.keopsfenks.arcana.core.math.ExpressionEnvironment
+import com.keopsfenks.arcana.core.math.ExpressionCompilationException
 import com.keopsfenks.arcana.core.skills.*
 import com.keopsfenks.arcana.skills.config.SkillArgumentsReader
 import com.keopsfenks.arcana.skills.registry.ComponentRegistry
@@ -62,6 +63,7 @@ class SkillCompilerImpl(
         }
         require(value is String && value.isNotBlank() && value.length <= 4096) { "$path: expected a number or an expression" }
         val compiled = try { environment.compileOrThrow(value) }
+        catch (error: ExpressionCompilationException) { throw IllegalArgumentException("$path: invalid expression at ${error.position}: ${error.message}", error) }
         catch (error: IllegalArgumentException) { throw IllegalArgumentException("$path: invalid expression: ${error.message}", error) }
         return SkillNumber { context ->
             val result = compiled.evaluate(*VARIABLES.map { context.getNumber(it) }.toDoubleArray())

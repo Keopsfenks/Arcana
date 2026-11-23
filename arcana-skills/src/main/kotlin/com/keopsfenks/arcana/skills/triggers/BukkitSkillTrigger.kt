@@ -37,13 +37,14 @@ abstract class BukkitSkillTrigger(id: String, private val plugin: ArcanaPlugin) 
 
     protected fun emit(context: SkillContext) {
         val fire = dispatcher.get() ?: return
+        val dispatch = if (fire is SkillTriggerDispatch) fire.prepare(context) ?: return else Runnable { fire.accept(context) }
         pending.removeIf { it.isCancelled }
         val handle = AtomicReference<ArcanaTask?>()
         val finished = AtomicBoolean(false)
         fun complete() { finished.set(true); handle.get()?.let { pending.remove(it) } }
         try {
             val task = plugin.scheduler.on(context.caster).onRetired { complete() }.run {
-                try { if (dispatcher.get() === fire) fire.accept(context) }
+                try { if (dispatcher.get() === fire) dispatch.run() }
                 finally { complete() }
             }
             handle.set(task)

@@ -26,6 +26,17 @@ class CoreSkillsIntegrationTests {
         assertEquals(SkillEngine::class.java, ArcanaImpl::class.java.getDeclaredMethod("getSkillEngine").returnType)
     }
 
+    @Test fun `real expression errors identify the exact YAML field`() {
+        val plugin = mockk<ArcanaPlugin>()
+        val environment = ArcanaExpressionEnvironmentBuilder().variables(*SkillCompilerImpl.VARIABLES).build()
+        val engine = DefaultSkillEngine(plugin, directory, environment)
+        BuiltinComponents.install(engine, plugin)
+        Files.writeString(directory.resolve("bad.yml"), "id: bad\neffects:\n  - type: heal\n    amount: 'damage +'\n")
+        val result = engine.reload()
+        assertFalse(result.success())
+        assertTrue(result.errors().single().contains("effects[0].amount"), result.errors().toString())
+    }
+
     @Test fun `bundled examples compile with the actual Arcana expression engine`() {
         val plugin = mockk<ArcanaPlugin>()
         every { plugin.logger } returns Logger.getLogger("CoreSkillsTest")

@@ -7,6 +7,9 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletionException
+import java.util.concurrent.ExecutionException
 import java.util.function.Function
 
 class SkillExecutionImpl(
@@ -20,23 +23,24 @@ class SkillExecutionImpl(
     override fun onTarget(target: SkillTarget, action: Function<LivingEntity, SkillResult>): CompletionStage<SkillResult> {
         val entity = if (target == SkillTarget.CASTER) context.caster else context.victim
         if (entity == null) return missing()
-        return state.track(engine.scheduler.on(entity) {
+        return victimRetirement(target, state.track(engine.scheduler.on(entity) {
             state.checkActive()
             if (if (entity is Player) !entity.isOnline else !entity.isValid) SkillResult.of(SkillResult.Status.NO_TARGET, "Target is unavailable")
             else action.apply(entity)
-        })
+        }))
     }
 
     override fun atTarget(target: SkillTarget, action: Function<Location, SkillResult>): CompletionStage<SkillResult> {
         val entity = if (target == SkillTarget.CASTER) context.caster else context.victim
         if (entity == null) return missing()
-        return state.track(engine.scheduler.on(entity) {
+        val dispatched = state.track(engine.scheduler.on(entity) {
             state.checkActive()
             if (if (entity is Player) !entity.isOnline else !entity.isValid) null else entity.location.clone()
         }).thenCompose { location ->
             if (location == null) missing()
             else state.track(engine.scheduler.at(location) { state.checkActive(); action.apply(location) })
         }
+        return victimRetirement(target, dispatched)
     }
 
     override fun global(action: Runnable): CompletionStage<SkillResult> = state.track(engine.scheduler.global {
@@ -69,4 +73,16 @@ class SkillExecutionImpl(
         .replace("{target}", context.getText("target_name")).replace("{skill}", context.getText("skill"))
 
     private fun missing() = CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.NO_TARGET, "No living victim was provided"))
+
+    private fun victimRetirement(target: SkillTarget, result: CompletableFuture<SkillResult>): CompletableFuture<SkillResult> =
+        result.handle { value, error ->
+            state.checkActive()
+            if (error == null) value
+            else {
+                var cause = error
+                while ((cause is CompletionException || cause is ExecutionException) && cause.cause != null) cause = cause.cause!!
+                if (target == SkillTarget.VICTIM && cause is CancellationException) SkillResult.of(SkillResult.Status.NO_TARGET, "Victim is unavailable")
+                else throw CompletionException(cause)
+            }
+        }
 }

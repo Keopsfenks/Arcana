@@ -11,9 +11,53 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import com.keopsfenks.arcana.core.skills.SkillEffect
+import io.mockk.mockk
 
 class ExecutionLifecycleTests {
     @TempDir lateinit var directory: Path
+
+    @Test fun `registration cannot survive concurrent owner closure or shutdown`() {
+        for (shutdown in listOf(false, true)) {
+            val f = EngineFixture(directory)
+            val entered = CountDownLatch(1)
+            val resume = CountDownLatch(1)
+            val closing = CountDownLatch(1)
+            val component = mockk<SkillEffect>()
+            every { component.id } answers { entered.countDown(); check(resume.await(3, TimeUnit.SECONDS)); "late" }
+            val pool = Executors.newFixedThreadPool(2)
+            try {
+                val registered = pool.submit<com.keopsfenks.arcana.core.skills.SkillRegistration> { f.engine.registerEffect(f.plugin, component) }
+                assertTrue(entered.await(3, TimeUnit.SECONDS))
+                val closed = pool.submit { closing.countDown(); if (shutdown) f.engine.shutdown() else f.engine.closeOwner(f.plugin) }
+                assertTrue(closing.await(3, TimeUnit.SECONDS))
+                try { closed.get(200, TimeUnit.MILLISECONDS) } catch (_: TimeoutException) { /* Correct admission lock waits for insertion. */ }
+                resume.countDown()
+                val handle = registered.get(3, TimeUnit.SECONDS)
+                closed.get(3, TimeUnit.SECONDS)
+                assertFalse(handle.isActive, "Late registration survived shutdown=$shutdown")
+            } finally { resume.countDown(); pool.shutdownNow() }
+        }
+    }
+
+    @Test fun `removal of a statically cast child dependency cancels its waiting ancestors even through cycles`() {
+        val f = EngineFixture(directory)
+        com.keopsfenks.arcana.skills.BuiltinComponents.install(f.engine, f.plugin)
+        val handle = f.register("extension") { _, _ -> com.keopsfenks.arcana.core.skills.CompiledSkillEffect {
+            CompletableFuture.completedFuture(SkillResult.success())
+        } }
+        f.write(options = "cooldown: 3s", effects = "  - type: delay\n    duration: 1s\n  - type: cast\n    skill: child")
+        Files.writeString(directory.resolve("child.yml"), "id: child\neffects:\n  - type: extension\n  - type: cast\n    skill: one\n")
+        f.load()
+        val pending = f.cast()
+        assertFalse(pending.isDone)
+        handle.close()
+        assertTrue(pending.isDone, "Ancestor must be cancelled before its delayed child starts")
+        assertEquals(SkillResult.Status.CANCELLED, pending.join().status())
+        assertTrue(f.engine.skills().all { it.problem().isNotBlank() })
+        assertEquals(SkillResult.Status.DEPENDENCY_UNAVAILABLE, f.cast().join().status())
+    }
 
     @Test fun `failed reload preserves pending work while successful reload cancels old work and keeps cooldown`() {
         val f = EngineFixture(directory)

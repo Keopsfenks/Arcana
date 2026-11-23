@@ -569,11 +569,11 @@ class ArcanaImpl : ArcanaSpigotPlugin(), Arcana {
 
     override fun handleReload() {
         super.handleReload()
-        skillsRuntime.afterReload()
-
-        // Restarted rather than left alone, so a changed refresh-interval (or a leaderboards
-        // section that was just turned on or off) takes effect without a restart.
-        leaderboardService.start()
+        try { skillsRuntime.afterReload() }
+        finally {
+            // Independent services still restart when a staged skills dependency disappears.
+            leaderboardService.start()
+        }
     }
 
     override fun handleDisable() {

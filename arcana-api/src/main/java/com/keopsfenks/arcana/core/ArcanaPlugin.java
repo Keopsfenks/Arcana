@@ -742,7 +742,11 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
         return true;
     }
 
-    /** Run the normal reload lifecycle only after successful preflight. Reloads are serialized per plugin. */
+    /**
+     * Run the normal reload lifecycle only after successful preflight. Reloads are serialized per plugin.
+     * Returns false for rejected preflight or a logged lifecycle failure. Once preflight accepts,
+     * lifecycle failures do not roll back config updates or already applied changes.
+     */
     public final synchronized boolean tryReload(final boolean cancelTasks) {
         if (!this.prepareReload(cancelTasks)) {
             return false;
@@ -757,11 +761,12 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
         // commands) into a single sync. Syncing per command fires overlapping async
         // command tree sends, which race with the next mutation and throw CMEs.
         Arcana.get().beginCommandBatch();
+        boolean successful;
         try {
-            this.handleLifecycle(this.onReload, this::handleReload);
+            successful = this.handleLifecycle(this.onReload, this::handleReload);
 
             if (cancelTasks) {
-                this.handleLifecycle(this.onCreateTasks, this::createTasks);
+                successful &= this.handleLifecycle(this.onCreateTasks, this::createTasks);
             }
 
             for (Extension extension : this.extensionLoader.getLoadedExtensions()) {
@@ -772,7 +777,7 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
         }
 
         Arcana.get().requestDisplayRefresh();
-        return true;
+        return successful;
     }
 
     /**
@@ -847,13 +852,16 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
      *
      * @param tasks   The tasks.
      * @param handler The handler.
+     * @return Whether all tasks and the handler completed without a logged exception.
      */
-    private void handleLifecycle(@NotNull final ListMap<LifecyclePosition, Runnable> tasks,
+    private boolean handleLifecycle(@NotNull final ListMap<LifecyclePosition, Runnable> tasks,
                                  @NotNull final Runnable handler) {
+        boolean successful = true;
         for (Runnable task : tasks.get(LifecyclePosition.START)) {
             try {
                 task.run();
             } catch (final Exception e) {
+                successful = false;
                 this.getLogger().log(Level.SEVERE, "Error while running lifecycle task!");
                 this.getLogger().log(Level.SEVERE, "The plugin may not function properly");
                 e.printStackTrace();
@@ -863,6 +871,7 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
         try {
             handler.run();
         } catch (final Exception e) {
+            successful = false;
             this.getLogger().log(Level.SEVERE, "Error while running lifecycle task!");
             this.getLogger().log(Level.SEVERE, "The plugin may not function properly");
             e.printStackTrace();
@@ -872,11 +881,13 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
             try {
                 task.run();
             } catch (final Exception e) {
+                successful = false;
                 this.getLogger().log(Level.SEVERE, "Error while running lifecycle task!");
                 this.getLogger().log(Level.SEVERE, "The plugin may not function properly");
                 e.printStackTrace();
             }
         }
+        return successful;
     }
 
     /**
