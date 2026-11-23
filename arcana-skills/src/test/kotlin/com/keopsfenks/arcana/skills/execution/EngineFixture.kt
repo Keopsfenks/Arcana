@@ -28,6 +28,7 @@ class EngineFixture(val directory: Path, immediate: Boolean = true) {
     val plugin = mockk<ArcanaPlugin>(relaxed = true)
     val caster = mockk<Player>()
     val victim = mockk<LivingEntity>()
+    val world = mockk<World>()
     val playerId = UUID.randomUUID()
     val marks = mutableListOf<String>()
     val engine: DefaultSkillEngine
@@ -46,7 +47,6 @@ class EngineFixture(val directory: Path, immediate: Boolean = true) {
         every { caster.isSneaking } returns false
         every { caster.isSprinting } returns false
         every { caster.hasPermission(any<String>()) } returns true
-        val world = mockk<World>()
         every { world.name } returns "world"
         every { caster.world } returns world
         every { caster.location } answers { scheduler.assertOwner(caster); Location(world, 0.0, 60.0, 0.0) }

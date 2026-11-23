@@ -18,11 +18,13 @@ class SkillCompilerImpl(
     }
 ) : SkillCompiler {
     private val dependencies = LinkedHashSet<SkillRegistration>()
+    private val references = LinkedHashMap<String, String>()
     private var depth = 0
     private var nodes = 0
 
     fun compile(definition: SkillArguments): CompiledSkill {
         dependencies.clear()
+        references.clear()
         depth = 0
         nodes = 0
         val allowed = setOf("id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "filters", "conditions", "effects")
@@ -49,7 +51,8 @@ class SkillCompilerImpl(
                 require(it.isNotBlank()) { "${definition.path}.permission: must not be blank" }
             } else null,
             chance, SkillArgumentsReader.durationNanos(definition.raw("cooldown", "0s"), "${definition.path}.cooldown"),
-            group, conditions, filters, effects, Collections.unmodifiableSet(LinkedHashSet(dependencies)), definition.path
+            group, conditions, filters, effects, Collections.unmodifiableSet(LinkedHashSet(dependencies)), definition.path,
+            Collections.unmodifiableMap(LinkedHashMap(references))
         )
     }
 
@@ -99,6 +102,11 @@ class SkillCompilerImpl(
     override fun conditions(definitions: List<*>, path: String): CompiledSkillCondition {
         val children = definitions.mapIndexed { index, value -> condition(SkillArguments(emptyMap<String, Any>(), path).child("[$index]", value)) }
         return CompiledSkillCondition { context -> children.all { it.test(context) } }
+    }
+
+    override fun referenceSkill(skillId: String, path: String) {
+        require(skillId.matches(Regex("[a-z0-9_]{1,100}"))) { "$path: invalid skill ID" }
+        references[skillId] = path
     }
 
     private fun <T> nested(path: String, action: () -> T): T {

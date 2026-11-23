@@ -90,10 +90,10 @@ Tests mirror runtime packages under `arcana-skills/src/test/kotlin/`.
 
 **Consumes:** task 3 scheduling/execution helpers and task 2 typed arguments. **Produces:** spec's concrete YAML IDs with factory-time validation; no central type switch. IDs use lower snake_case corresponding to class names (`particle`, `health_below`, `cast`, etc.).
 
-- [ ] Write tests proving particle/sound/heal/damage/potion/velocity arguments are validated once, health is clamped, dead targets reject state-changing effects, and target omission defaults to caster.
-- [ ] Write tests for all/any/not truth tables, empty-composite validation, branch choosing exactly one path, sequence stopping at failure, delay/repeat preserving order and cancellation, and cast applying the target skill's admission while sharing budgets.
-- [ ] Write a synchronous generated-damage test proving the runtime marker suppresses recursively generated skill damage triggers and clears in `finally`, including exceptions.
-- [ ] Observe focused failures, implement each separate component class, run the full skills suite, then commit `feat(skills): add modular built-in effects conditions and flow controls`.
+- [x] Write tests proving particle/sound/heal/damage/potion/velocity arguments are validated once, health is clamped, dead targets reject state-changing effects, and target omission defaults to caster.
+- [x] Write tests for all/any/not truth tables, empty-composite validation, branch choosing exactly one path, sequence stopping at failure, delay/repeat preserving order and cancellation, and cast applying the target skill's admission while sharing budgets.
+- [x] Write a synchronous generated-damage test proving the runtime marker suppresses recursively generated skill damage triggers and clears in `finally`, including exceptions.
+- [x] Observe focused failures, implement each separate component class, run the full skills suite, then commit `feat(skills): add modular built-in effects conditions and flow controls`.
 
 ### Task 5: Separate trigger adapters and snapshot filters
 

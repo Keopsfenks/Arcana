@@ -1,0 +1,16 @@
+package com.keopsfenks.arcana.skills.effects
+
+import com.keopsfenks.arcana.core.skills.*
+import com.keopsfenks.arcana.skills.config.ComponentArguments
+
+class HealEffect : SkillEffect("heal") {
+    @Suppress("DEPRECATION")
+    override fun compile(arguments: SkillArguments, compiler: SkillCompiler): CompiledSkillEffect {
+        ComponentArguments.keys(arguments, "amount", "target")
+        val amount = ComponentArguments.number(arguments, "amount", compiler, 0.0, 1_000_000.0)
+        val target = ComponentArguments.target(arguments)
+        return CompiledSkillEffect { execution -> execution.onTarget(target) { entity ->
+            EffectValues.alive(entity) { entity.health = (entity.health + amount.evaluate(execution.context)).coerceIn(0.0, entity.maxHealth) }
+        } }
+    }
+}

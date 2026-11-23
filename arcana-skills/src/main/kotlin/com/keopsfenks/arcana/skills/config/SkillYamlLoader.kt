@@ -47,6 +47,9 @@ class SkillYamlLoader(private val compiler: () -> SkillCompilerImpl) {
         } catch (error: Exception) {
             errors.add("$directory: ${error.message ?: error.javaClass.simpleName}")
         }
+        for (skill in compiled.values) {
+            for ((id, path) in skill.references) if (id !in compiled) errors.add("$path: unknown skill $id")
+        }
         if (errors.isNotEmpty()) return SkillLoadResult(null, SkillReloadResult(false, 0, 0, errors))
         return SkillLoadResult(SkillSnapshot(compiled.values), SkillReloadResult(true, compiled.size, compiled.values.count { !it.enabled }, emptyList()))
     }

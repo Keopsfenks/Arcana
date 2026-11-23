@@ -8,4 +8,6 @@ public interface SkillCompiler {
     List<CompiledSkillEffect> effects(List<?> definitions, String path);
     CompiledSkillCondition condition(SkillArguments definition);
     CompiledSkillCondition conditions(List<?> definitions, String path);
+    /** Declare a literal skill dependency so missing files can reject the entire reload. */
+    void referenceSkill(String skillId, String path);
 }

@@ -14,7 +14,8 @@ data class CompiledSkill(
     val filters: CompiledSkillCondition,
     val effects: List<CompiledSkillEffect>,
     val dependencies: Set<SkillRegistration>,
-    val source: String
+    val source: String,
+    val references: Map<String, String> = emptyMap()
 ) {
     fun available() = dependencies.all { it.isActive }
     fun info() = SkillInfo(id, enabled, triggers, source, if (available()) "" else "A component dependency is unavailable")
