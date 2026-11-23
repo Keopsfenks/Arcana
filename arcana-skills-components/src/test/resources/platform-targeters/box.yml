@@ -1,0 +1,9 @@
+schema: 2
+id: example_box
+effects:
+  - type: select_fixture
+    selector:
+      type: box
+      width: 6
+      height: 4
+      depth: 10

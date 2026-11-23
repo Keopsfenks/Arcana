@@ -1,0 +1,8 @@
+schema: 2
+id: example_ray
+effects:
+  - type: select_fixture
+    selector:
+      type: ray
+      length: 12
+      radius: 0.1

@@ -18,11 +18,11 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | VAR | M-V | Invocation/actor/target/server değişkenleri | 5 | Tamamlandı | VariableStoreTests |
 | VALUE | M-V | SetVariableMechanic, AddVariableMechanic, RemoveVariableMechanic | 5 | Tamamlandı | VariableMechanicTests |
 | CONTEXT | M-S,M-T | Origin/trigger/victim ayrımı ve snapshot | 6 | Tamamlandı | InvocationSchedulingTests |
-| T-SELF | M-T | SelfTargeter, VictimTargeter, TriggerTargeter | 7 | Planlandı | TargeterTests |
-| T-LOC | M-T | OriginTargeter, LocationTargeter, ForwardTargeter | 7 | Planlandı | TargeterTests |
-| T-AREA | M-T | EntitiesInRadiusTargeter, PlayersInRadiusTargeter, BoxTargeter | 7 | Planlandı | TargeterGeometryTests |
-| T-SHAPE | M-T | ConeTargeter, LineTargeter, RayTargeter | 7 | Planlandı | TargeterGeometryTests |
-| T-SELECT | M-T | TargetSelectionPolicy: filtre/sıra/limit/rastgele | 7 | Planlandı | TargeterTests |
+| T-SELF | M-T | SelfTargeter, VictimTargeter, TriggerTargeter | 7 | Tamamlandı | TargeterTests |
+| T-LOC | M-T | OriginTargeter, LocationTargeter, ForwardTargeter | 7 | Tamamlandı | TargeterTests |
+| T-AREA | M-T | EntitiesInRadiusTargeter, PlayersInRadiusTargeter, BoxTargeter | 7 | Tamamlandı | TargeterGeometryTests |
+| T-SHAPE | M-T | ConeTargeter, LineTargeter, RayTargeter | 7 | Tamamlandı | TargeterGeometryTests |
+| T-SELECT | M-T | TargetSelectionPolicy: filtre/sıra/limit/rastgele | 7 | Tamamlandı | TargeterTests |
 | M-ROLE | L-M | SwapActorTargetMutator, TargetAsActorMutator, TriggerAsTargetMutator | 8 | Planlandı | MutatorTests |
 | M-LOC | L-M | OffsetLocationMutator, RotateLocationMutator, CenterLocationMutator | 8 | Planlandı | MutatorTests |
 | M-DATA | L-M | SetValueMutator, MultiplyValueMutator, ClampValueMutator | 8 | Planlandı | MutatorTests |

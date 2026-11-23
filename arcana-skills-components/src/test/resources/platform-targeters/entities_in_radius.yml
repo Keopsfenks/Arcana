@@ -1,0 +1,7 @@
+schema: 2
+id: example_entities_in_radius
+effects:
+  - type: select_fixture
+    selector:
+      type: entities_in_radius
+      radius: 8

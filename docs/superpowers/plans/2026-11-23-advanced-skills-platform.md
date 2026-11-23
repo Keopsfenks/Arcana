@@ -142,11 +142,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** targeter `compile(args,compilation): CompiledSkillTargeter`; compiled `select(context): CompletionStage<SkillSelection>`; public context supplies invocation, SkillTargetQuery and injected `DoubleSupplier` RNG. Policy takes filters, sort, limit and random selection; default64/hard256, duplicate UUID/location removal and stable tie-breaks.
 
-- [ ] Test exact radius boundary, cone angle/zero direction, line/box inclusion, nearest ray hit, self/trigger/origin distinction, random reproducibility, 257 rejection and missing required snapshots. Partition-spy asserts no foreign live reads, no chunk loads and retired target removal.
-- [ ] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*TargeterTests' --tests '*TargeterGeometryTests' FLAGS`; expect RED.
-- [ ] Implement separate targeter classes and shared numeric geometry; compile all constants/expressions once and apply policy after combining query snapshots.
-- [ ] Same Verify GREEN; each built-in selector has a compiling schema 2 example fixture.
-- [ ] Commit `feat(skills): add bounded entity and location targeters`.
+- [x] Test exact radius boundary, cone angle/zero direction, line/box inclusion, nearest ray hit, self/trigger/origin distinction, random reproducibility, 257 rejection and missing required snapshots. Partition-spy asserts no foreign live reads, no chunk loads and retired target removal.
+- [x] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*TargeterTests' --tests '*TargeterGeometryTests' FLAGS`; expect RED.
+- [x] Implement separate targeter classes and shared numeric geometry; compile all constants/expressions once and apply policy after combining query snapshots.
+- [x] Same Verify GREEN; each built-in selector has a compiling schema 2 example fixture.
+- [x] Commit `feat(skills): add bounded entity and location targeters`.
 
 ### Task 8: Immutable mutators and schema 2 node compilation
 
