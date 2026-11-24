@@ -4,11 +4,15 @@ import com.keopsfenks.arcana.core.skills.SkillComponent
 import org.bukkit.plugin.Plugin
 import java.util.concurrent.ConcurrentHashMap
 
-class ComponentRegistry<T : SkillComponent>(private val removed: (OwnedRegistration<T>) -> Unit = {}) {
+class ComponentRegistry<T : SkillComponent> @JvmOverloads constructor(
+    private val lifecycle: com.keopsfenks.arcana.skills.platform.lifecycle.SkillLifecycleGate? = null,
+    private val removed: (OwnedRegistration<T>) -> Unit = {}
+) {
+    constructor(removed: (OwnedRegistration<T>) -> Unit) : this(null, removed)
     private val entries = ConcurrentHashMap<String, OwnedRegistration<T>>()
 
     fun register(owner: Plugin, component: T): OwnedRegistration<T> {
-        val registration = OwnedRegistration(owner, component) { handle ->
+        val registration = OwnedRegistration(owner, component, lifecycle) { handle ->
             entries.remove(handle.id, handle)
             removed(handle)
         }

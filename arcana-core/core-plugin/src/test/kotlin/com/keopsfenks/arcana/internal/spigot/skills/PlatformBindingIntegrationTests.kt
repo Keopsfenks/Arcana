@@ -22,6 +22,35 @@ import java.util.concurrent.CompletableFuture
 class PlatformBindingIntegrationTests {
     @TempDir lateinit var directory: Path
 
+    @Test fun parameterVariableAndStatSlotsEvaluateTogetherWithTheActualExpressionEngine() {
+        val plugin = mockk<ArcanaPlugin>(relaxed = true)
+        every { plugin.name } returns "Arcana"
+        val base = ArcanaExpressionEnvironmentBuilder().variables(*SkillCompilerImpl.VARIABLES).build()
+        val engine = DefaultSkillEngine(plugin, directory, base, expressionEnvironmentFactory = { names -> ArcanaExpressionEnvironmentBuilder().variables(*names).build() })
+        engine.platform().register(plugin, SkillComponentType.STAT, SkillKey("arcana", "stats"), object : SkillStatProvider {
+            override fun descriptor() = SkillDescriptor.of("stats", "test")
+            override fun snapshot(actor: SkillActor, keys: Set<SkillKey>) = CompletableFuture.completedFuture(mapOf(SkillKey("arcana", "power") to 7.0))
+        })
+        var evaluated = 0.0
+        engine.platform().register(plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "capture"), object : SkillMechanic(SkillDescriptor.of("capture", "test")) {
+            override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
+                val expression = compilation.number(arguments.raw("amount"), arguments.path + ".amount")
+                return CompiledSkillMechanic { evaluated = expression.evaluate(it.invocation()); CompletableFuture.completedFuture(SkillResult.success()) }
+            }
+        })
+        Files.writeString(directory.resolve("bolt.yml"), "schema: 2\nid: bolt\nparameters:\n  power: {type: number, default: 6}\nbindings:\n  var_counter: {key: counter, default: 2}\n  stat_power: {provider: stats, key: power}\neffects:\n  - type: capture\n    amount: 'damage + param_power + var_counter + stat_power'\n")
+        val report = engine.reload()
+        assertTrue(report.success(), report.errors().toString())
+        val skill = requireNotNull((engine.platform() as DefaultSkillPlatform).repository.revision(SkillKey("arcana", "bolt"))?.native)
+        val player = mockk<Player>(); every { player.uniqueId } returns UUID.randomUUID()
+        val invocation = SkillInvocation.builder(SkillActor.of(player)).data(mapOf("damage" to 8, "var_counter" to 2, "stat_power" to 7))
+            .parameters(ParameterBindings.bind(skill.parameters, emptyMap())).build()
+        val execution = mockk<SkillExecutionContext>(); every { execution.invocation() } returns invocation
+        assertTrue(skill.effects.single().execute(execution).toCompletableFuture().join().isSuccess)
+        assertEquals(23.0, evaluated)
+        engine.shutdown()
+    }
+
     @Test fun nativeParametersCompileAndEvaluateWithTheActualExpressionEngine() {
         val plugin = mockk<ArcanaPlugin>(relaxed = true)
         every { plugin.name } returns "Arcana"

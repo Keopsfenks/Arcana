@@ -11,6 +11,8 @@ import com.keopsfenks.arcana.skills.platform.values.ParameterBindings
 import com.keopsfenks.arcana.skills.platform.values.VariableBinding
 import java.util.Collections
 import java.util.concurrent.CompletableFuture
+import com.keopsfenks.arcana.skills.platform.admission.*
+import com.keopsfenks.arcana.skills.platform.providers.CompiledStatBinding
 
 /** Native definition/node compilation, independent of the installed component catalog. */
 open class PlatformSkillCompiler(
@@ -29,10 +31,11 @@ open class PlatformSkillCompiler(
     fun compile(definition: SkillDefinition): CompiledPlatformSkill {
         dependencies.clear(); references.clear(); nodes = 0; depth = 0
         val args = SkillArguments(definition.configuration(), definition.origin())
-        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings")
+        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every")
         args.values.keys.firstOrNull { it !in allowed }?.let { throw args.error(it, "unsupported skill option") }
         val parameters = ParameterBindings.declarations(args, namespace)
         val variables = VariableBinding.declarations(args, namespace)
+        val stats = statBindings(args)
         val numeric = LinkedHashMap(baseBindings())
         parameters.filter { it.type() == SkillValue.Kind.NUMBER }.forEach { parameter ->
             numeric["param_${parameter.name()}"] = { invocation ->
@@ -42,6 +45,7 @@ open class PlatformSkillCompiler(
         variables.filter { it.type == SkillValue.Kind.NUMBER }.forEach { binding ->
             numeric[binding.alias] = { invocation -> requireNotNull(invocation.data()[binding.alias]) { "${args.path}.bindings.${binding.alias}: value is unavailable" }.number() }
         }
+        stats.forEach { binding -> numeric[binding.alias] = { invocation -> requireNotNull(invocation.data()[binding.alias]) { "${binding.path}: stat snapshot is unavailable" }.number() } }
         numbers = PlatformExpressionCompiler(environment, environmentFactory, numeric)
         val chance = args.number("chance", 100.0)
         require(chance in 0.0..100.0) { "${args.path}.chance: must be between 0 and 100" }
@@ -58,11 +62,46 @@ open class PlatformSkillCompiler(
         val conditions = predicates(args.list("conditions", emptyList<Any>()), "${args.path}.conditions")
         val effects = effects(args.list("effects"), "${args.path}.effects")
         require(effects.isNotEmpty()) { "${args.path}.effects: at least one effect is required" }
+        val every = args.number("every", 1.0).also { require(it in 1.0..1_000_000.0 && kotlin.math.floor(it) == it) { "${args.path}.every: expected an integer between 1 and 1000000" } }.toInt()
+        val costs = costs(args)
+        val charges = if (!args.has("charges")) null else {
+            val section = args.section("charges")
+            section.values.keys.firstOrNull { it !in setOf("max", "refill", "group") }?.let { throw section.error(it, "unknown charge option") }
+            val max = section.number("max", 1.0).also { require(it in 1.0..1_000_000.0 && kotlin.math.floor(it) == it) { "${section.path}.max: expected an integer between 1 and 1000000" } }.toInt()
+            val refill = SkillArgumentsReader.durationNanos(section.raw("refill"), "${section.path}.refill")
+            require(refill > 0) { "${section.path}.refill: must be positive" }
+            CompiledCharges(SkillKey.parse(section.string("group", definition.key().value()), namespace), ChargeOptions(max, refill))
+        }
         return CompiledPlatformSkill(definition.key(), args.bool("enabled", true), java.util.List.copyOf(triggers),
             if (args.has("permission")) args.string("permission").also { require(it.isNotBlank()) { "${args.path}.permission: must not be blank" } } else null,
             chance, SkillArgumentsReader.durationNanos(args.raw("cooldown", "0s"), "${args.path}.cooldown"),
             SkillKey.parse(args.string("cooldown-group", definition.key().value()), namespace), conditions, effects,
-            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables)
+            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables, costs, charges, every, stats)
+    }
+
+    private fun costs(args: SkillArguments): List<CompiledCost> = java.util.List.copyOf(args.list("costs", emptyList<Any>()).mapIndexed { index, raw ->
+        val cost = args.child("costs[$index]", raw)
+        cost.values.keys.firstOrNull { it !in setOf("resource", "amount") }?.let { throw cost.error(it, "unknown cost option") }
+        val handle = platform.providers.resource(cost.string("resource"), namespace, "${cost.path}.resource")
+        dependencies.add(handle)
+        val value = cost.raw("amount", 1)
+        if (value is Number) try { handle.component.validateAmount(value.toDouble()) } catch (error: IllegalArgumentException) { throw cost.error("amount", error.message ?: "invalid amount") }
+        val compiled = number(value, "${cost.path}.amount")
+        CompiledCost(handle, SkillNumericExpression { invocation -> compiled.evaluate(invocation).also { handle.component.validateAmount(it) } }, handle.component.supportsLocal(), cost.path)
+    })
+
+    private fun statBindings(args: SkillArguments): List<CompiledStatBinding> {
+        if (!args.has("bindings")) return emptyList()
+        val section = args.section("bindings")
+        return java.util.List.copyOf(section.values.filterKeys { it.startsWith("stat_") }.map { (alias, raw) ->
+            val binding = section.child(alias, raw)
+            require(alias.matches(Regex("stat_[a-z0-9_]{1,100}"))) { "${binding.path}: invalid stat alias" }
+            binding.values.keys.firstOrNull { it !in setOf("provider", "key", "default") }?.let { throw binding.error(it, "unknown stat binding option") }
+            val handle = platform.providers.stat(binding.string("provider"), namespace, "${binding.path}.provider")
+            dependencies.add(handle)
+            val fallback = if (!binding.has("default")) null else binding.number("default", 0.0)
+            CompiledStatBinding(alias, handle, SkillKey.parse(binding.string("key", alias.removePrefix("stat_")), handle.key.namespace()), fallback, handle.component.supportsLocal(), binding.path)
+        })
     }
 
     override fun number(value: Any?, path: String) = numbers.number(value, path)

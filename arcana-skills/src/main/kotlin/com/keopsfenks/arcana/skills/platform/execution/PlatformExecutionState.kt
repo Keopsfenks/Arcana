@@ -52,6 +52,7 @@ class PlatformExecutionState(val root: ExecutionState, val snapshot: DefinitionS
                 is PlatformDependencyException -> SkillResult.Status.DEPENDENCY_UNAVAILABLE
                 is MissingSkillTargetException -> SkillResult.Status.NO_TARGET
                 is com.keopsfenks.arcana.skills.platform.legacy.LegacyActorException -> return cause.result
+                is com.keopsfenks.arcana.core.skills.platform.SkillProviderException -> return cause.result()
                 else -> SkillResult.Status.ERROR
             }, cause.message ?: cause.javaClass.simpleName)
         }

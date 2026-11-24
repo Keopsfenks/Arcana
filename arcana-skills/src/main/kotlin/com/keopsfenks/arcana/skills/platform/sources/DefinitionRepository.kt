@@ -29,7 +29,7 @@ class DefinitionRepository(
         val key = source.key()
         require(key.namespace() == if (core) "arcana" else PlatformRegistry.namespace(owner)) { "Source namespace does not belong to its owner: $key" }
         return lifecycle.admit(owner, key.namespace()) {
-            val handle = SourceRegistration(owner, key, source, ::remove)
+            val handle = SourceRegistration(owner, key, source, lifecycle, ::remove)
             require(sources.putIfAbsent(key, handle) == null) { "Definition source already registered: $key" }
             epoch++
             handle
@@ -80,6 +80,11 @@ class DefinitionRepository(
         }
         loaded.values.forEach { revision -> revision.references.forEach { (key, path) ->
             if (key !in merged) errors.add("$path: unknown skill $key")
+        } }
+        val chargeGroups = HashMap<SkillKey, Pair<com.keopsfenks.arcana.skills.platform.admission.ChargeOptions, DefinitionRevision>>()
+        merged.values.forEach { revision -> revision.platformBase?.charges?.let { charges ->
+            val previous = chargeGroups.putIfAbsent(charges.group, charges.options to revision)
+            if (previous != null && previous.first != charges.options) errors.add("${revision.definition.origin()}.charges: group ${charges.group} conflicts with ${previous.second.key}; max/refill must match")
         } }
         val changed = base.entries.filterValues { it.source.key in selectedKeys }.keys + loaded.keys
         val affected = DefinitionGraph.affected(changed, base.entries, merged)

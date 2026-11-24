@@ -77,7 +77,7 @@ data class VariableBinding(
         fun declarations(arguments: com.keopsfenks.arcana.core.skills.SkillArguments, namespace: String): List<VariableBinding> {
             if (!arguments.has("bindings")) return emptyList()
             val section = arguments.section("bindings")
-            return java.util.List.copyOf(section.values.map { (alias, raw) ->
+            return java.util.List.copyOf(section.values.filterKeys { !it.startsWith("stat_") }.map { (alias, raw) ->
                 val args = section.child(alias, raw)
                 require(alias.matches(Regex("var_[a-z0-9_]{1,100}"))) { "${args.path}: variable aliases must begin var_" }
                 args.values.keys.firstOrNull { it !in setOf("scope", "key", "type", "default", "persistent") }?.let { throw args.error(it, "unknown binding option") }

@@ -14,6 +14,7 @@ class ControlledSkillScheduler(var immediate: Boolean = true) : SkillScheduler {
         private set
 
     fun assertOwner(owner: Any) = check(current === owner) { "Foreign context access: expected $owner, current $current" }
+    override fun owns(entity: LivingEntity) = current === entity
     override fun <T> on(entity: LivingEntity, delayTicks: Long, action: () -> T) = submit(entity, delayTicks, action)
     override fun <T> at(location: Location, action: () -> T) = submit(location, 0, action)
     override fun <T> global(action: () -> T) = submit("global", 0, action)

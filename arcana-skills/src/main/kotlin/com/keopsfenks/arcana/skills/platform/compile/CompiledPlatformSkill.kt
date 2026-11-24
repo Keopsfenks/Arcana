@@ -3,8 +3,11 @@ package com.keopsfenks.arcana.skills.platform.compile
 import com.keopsfenks.arcana.core.skills.SkillRegistration
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.platform.values.VariableBinding
+import com.keopsfenks.arcana.skills.platform.providers.CompiledStatBinding
+import com.keopsfenks.arcana.skills.platform.admission.CompiledCost
+import com.keopsfenks.arcana.skills.platform.admission.CompiledCharges
 
-/** Base compiled contract; node target/mutator/options are added by their own compiler task. */
+/** Immutable compiled definition, including captured provider handles and admission options. */
 data class CompiledPlatformSkill(
     val key: SkillKey,
     val enabled: Boolean,
@@ -19,5 +22,9 @@ data class CompiledPlatformSkill(
     val references: Map<SkillKey, String>,
     val origin: String,
     val parameters: List<SkillParameter> = emptyList(),
-    val bindings: List<VariableBinding> = emptyList()
+    val bindings: List<VariableBinding> = emptyList(),
+    val costs: List<CompiledCost> = emptyList(),
+    val charges: CompiledCharges? = null,
+    val every: Int = 1,
+    val stats: List<CompiledStatBinding> = emptyList()
 )

@@ -22,15 +22,17 @@ class ScheduledWork<T>(val future: CompletableFuture<T>, private val cancelActio
 }
 
 interface SkillScheduler {
+    fun owns(entity: LivingEntity): Boolean = false
     fun <T> on(entity: LivingEntity, delayTicks: Long = 0, action: () -> T): ScheduledWork<T>
     fun <T> at(location: Location, action: () -> T): ScheduledWork<T>
     fun <T> global(action: () -> T): ScheduledWork<T>
 }
 
 class ArcanaSkillScheduler(private val plugin: ArcanaPlugin) : SkillScheduler {
+    override fun owns(entity: LivingEntity) = if (Prerequisite.HAS_FOLIA.isMet) Arcana.get().isOwnedByCurrentRegion(entity) else Bukkit.isPrimaryThread()
     override fun <T> on(entity: LivingEntity, delayTicks: Long, action: () -> T): ScheduledWork<T> {
         val future = CompletableFuture<T>()
-        val owned = if (Prerequisite.HAS_FOLIA.isMet) Arcana.get().isOwnedByCurrentRegion(entity) else Bukkit.isPrimaryThread()
+        val owned = owns(entity)
         val context = plugin.scheduler.on(entity).onRetired { future.cancel(false) }
         return submit(context, owned, delayTicks, future, action)
     }

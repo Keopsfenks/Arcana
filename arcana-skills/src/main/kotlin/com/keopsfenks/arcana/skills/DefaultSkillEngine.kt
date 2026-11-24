@@ -35,9 +35,9 @@ class DefaultSkillEngine(
     internal val lifecycle = SkillLifecycleGate()
     private val generalPlatform = DefaultSkillPlatform(this, lifecycle, plugin, directory, environment, expressionEnvironmentFactory, clock)
     private val diagnostics = SkillRuntimeDiagnostics({ plugin.logger }, clock)
-    val effects = ComponentRegistry<SkillEffect> { invalidate(it) }
-    val conditions = ComponentRegistry<SkillCondition> { invalidate(it) }
-    val triggers = ComponentRegistry<SkillTrigger> { handle ->
+    val effects = ComponentRegistry<SkillEffect>(lifecycle) { invalidate(it) }
+    val conditions = ComponentRegistry<SkillCondition>(lifecycle) { invalidate(it) }
+    val triggers = ComponentRegistry<SkillTrigger>(lifecycle) { handle ->
         invalidate(handle)
         listeners.remove(handle)?.let { safelyClose(it) }
     }
@@ -183,7 +183,7 @@ class DefaultSkillEngine(
 
     override fun cancel(playerId: UUID) {
         executions.filter { it.playerId == playerId }.forEach { it.cancel("Player left") }
-        cooldowns.remove(playerId)
+        generalPlatform.admissions.removeActor(playerId)
         generalPlatform.variables.evictActor(playerId)
         generalPlatform.flowCursors.removeActor(playerId)
     }
@@ -218,11 +218,13 @@ class DefaultSkillEngine(
     private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot() + generalPlatform.registrations()
 
     private fun invalidate(handle: SkillRegistration) {
+        generalPlatform.admissions.remove(handle)
         generalPlatform.flowCursors.remove(handle)
         executions.filter { handle in it.dependencies }.forEach { it.cancel("Component ${handle.id} was removed") }
     }
 
     internal fun invalidateRegistration(handle: SkillRegistration) = invalidate(handle)
+    internal fun reportProviderFailure(message: String) { plugin.logger.warning(message) }
 
     private fun safelyClose(handle: AutoCloseable) {
         try { handle.close() } catch (error: Exception) { plugin.logger.warning("Could not close skill listener: ${error.message}") }

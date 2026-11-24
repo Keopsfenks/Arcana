@@ -16,6 +16,7 @@ import java.util.concurrent.*
 import java.util.function.Function
 import java.util.function.DoubleSupplier
 import com.keopsfenks.arcana.skills.execution.ScheduledWork
+import com.keopsfenks.arcana.skills.platform.providers.StatBindings
 
 class PlatformExecutionContext(
     val engine: DefaultSkillEngine,
@@ -24,15 +25,22 @@ class PlatformExecutionContext(
     val frame: InvocationFrame,
     val definition: CompiledPlatformSkill,
     val depth: Int,
-    val variables: VariableStore.VariableAccess
+    val variables: VariableStore.VariableAccess,
+    initialAdmission: SkillAdmission? = null
 ) : SkillExecutionContext {
+    var admission: SkillAdmission? = initialAdmission
+        internal set
     private val query: SkillTargetQuery = RegionQuery(engine.scheduler, state = state, frame = frame)
     private val flow = ParallelScope(this)
     fun <T> track(work: ScheduledWork<T>): CompletableFuture<T> = state.track(frame.track(work))
     override fun invocation(): SkillInvocation { state.checkActive(); return frame.snapshot(definition.bindings, variables) }
-    override fun services(): SkillServices = SkillServices.of(mapOf<Class<*>, Any>(SkillVariables::class.java to variables, SkillTargetQuery::class.java to query,
-        ParallelScope::class.java to flow, FlowCursorStore::class.java to platform.flowCursors, DoubleSupplier::class.java to DoubleSupplier { engine.random() }))
-    fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame).thenCompose { captured ->
+    override fun services(): SkillServices = SkillServices.of(buildMap<Class<*>, Any> {
+        put(SkillVariables::class.java, variables); put(SkillTargetQuery::class.java, query); put(ParallelScope::class.java, flow)
+        put(FlowCursorStore::class.java, platform.flowCursors); put(DoubleSupplier::class.java, DoubleSupplier { engine.random() })
+        admission?.let { put(SkillAdmission::class.java, it) }
+    })
+    fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame)
+        .thenCompose { StatBindings.capture(it, definition.stats, state, frame, platform) }.thenCompose { captured ->
         val view = state.frame(if (isolateLocals) frame.fork(captured) else frame.view(captured))
         prepare(view)
     }
@@ -40,13 +48,15 @@ class PlatformExecutionContext(
         try {
             val persistent = definition.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { it.value.map { value -> value.key }.toSet() }
             val access = platform.variables.access(view, persistent)
-            return access.prepare().thenApply { PlatformExecutionContext(engine, platform, state, view, definition, depth, access) }
+            return access.prepare().thenApply { PlatformExecutionContext(engine, platform, state, view, definition, depth, access, admission) }
                 .whenComplete { _, error -> if (error != null) state.release(view) }
         } catch (error: Throwable) { state.release(view); return CompletableFuture.failedFuture(error) }
     }
     fun branch(input: SkillInvocation): PlatformBranch {
         val scope = state.frame(frame.fork(input))
-        val ready = InvocationSnapshots.capture(input, engine.scheduler, state, scope).thenCompose { captured -> prepare(state.frame(scope.view(captured))) }
+        val ready = InvocationSnapshots.capture(input, engine.scheduler, state, scope)
+            .thenCompose { StatBindings.capture(it, definition.stats, state, scope, platform) }
+            .thenCompose { captured -> prepare(state.frame(scope.view(captured))) }
         return PlatformBranch(scope, ready)
     }
     override fun on(actor: SkillActor, action: Function<LivingEntity, SkillResult>): CompletionStage<SkillResult> =

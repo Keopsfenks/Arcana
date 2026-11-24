@@ -21,7 +21,7 @@ class PlatformRegistry<T : SkillPlatformComponent>(
         val descriptor = component.descriptor()
         require(key.value() == descriptor.id()) { "Component descriptor ${descriptor.id()} does not match $key" }
         return lifecycle.admit(owner, namespace) {
-            val registration = PlatformRegistration(owner, key, component, descriptor) { handle ->
+            val registration = PlatformRegistration(owner, key, component, descriptor, lifecycle) { handle ->
                 entries.remove(key, handle)
                 removed(handle)
             }

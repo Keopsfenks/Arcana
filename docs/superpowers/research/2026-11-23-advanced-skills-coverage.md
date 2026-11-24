@@ -30,8 +30,8 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | FLOW-BASE | L-C,M-C | SequenceMechanic, DelayMechanic, RepeatMechanic, BranchMechanic, CastMechanic | 9 | Tamamlandı | FlowMechanicTests |
 | FLOW-MULTI | L-C,M-T | ForEachMechanic, ParallelMechanic, WaitUntilMechanic | 9 | Tamamlandı | FlowMechanicTests |
 | FLOW-PICK | L-C | WeightedRandomMechanic, CycleMechanic, ShuffleMechanic | 9 | Tamamlandı | FlowMechanicTests |
-| ADMIT | L-E,M-C | Cooldown, every-N, charges/refill, ortak kabul kimliği | 10 | Planlandı | AdmissionTests |
-| COST | L-E | SkillResourceProvider; health/food/vanilla XP sağlayıcıları | 10 | Planlandı | ResourceReservationTests |
+| ADMIT | L-E,M-C | Cooldown, every-N, charges/refill, ortak kabul kimliği | 10 | Tamamlandı; test edildi | AdmissionTests |
+| COST | L-E | SkillResourceProvider; health/food/vanilla XP sağlayıcıları | 10 | Tamamlandı; test edildi | ResourceReservationTests |
 | STAT | L-E,M-A | SkillStatProvider ve namespaced binding | 10,12 | Planlandı | StatContributionTests |
 | EVENT-DMG | L-E,M-S | AddDamageInterceptor, MultiplyDamageInterceptor | 11 | Planlandı | InterceptorTests |
 | EVENT-CANCEL | M-S | CancelEventInterceptor; capability/priority sınırları | 11 | Planlandı | InterceptorTests |

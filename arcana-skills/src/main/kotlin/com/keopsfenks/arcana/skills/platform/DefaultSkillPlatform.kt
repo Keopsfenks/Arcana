@@ -24,6 +24,8 @@ import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionState
 import com.keopsfenks.arcana.skills.platform.execution.PlatformRunner
 import com.keopsfenks.arcana.skills.platform.execution.FlowCursorStore
 import com.keopsfenks.arcana.skills.platform.values.InvocationFrame
+import com.keopsfenks.arcana.skills.platform.providers.ProviderRegistry
+import com.keopsfenks.arcana.skills.platform.admission.AdmissionCoordinator
 
 class DefaultSkillPlatform(
     private val engine: DefaultSkillEngine,
@@ -37,6 +39,9 @@ class DefaultSkillPlatform(
     private val registries = ConcurrentHashMap<SkillComponentType<*>, PlatformRegistry<*>>()
     val variables = VariableStore(clock, persistence = PersistentVariableStore())
     val flowCursors = FlowCursorStore()
+    val providers = ProviderRegistry(this)
+    val admissions = AdmissionCoordinator(engine, lifecycle, clock)
+    internal fun componentActive(handle: SkillRegistration) = handle.isActive && lifecycle.available(handle.owner)
     private val runner = PlatformRunner(engine, this)
     val repository = DefinitionRepository(lifecycle, engine::compileSourceLegacy,
         { definition -> SourceSkillCompiler(this, environment, definition.key().namespace(), environmentFactory).compile(definition) },
@@ -55,7 +60,7 @@ class DefaultSkillPlatform(
     override fun registerSource(owner: Plugin, source: SkillDefinitionSource) = repository.register(owner, source)
     override fun reloadSource(source: SkillKey): SkillReloadResult = repository.commit(repository.prepare(setOf(source)))
     override fun definitions() = repository.definitions()
-    internal fun close() { variables.close(); flowCursors.close() }
+    internal fun close() { variables.close(); flowCursors.close(); admissions.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)

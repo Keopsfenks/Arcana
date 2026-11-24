@@ -8,6 +8,7 @@ import com.keopsfenks.arcana.skills.platform.legacy.LegacyInvocationAdapter
 import com.keopsfenks.arcana.skills.platform.sources.DefinitionRevision
 import com.keopsfenks.arcana.skills.platform.values.*
 import java.util.concurrent.CompletableFuture
+import com.keopsfenks.arcana.skills.platform.providers.StatBindings
 
 class PlatformRunner(private val engine: DefaultSkillEngine, private val platform: DefaultSkillPlatform) {
     fun run(revision: DefinitionRevision, input: SkillInvocation, state: PlatformExecutionState, depth: Int, parent: InvocationFrame? = null): CompletableFuture<SkillResult> {
@@ -23,28 +24,37 @@ class PlatformRunner(private val engine: DefaultSkillEngine, private val platfor
                 val context = LegacyInvocationAdapter.toLegacy(input)
                 return engine.runLegacyNested(requireNotNull(revision.legacy), context, state.root, depth, parent).toCompletableFuture()
             }
+            if (!native.enabled) return CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.DISABLED, "Skill is disabled"))
             val parameters = ParameterBindings.bind(native.parameters, input.parameters())
             val supplied = input.derive().parameters(parameters).build()
             InvocationSnapshots.capture(supplied, engine.scheduler, state, parent).thenCompose { snapshot ->
                 val frame = state.frame(parent?.fork(snapshot) ?: InvocationFrame(snapshot))
                 val persistent = native.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { entry -> entry.value.map { it.key }.toSet() }
                 val variables = platform.variables.access(frame, persistent)
-                variables.prepare().thenCompose {
-                    val execution = PlatformExecutionContext(engine, platform, state, frame, native, depth, variables)
-                    state.track(engine.scheduler.on(snapshot.actor().entity()) {
-                        state.checkActive(); frame.checkActive()
-                        when {
-                            !native.enabled -> SkillResult.of(SkillResult.Status.DISABLED, "Skill is disabled")
-                            !revision.available() -> SkillResult.of(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "Definition ${revision.key} is unavailable")
-                            native.permission != null && snapshot.actor().player().isEmpty -> SkillResult.of(SkillResult.Status.UNSUPPORTED_ACTOR, "Permission admission requires a Player actor")
-                            native.permission != null && !snapshot.actor().player().orElseThrow().hasPermission(native.permission) -> SkillResult.of(SkillResult.Status.NO_PERMISSION, native.permission)
-                            !native.conditions.test(execution.invocation()) -> SkillResult.of(SkillResult.Status.CONDITION_FAILED, "Conditions did not match")
-                            native.chance == 0.0 || native.chance < 100.0 && checkedRoll() * 100 >= native.chance -> SkillResult.of(SkillResult.Status.CHANCE_FAILED, "Chance did not succeed")
-                            !engine.cooldowns.tryAcquire(snapshot.actor().id(), native.cooldownGroup.toString(), native.cooldownNanos) -> SkillResult.of(SkillResult.Status.COOLDOWN, "Skill cooldown is active")
-                            else -> SkillResult.success()
+                variables.prepare().thenCompose { StatBindings.capture(snapshot, native.stats, state, frame, platform) }.thenCompose { enriched ->
+                    val effectFrame = if (enriched === snapshot) frame else state.frame(frame.view(enriched))
+                    val effectVariables = if (effectFrame === frame) variables else platform.variables.access(effectFrame, persistent)
+                    effectVariables.prepare().thenCompose {
+                        val execution = PlatformExecutionContext(engine, platform, state, effectFrame, native, depth, effectVariables)
+                        execution.track(engine.scheduler.on(snapshot.actor().entity()) {
+                            state.checkActive(); effectFrame.checkActive()
+                            when {
+                                !InvocationSnapshots.valid(snapshot.actor().entity()) -> SkillResult.of(SkillResult.Status.CANCELLED, "Actor retired")
+                                !native.enabled -> SkillResult.of(SkillResult.Status.DISABLED, "Skill is disabled")
+                                !revision.available() -> SkillResult.of(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "Definition ${revision.key} is unavailable")
+                                native.permission != null && snapshot.actor().player().isEmpty -> SkillResult.of(SkillResult.Status.UNSUPPORTED_ACTOR, "Permission admission requires a Player actor")
+                                native.permission != null && !snapshot.actor().player().orElseThrow().hasPermission(native.permission) -> SkillResult.of(SkillResult.Status.NO_PERMISSION, native.permission)
+                                !native.conditions.test(execution.invocation()) -> SkillResult.of(SkillResult.Status.CONDITION_FAILED, "Conditions did not match")
+                                native.chance == 0.0 || native.chance < 100.0 && checkedRoll() * 100 >= native.chance -> SkillResult.of(SkillResult.Status.CHANCE_FAILED, "Chance did not succeed")
+                                else -> SkillResult.success()
+                            }
+                        }).thenCompose { eligible ->
+                            if (!eligible.isSuccess) CompletableFuture.completedFuture(eligible)
+                            else platform.admissions.admit(revision, execution).thenCompose { outcome ->
+                                if (!outcome.result.isSuccess) CompletableFuture.completedFuture(outcome.result)
+                                else { execution.admission = outcome.admission; execution.execute(native.effects).toCompletableFuture() }
+                            }
                         }
-                    }).thenCompose { admission ->
-                        if (admission.isSuccess) execution.execute(native.effects).toCompletableFuture() else CompletableFuture.completedFuture(admission)
                     }
                 }.whenComplete { _, _ -> state.release(frame) }
             }

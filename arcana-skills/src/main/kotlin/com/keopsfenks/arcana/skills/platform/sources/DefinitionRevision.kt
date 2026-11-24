@@ -8,17 +8,21 @@ import org.bukkit.plugin.Plugin
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 
-class SourceRegistration(
+class SourceRegistration @JvmOverloads constructor(
     private val owner: Plugin,
     val key: SkillKey,
     val source: SkillDefinitionSource,
+    private val lifecycle: com.keopsfenks.arcana.skills.platform.lifecycle.SkillLifecycleGate? = null,
     private val removed: (SourceRegistration) -> Unit
 ) : SkillRegistration {
     private val active = AtomicBoolean(true)
     override fun getOwner() = owner
     override fun getId() = key.toString()
     override fun isActive() = active.get()
-    override fun close() { if (active.compareAndSet(true, false)) removed(this) }
+    override fun close() {
+        val retired = lifecycle?.locked { active.compareAndSet(true, false) } ?: active.compareAndSet(true, false)
+        if (retired) removed(this)
+    }
 }
 
 /** A published definition lease; only the repository retires it, never a mutable YAML document. */

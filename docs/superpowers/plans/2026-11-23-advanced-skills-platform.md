@@ -178,11 +178,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** resource `reserve(actor,amount): CompletionStage<SkillResourceReservation>`; reservation `commit()`, `release()` are idempotent. Optional `reserveLocal` is declared by provider capability for interceptors. Stat `snapshot(actor,Set<SkillKey>): CompletionStage<Map<SkillKey,Double>>`. Admission carries one UUID plus reserved costs/charge/cooldown permit.
 
-- [ ] Assert conditions/chance reject with zero resource calls; second resource failure releases first, cooldown denial releases costs, exactly one concurrent shared-group/last-charge winner; interception continuation reuses admission; monotonic refill/wrap, zero-duration shared cooldown and unloaded provider checks. Later effect error keeps committed costs.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test :arcana-skills-components:test FLAGS`; expect RED.
-- [ ] Implement reserve-all→cooldown/charge permit→commit admission with compensating release before commitment; no RPG mana/economy product is created. Native resources validate Player capability and prevent a health cost killing its actor by default.
-- [ ] Same Verify GREEN and real vanilla XP point math round trips; missing provider produces a qualified validation error.
-- [ ] Commit `feat(skills): coordinate resource reservations charges and shared admission`.
+- [x] Assert conditions/chance reject with zero resource calls; second resource failure releases first, cooldown denial releases costs, exactly one concurrent shared-group/last-charge winner; interception continuation reuses admission; monotonic refill/wrap, zero-duration shared cooldown and unloaded provider checks. Later effect error keeps committed costs.
+- [x] Verify `.\gradlew.bat :arcana-skills:test :arcana-skills-components:test FLAGS`; expect RED.
+- [x] Implement reserve-all→cooldown/charge permit→commit admission with compensating release before commitment; no RPG mana/economy product is created. Native resources validate Player capability and prevent a health cost killing its actor by default.
+- [x] Same Verify GREEN and real vanilla XP point math round trips; missing provider produces a qualified validation error.
+- [x] Commit `feat(skills): coordinate resource reservations charges and shared admission`.
 
 ### Task 11: Synchronous event interceptors
 
