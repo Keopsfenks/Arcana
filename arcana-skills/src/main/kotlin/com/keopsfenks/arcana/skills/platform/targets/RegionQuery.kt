@@ -13,15 +13,17 @@ import org.bukkit.util.BoundingBox
 import java.util.*
 import java.util.concurrent.*
 import kotlin.math.*
+import com.keopsfenks.arcana.skills.platform.values.InvocationFrame
 
 /** Resolve references globally, enumerate each loaded chunk locally, snapshot each entity on its owner. */
 class RegionQuery(
     private val scheduler: SkillScheduler,
     private val worlds: (UUID) -> World? = { Bukkit.getWorld(it) },
-    private val state: PlatformExecutionState? = null
+    private val state: PlatformExecutionState? = null,
+    private val frame: InvocationFrame? = null
 ) : SkillTargetQuery {
-    private fun check() { state?.checkActive() }
-    private fun <T> track(work: ScheduledWork<T>): CompletableFuture<T> = state?.track(work) ?: work.future
+    private fun check() { state?.checkActive(); frame?.checkActive() }
+    private fun <T> track(work: ScheduledWork<T>): CompletableFuture<T> = (frame?.track(work) ?: work).let { state?.track(it) ?: it.future }
     private fun world(id: UUID) = track(scheduler.global { check(); worlds(id) })
     private fun chunks(bounds: SkillBounds): List<Pair<Int, Int>> {
         val x1 = floor(bounds.minX()).toInt() shr 4; val x2 = floor(bounds.maxX()).toInt() shr 4

@@ -27,13 +27,14 @@ class PlatformExecutionState(val root: ExecutionState, val snapshot: DefinitionS
         }
     }
     fun frame(frame: InvocationFrame): InvocationFrame {
-        checkActive(); frames.add(frame)
+        checkActive(); frames.add(frame); frame.onClose { frames.remove(frame) }
         try { checkActive() } catch (error: Throwable) { release(frame); throw error }
         return frame
     }
     fun release(frame: InvocationFrame) { frames.remove(frame); frame.close() }
     fun reserveBranches(count: Int): AutoCloseable {
-        require(count in 1..16) { "Parallel fan-out must be between 1 and 16" }
+        require(count > 0) { "Parallel fan-out must be positive" }
+        if (count > 16) throw PlatformBudgetException("Parallel fan-out exceeds 16")
         checkActive()
         if (branches.addAndGet(count) > 16) { branches.addAndGet(-count); throw PlatformBudgetException("Parallel fan-out exceeds 16") }
         val closed = java.util.concurrent.atomic.AtomicBoolean()

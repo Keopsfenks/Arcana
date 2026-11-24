@@ -27,14 +27,14 @@ data class NodeOptions(
                 number(args, compiler, "chance", 100, 0.0, 100.0), duration(args, compiler, "delay"),
                 number(args, compiler, "repeat", 1, 1.0, 100.0, true), duration(args, compiler, "interval"), failure == "skip", args.values.keys.any { it in OPTIONS })
         }
-        private fun number(args: SkillArguments, compiler: SkillCompilation, key: String, fallback: Number, min: Double, max: Double, integer: Boolean = false): SkillNumericExpression {
+        fun number(args: SkillArguments, compiler: SkillCompilation, key: String, fallback: Number, min: Double, max: Double, integer: Boolean = false): SkillNumericExpression {
             fun validate(value: Double): Double = value.also { require(it.isFinite() && it in min..max && (!integer || floor(it) == it)) { "${args.path}.$key: expected ${if (integer) "an integer" else "a finite number"} in $min..$max" } }
             val raw = args.raw(key, fallback)
             if (raw is Number) validate(raw.toDouble())
             val compiled = compiler.number(raw, "${args.path}.$key")
             return SkillNumericExpression { validate(compiled.evaluate(it)) }
         }
-        private fun duration(args: SkillArguments, compiler: SkillCompilation, key: String): SkillNumericExpression {
+        fun duration(args: SkillArguments, compiler: SkillCompilation, key: String): SkillNumericExpression {
             val raw = args.raw(key, "0s")
             if (raw is Number || raw is String && raw.matches(Regex("[0-9]+(?:\\.[0-9]+)?(?:ms|s|m|t)"))) {
                 val ticks = SkillArgumentsReader.ticks(raw, "${args.path}.$key")

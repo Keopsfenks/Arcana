@@ -27,9 +27,9 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | M-LOC | L-M | OffsetLocationMutator, RotateLocationMutator, CenterLocationMutator | 8 | Tamamlandı | MutatorTests |
 | M-DATA | L-M | SetValueMutator, MultiplyValueMutator, ClampValueMutator | 8 | Tamamlandı | MutatorTests |
 | NODE | L-E,M-C | Node başına koşul/şans/delay/repeat/filter/skip | 8 | Tamamlandı | PlatformCompilerTests |
-| FLOW-BASE | L-C,M-C | SequenceMechanic, DelayMechanic, RepeatMechanic, BranchMechanic, CastMechanic | 9 | Planlandı | FlowMechanicTests |
-| FLOW-MULTI | L-C,M-T | ForEachMechanic, ParallelMechanic, WaitUntilMechanic | 9 | Planlandı | FlowMechanicTests |
-| FLOW-PICK | L-C | WeightedRandomMechanic, CycleMechanic, ShuffleMechanic | 9 | Planlandı | FlowMechanicTests |
+| FLOW-BASE | L-C,M-C | SequenceMechanic, DelayMechanic, RepeatMechanic, BranchMechanic, CastMechanic | 9 | Tamamlandı | FlowMechanicTests |
+| FLOW-MULTI | L-C,M-T | ForEachMechanic, ParallelMechanic, WaitUntilMechanic | 9 | Tamamlandı | FlowMechanicTests |
+| FLOW-PICK | L-C | WeightedRandomMechanic, CycleMechanic, ShuffleMechanic | 9 | Tamamlandı | FlowMechanicTests |
 | ADMIT | L-E,M-C | Cooldown, every-N, charges/refill, ortak kabul kimliği | 10 | Planlandı | AdmissionTests |
 | COST | L-E | SkillResourceProvider; health/food/vanilla XP sağlayıcıları | 10 | Planlandı | ResourceReservationTests |
 | STAT | L-E,M-A | SkillStatProvider ve namespaced binding | 10,12 | Planlandı | StatContributionTests |

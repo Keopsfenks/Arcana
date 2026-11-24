@@ -9,8 +9,8 @@ class SkillRunner(private val engine: DefaultSkillEngine) {
     fun run(skill: CompiledSkill, context: SkillContext, state: ExecutionState, depth: Int, platformFrame: com.keopsfenks.arcana.skills.platform.values.InvocationFrame? = null): CompletableFuture<SkillResult> {
         if (depth > 16) return completed(SkillResult.Status.ERROR, "Skill calls exceed 16 levels")
         state.dependencies.addAll(skill.dependencies)
-        return state.track(engine.scheduler.on(context.caster) {
-            state.checkActive()
+        return engine.scheduler.on(context.caster) {
+            state.checkActive(); platformFrame?.checkActive()
             when {
                 !skill.enabled -> SkillResult.of(SkillResult.Status.DISABLED, "Skill is disabled")
                 !skill.available() -> SkillResult.of(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "A component dependency is unavailable")
@@ -22,7 +22,7 @@ class SkillRunner(private val engine: DefaultSkillEngine) {
                     SkillResult.of(SkillResult.Status.COOLDOWN, "${engine.cooldowns.remaining(context.casterId, skill.cooldownGroup) / 1_000_000_000.0}s remaining")
                 else -> SkillResult.success()
             }
-        }).thenCompose { admission ->
+        }.let { state.track(platformFrame?.track(it) ?: it) }.thenCompose { admission ->
             if (!admission.isSuccess) CompletableFuture.completedFuture(admission)
             else SkillExecutionImpl(engine, state, context.toBuilder().value("skill", skill.id).build(), depth, platformFrame).execute(skill.effects).toCompletableFuture()
         }

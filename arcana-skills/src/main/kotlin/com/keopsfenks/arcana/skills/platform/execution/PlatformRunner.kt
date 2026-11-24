@@ -25,7 +25,7 @@ class PlatformRunner(private val engine: DefaultSkillEngine, private val platfor
             }
             val parameters = ParameterBindings.bind(native.parameters, input.parameters())
             val supplied = input.derive().parameters(parameters).build()
-            InvocationSnapshots.capture(supplied, engine.scheduler, state).thenCompose { snapshot ->
+            InvocationSnapshots.capture(supplied, engine.scheduler, state, parent).thenCompose { snapshot ->
                 val frame = state.frame(parent?.fork(snapshot) ?: InvocationFrame(snapshot))
                 val persistent = native.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { entry -> entry.value.map { it.key }.toSet() }
                 val variables = platform.variables.access(frame, persistent)

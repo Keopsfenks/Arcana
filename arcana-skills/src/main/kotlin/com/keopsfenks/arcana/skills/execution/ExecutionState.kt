@@ -19,6 +19,7 @@ class ExecutionState(val playerId: UUID, val snapshot: SkillSnapshot) {
     val appliedSteps: Int get() = steps.get()
     @Volatile var platformState: com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionState? = null
     private val work = ConcurrentHashMap.newKeySet<ScheduledWork<*>>()
+    val pendingWork: Int get() = work.size
     val dependencies = ConcurrentHashMap.newKeySet<SkillRegistration>()
 
     fun checkActive() { if (cancelled.get() || result.isDone) throw CancellationException("Skill execution finished or cancelled") }

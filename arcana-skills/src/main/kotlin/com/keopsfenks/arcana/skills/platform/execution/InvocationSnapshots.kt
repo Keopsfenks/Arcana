@@ -5,14 +5,15 @@ import com.keopsfenks.arcana.skills.execution.SkillScheduler
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import java.util.concurrent.*
+import com.keopsfenks.arcana.skills.platform.values.InvocationFrame
 
 object InvocationSnapshots {
     fun valid(entity: LivingEntity) = if (entity is Player) entity.isOnline else entity.isValid
 
     @Suppress("DEPRECATION")
-    fun actor(reference: SkillActor, scheduler: SkillScheduler, state: PlatformExecutionState): CompletableFuture<Map<String, SkillValue>?> =
-        state.track(scheduler.on(reference.entity()) {
-            state.checkActive()
+    fun actor(reference: SkillActor, scheduler: SkillScheduler, state: PlatformExecutionState, frame: InvocationFrame? = null): CompletableFuture<Map<String, SkillValue>?> =
+        scheduler.on(reference.entity()) {
+            state.checkActive(); frame?.checkActive()
             val entity = reference.entity()
             if (!valid(entity)) null else {
                 val location = entity.location
@@ -29,19 +30,19 @@ object InvocationSnapshots {
                 }
                 SkillValue.of(values).map()
             }
-        }).handle { value, error ->
-            state.checkActive()
+        }.let { state.track(frame?.track(it) ?: it) }.handle { value, error ->
+            state.checkActive(); frame?.checkActive()
             if (error == null) value else {
                 val failure = PlatformExecutionState.failure(error)
                 if (failure.status() == com.keopsfenks.arcana.core.skills.SkillResult.Status.CANCELLED) null else throw CompletionException(error)
             }
         }
 
-    fun capture(input: SkillInvocation, scheduler: SkillScheduler, state: PlatformExecutionState): CompletableFuture<SkillInvocation> {
+    fun capture(input: SkillInvocation, scheduler: SkillScheduler, state: PlatformExecutionState, frame: InvocationFrame? = null): CompletableFuture<SkillInvocation> {
         val references = (listOf(input.actor()) + listOfNotNull(input.target().orElse(null), input.trigger().orElse(null)) + input.selection().entities()).distinctBy { it.id() }
-        val snapshots = references.associateWith { actor(it, scheduler, state) }
+        val snapshots = references.associateWith { actor(it, scheduler, state, frame) }
         return CompletableFuture.allOf(*snapshots.values.toTypedArray()).thenApply {
-            state.checkActive()
+            state.checkActive(); frame?.checkActive()
             val caster = snapshots.getValue(input.actor()).join() ?: throw CancellationException("Actor is unavailable")
             val values = LinkedHashMap(input.data())
             // Trusted snapshots replace caller-supplied values, including stale selected-role fields.

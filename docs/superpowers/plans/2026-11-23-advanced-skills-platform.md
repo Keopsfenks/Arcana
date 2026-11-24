@@ -166,11 +166,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** child invocation derives parameters/local frame; parallel execution returns ordered child results and shares state. Cursor key is actor+qualified definition+node revision; reload/removal retires stale cursors. `WaitUntil` requires timeout and interval≥1 tick.
 
-- [ ] Assert weighted choice and zero/negative weight validation, cycle/shuffle isolation per actor, 17th parallel branch rejection, foreach per-target result aggregation/fail-fast, nested call17 rejection, exactly1,024 applied steps and cancellation of pending siblings. Wait-until timeout and logout release all scheduled work.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test :arcana-skills-components:test --tests '*FlowMechanicTests' --tests '*PlatformLimitsTests' FLAGS`; expect RED.
-- [ ] Implement each flow mechanic separately; preserve ordinary sequence ordering and fail-stop semantics. Child calls apply target skill admission while inline nodes share current admission.
-- [ ] Same Verify GREEN; finite elapsed/tick bounds and no detached callbacks after completion.
-- [ ] Commit `feat(skills): add parameterized bounded flow and parallel execution`.
+- [x] Assert weighted choice and zero/negative weight validation, cycle/shuffle isolation per actor, 17th parallel branch rejection, foreach per-target result aggregation/fail-fast, nested call17 rejection, exactly1,024 applied steps and cancellation of pending siblings. Wait-until timeout and logout release all scheduled work.
+- [x] Verify `.\gradlew.bat :arcana-skills:test :arcana-skills-components:test --tests '*FlowMechanicTests' --tests '*PlatformLimitsTests' FLAGS`; expect RED.
+- [x] Implement each flow mechanic separately; preserve ordinary sequence ordering and fail-stop semantics. Child calls apply target skill admission while inline nodes share current admission.
+- [x] Same Verify GREEN; finite elapsed/tick bounds and no detached callbacks after completion.
+- [x] Commit `feat(skills): add parameterized bounded flow and parallel execution`.
 
 ### Task 10: Resource/stat providers, charges and atomic admission
 

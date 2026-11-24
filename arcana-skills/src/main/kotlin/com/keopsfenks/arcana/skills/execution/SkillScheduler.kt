@@ -12,9 +12,12 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 
 class ScheduledWork<T>(val future: CompletableFuture<T>, private val cancelAction: () -> Unit) {
+    private val cancelled = java.util.concurrent.atomic.AtomicBoolean()
     fun cancel() {
-        future.cancel(false)
-        cancelAction()
+        if (cancelled.compareAndSet(false, true)) {
+            future.cancel(false)
+            try { cancelAction() } catch (_: Exception) { /* The cancelled future still prevents the callback. */ }
+        }
     }
 }
 

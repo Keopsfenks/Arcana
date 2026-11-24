@@ -14,6 +14,8 @@ import org.bukkit.Location
 import org.bukkit.entity.LivingEntity
 import java.util.concurrent.*
 import java.util.function.Function
+import java.util.function.DoubleSupplier
+import com.keopsfenks.arcana.skills.execution.ScheduledWork
 
 class PlatformExecutionContext(
     val engine: DefaultSkillEngine,
@@ -24,20 +26,31 @@ class PlatformExecutionContext(
     val depth: Int,
     val variables: VariableStore.VariableAccess
 ) : SkillExecutionContext {
-    private val query: SkillTargetQuery = RegionQuery(engine.scheduler, state = state)
+    private val query: SkillTargetQuery = RegionQuery(engine.scheduler, state = state, frame = frame)
+    private val flow = ParallelScope(this)
+    fun <T> track(work: ScheduledWork<T>): CompletableFuture<T> = state.track(frame.track(work))
     override fun invocation(): SkillInvocation { state.checkActive(); return frame.snapshot(definition.bindings, variables) }
-    override fun services(): SkillServices = SkillServices.of(mapOf<Class<*>, Any>(SkillVariables::class.java to variables, SkillTargetQuery::class.java to query))
-    fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state).thenCompose { captured ->
+    override fun services(): SkillServices = SkillServices.of(mapOf<Class<*>, Any>(SkillVariables::class.java to variables, SkillTargetQuery::class.java to query,
+        ParallelScope::class.java to flow, FlowCursorStore::class.java to platform.flowCursors, DoubleSupplier::class.java to DoubleSupplier { engine.random() }))
+    fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame).thenCompose { captured ->
         val view = state.frame(if (isolateLocals) frame.fork(captured) else frame.view(captured))
+        prepare(view)
+    }
+    private fun prepare(view: InvocationFrame): CompletableFuture<PlatformExecutionContext> {
         try {
             val persistent = definition.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { it.value.map { value -> value.key }.toSet() }
             val access = platform.variables.access(view, persistent)
-            access.prepare().thenApply { PlatformExecutionContext(engine, platform, state, view, definition, depth, access) }
+            return access.prepare().thenApply { PlatformExecutionContext(engine, platform, state, view, definition, depth, access) }
                 .whenComplete { _, error -> if (error != null) state.release(view) }
-        } catch (error: Throwable) { state.release(view); CompletableFuture.failedFuture(error) }
+        } catch (error: Throwable) { state.release(view); return CompletableFuture.failedFuture(error) }
+    }
+    fun branch(input: SkillInvocation): PlatformBranch {
+        val scope = state.frame(frame.fork(input))
+        val ready = InvocationSnapshots.capture(input, engine.scheduler, state, scope).thenCompose { captured -> prepare(state.frame(scope.view(captured))) }
+        return PlatformBranch(scope, ready)
     }
     override fun on(actor: SkillActor, action: Function<LivingEntity, SkillResult>): CompletionStage<SkillResult> =
-        state.track(engine.scheduler.on(actor.entity()) {
+        track(engine.scheduler.on(actor.entity()) {
             state.checkActive(); frame.checkActive()
             if (!InvocationSnapshots.valid(actor.entity())) SkillResult.of(SkillResult.Status.NO_TARGET, "Actor target is unavailable") else action.apply(actor.entity())
         }).handle { value, error ->
@@ -46,21 +59,22 @@ class PlatformExecutionContext(
                 SkillResult.of(SkillResult.Status.NO_TARGET, "Selected actor retired") else throw CompletionException(error)
         }
     override fun at(location: SkillLocation, action: Function<Location, SkillResult>): CompletionStage<SkillResult> =
-        state.track(engine.scheduler.global { state.checkActive(); Bukkit.getWorld(location.world()) }).thenCompose { world ->
+        track(engine.scheduler.global { state.checkActive(); frame.checkActive(); Bukkit.getWorld(location.world()) }).thenCompose { world ->
             if (world == null) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.NO_TARGET, "World is unavailable"))
             else {
                 val target = Location(world, location.x(), location.y(), location.z(), location.yaw(), location.pitch())
-                state.track(engine.scheduler.at(target) { state.checkActive(); frame.checkActive(); action.apply(target) })
+                track(engine.scheduler.at(target) { state.checkActive(); frame.checkActive(); action.apply(target) })
             }
         }
     override fun execute(mechanics: List<CompiledSkillMechanic>): CompletionStage<SkillResult> {
         val immutable = java.util.List.copyOf(mechanics)
         // Schedule a bounded drain instead of composing a synchronous 1024-deep future chain.
         val result = CompletableFuture<SkillResult>()
-        fun drain(index: Int) {
+        fun drain(index: Int, initial: SkillResult) {
             try {
                 state.checkActive(); frame.checkActive()
                 var cursor = index
+                var last = initial
                 while (cursor < immutable.size && !result.isDone) {
                     val mechanic = immutable[cursor++]
                     if (mechanic !is CompiledNode) state.step()
@@ -68,25 +82,26 @@ class PlatformExecutionContext(
                     if (next.isDone) {
                         val outcome = next.join()
                         if (!outcome.isSuccess) { result.complete(outcome); return }
+                        last = outcome
                     } else {
                         val resume = cursor
                         next.whenComplete { outcome, error ->
                             if (error != null) result.completeExceptionally(error)
                             else if (!outcome.isSuccess) result.complete(outcome)
-                            else drain(resume)
+                            else drain(resume, outcome)
                         }
                         return
                     }
                 }
-                if (!result.isDone) result.complete(SkillResult.success())
+                if (!result.isDone) result.complete(last)
             } catch (error: Throwable) { result.completeExceptionally(error) }
         }
-        drain(0)
+        drain(0, SkillResult.success())
         return result
     }
     override fun delay(ticks: Long): CompletionStage<SkillResult> {
         require(ticks in 0..1_728_000L) { "Delay must be between zero and 24 hours" }
-        return state.track(engine.scheduler.on(frame.invocation.actor().entity(), ticks) { state.checkActive(); frame.checkActive(); SkillResult.success() })
+        return track(engine.scheduler.on(frame.invocation.actor().entity(), ticks) { state.checkActive(); frame.checkActive(); SkillResult.success() })
     }
     override fun cast(key: SkillKey, parameters: Map<String, SkillValue>): CompletionStage<SkillResult> =
         platform.runNested(key, invocation().derive().parameters(parameters).build(), state, depth + 1, frame)

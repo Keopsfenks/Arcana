@@ -110,6 +110,7 @@ class DefaultSkillEngine(
 
     fun runNested(skillId: String, context: SkillContext, state: ExecutionState, depth: Int, platformFrame: com.keopsfenks.arcana.skills.platform.values.InvocationFrame? = null): CompletionStage<SkillResult> {
         state.checkActive()
+        platformFrame?.checkActive()
         val skill = state.snapshot.byId[skillId]
         if (skill == null) {
             val key = try { SkillKey.parse(skillId, "arcana") } catch (_: IllegalArgumentException) { return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $skillId") }
@@ -184,6 +185,7 @@ class DefaultSkillEngine(
         executions.filter { it.playerId == playerId }.forEach { it.cancel("Player left") }
         cooldowns.remove(playerId)
         generalPlatform.variables.evictActor(playerId)
+        generalPlatform.flowCursors.removeActor(playerId)
     }
 
     fun cancelPending(reason: String) = synchronized(reloadLock) {
@@ -216,6 +218,7 @@ class DefaultSkillEngine(
     private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot() + generalPlatform.registrations()
 
     private fun invalidate(handle: SkillRegistration) {
+        generalPlatform.flowCursors.remove(handle)
         executions.filter { handle in it.dependencies }.forEach { it.cancel("Component ${handle.id} was removed") }
     }
 

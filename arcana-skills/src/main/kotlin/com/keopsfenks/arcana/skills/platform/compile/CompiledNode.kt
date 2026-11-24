@@ -54,7 +54,7 @@ class CompiledNode(private val mechanic: CompiledSkillMechanic, val options: Nod
         val mutated = options.mutators.fold(input) { current, mutator -> mutator.mutate(current) }
         return parent.derived(mutated, isolateLocals).thenCompose { execution ->
             val result = if (mutated.target().isPresent && execution.invocation().target().isEmpty) completed(SkillResult.Status.NO_TARGET, "Selected target retired") else
-                parent.state.track(parent.engine.scheduler.on(execution.invocation().actor().entity()) {
+                execution.track(parent.engine.scheduler.on(execution.invocation().actor().entity()) {
                     parent.state.checkActive(); execution.frame.checkActive()
                     val invocation = execution.invocation()
                     when {

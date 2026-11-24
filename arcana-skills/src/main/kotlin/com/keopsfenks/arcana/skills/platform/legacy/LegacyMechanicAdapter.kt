@@ -23,14 +23,14 @@ class LegacyMechanicAdapter(private val effect: CompiledSkillEffect) : CompiledS
                 actor(target)?.let { execution.on(it, action) } ?: missing()
             override fun atTarget(target: SkillTarget, action: Function<Location, SkillResult>): CompletionStage<SkillResult> {
                 val selected = actor(target) ?: return missing()
-                return execution.state.track(execution.engine.scheduler.on(selected.entity()) {
+                return execution.track(execution.engine.scheduler.on(selected.entity()) {
                     execution.state.checkActive()
                     if (!InvocationSnapshots.valid(selected.entity())) null else selected.entity().location.let { location ->
                         SkillLocation(requireNotNull(location.world).uid, location.x, location.y, location.z, location.yaw, location.pitch)
                     }
                 }).thenCompose { if (it == null) missing() else execution.at(it, action).toCompletableFuture() }
             }
-            override fun global(action: Runnable): CompletionStage<SkillResult> = execution.state.track(execution.engine.scheduler.global {
+            override fun global(action: Runnable): CompletionStage<SkillResult> = execution.track(execution.engine.scheduler.global {
                 execution.state.checkActive(); execution.frame.checkActive(); action.run(); SkillResult.success()
             })
             override fun execute(effects: List<CompiledSkillEffect>): CompletionStage<SkillResult> = execution.execute(effects.map(::LegacyMechanicAdapter))
@@ -39,7 +39,7 @@ class LegacyMechanicAdapter(private val effect: CompiledSkillEffect) : CompiledS
             override fun format(text: String) = text.replace("{player}", context.getText("caster_name")).replace("{target}", context.getText("target_name")).replace("{skill}", execution.definition.key.toString())
             private fun missing() = CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.NO_TARGET, "No living target was provided"))
         }
-        return execution.state.track(execution.engine.scheduler.on(invocation.actor().entity()) {
+        return execution.track(execution.engine.scheduler.on(invocation.actor().entity()) {
             execution.state.checkActive(); execution.frame.checkActive()
             if (!InvocationSnapshots.valid(invocation.actor().entity())) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.CANCELLED, "Actor retired"))
             else effect.execute(adapter)
