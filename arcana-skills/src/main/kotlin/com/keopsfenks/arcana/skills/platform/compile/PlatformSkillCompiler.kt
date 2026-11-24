@@ -23,6 +23,7 @@ open class PlatformSkillCompiler(
 ) : SkillCompilation {
     private val dependencies = LinkedHashSet<SkillRegistration>()
     private val references = LinkedHashMap<SkillKey, String>()
+    private var localOnly = false
     private var nodes = 0
     private var depth = 0
     private var numbers = PlatformExpressionCompiler(environment, environmentFactory, baseBindings())
@@ -31,7 +32,7 @@ open class PlatformSkillCompiler(
     fun compile(definition: SkillDefinition): CompiledPlatformSkill {
         dependencies.clear(); references.clear(); nodes = 0; depth = 0
         val args = SkillArguments(definition.configuration(), definition.origin())
-        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every")
+        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors")
         args.values.keys.firstOrNull { it !in allowed }?.let { throw args.error(it, "unsupported skill option") }
         val parameters = ParameterBindings.declarations(args, namespace)
         val variables = VariableBinding.declarations(args, namespace)
@@ -59,7 +60,9 @@ open class PlatformSkillCompiler(
             val handle = platform.legacyTrigger(key) ?: throw args.error("triggers[$index]", "unknown trigger $key")
             dependencies.add(handle)
         }
+        localOnly = args.list("interceptors", emptyList<Any>()).isNotEmpty()
         val conditions = predicates(args.list("conditions", emptyList<Any>()), "${args.path}.conditions")
+        localOnly = false
         val effects = effects(args.list("effects"), "${args.path}.effects")
         require(effects.isNotEmpty()) { "${args.path}.effects: at least one effect is required" }
         val every = args.number("every", 1.0).also { require(it in 1.0..1_000_000.0 && kotlin.math.floor(it) == it) { "${args.path}.every: expected an integer between 1 and 1000000" } }.toInt()
@@ -72,11 +75,19 @@ open class PlatformSkillCompiler(
             require(refill > 0) { "${section.path}.refill: must be positive" }
             CompiledCharges(SkillKey.parse(section.string("group", definition.key().value()), namespace), ChargeOptions(max, refill))
         }
+        localOnly = true
+        val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorCompiler(this, platform, dependencies).compile(args)
+        localOnly = false
+        if (interceptors.isNotEmpty()) {
+            require(costs.all { it.local }) { "${args.path}.costs: interceptors require local resource providers" }
+            require(stats.all { it.local }) { "${args.path}.bindings: interceptors require local stat providers" }
+            require(variables.none { it.persistent }) { "${args.path}.bindings: persistent prefetch is unavailable during interception" }
+        }
         return CompiledPlatformSkill(definition.key(), args.bool("enabled", true), java.util.List.copyOf(triggers),
             if (args.has("permission")) args.string("permission").also { require(it.isNotBlank()) { "${args.path}.permission: must not be blank" } } else null,
             chance, SkillArgumentsReader.durationNanos(args.raw("cooldown", "0s"), "${args.path}.cooldown"),
             SkillKey.parse(args.string("cooldown-group", definition.key().value()), namespace), conditions, effects,
-            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables, costs, charges, every, stats)
+            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables, costs, charges, every, stats, interceptors)
     }
 
     private fun costs(args: SkillArguments): List<CompiledCost> = java.util.List.copyOf(args.list("costs", emptyList<Any>()).mapIndexed { index, raw ->
@@ -114,6 +125,7 @@ open class PlatformSkillCompiler(
     }
 
     override fun effects(definitions: List<*>, path: String): List<CompiledSkillMechanic> {
+        require(!localOnly) { "$path: normal effects are unavailable during interceptor compilation" }
         return java.util.List.copyOf(definitions.mapIndexed { index, raw ->
             val args = SkillArguments(emptyMap<String, Any>(), path).child("[$index]", raw)
             count(args.path)
@@ -154,6 +166,7 @@ open class PlatformSkillCompiler(
         count(definition.path)
         val key = resolve(SkillComponentType.PREDICATE, definition.string("type"))
         val handle = platform.registry(SkillComponentType.PREDICATE).get(key) ?: throw definition.error("type", "unknown condition $key")
+        require(!localOnly || handle.component.supportsLocal()) { "${definition.path}: condition $key does not support local interception" }
         dependencies.add(handle)
         val compiled = try { handle.component.compile(definition, this) }
         catch (error: Exception) { throw definition.error("", error.message ?: "invalid condition") }
@@ -165,6 +178,13 @@ open class PlatformSkillCompiler(
     }
     override fun <T : SkillPlatformComponent> component(type: SkillComponentType<T>, key: SkillKey): T {
         val handle = platform.registry(type).get(key) ?: throw IllegalArgumentException("Unknown ${type.id()} $key")
+        if (localOnly) require(when (val component = handle.component) {
+            is SkillPredicateType -> component.supportsLocal()
+            is SkillResourceProvider -> component.supportsLocal()
+            is SkillStatProvider -> component.supportsLocal()
+            is SkillInterceptor -> true
+            else -> false
+        }) { "Component $key cannot be used during local interception" }
         dependencies.add(handle)
         return handle.component
     }

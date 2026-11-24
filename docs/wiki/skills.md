@@ -267,3 +267,12 @@ Arcana.get().getSkillEngine().cast("my_skill", context);
 ```
 
 Bağlam haritaları değiştirilemez ve Bukkit Event nesnesi gibi keyfi nesneleri kabul etmez. Entity referansları yalnızca kendi zamanlayıcı bağlamlarında kullanılmalıdır. Gelecek tamamlanması başka bir bağlamda olabilir; sonrasında başka oyuncuya işlem yaparken yine uygun scheduler kullan.
+
+
+### Schema 2 event interception
+
+`interceptors` is a separate synchronous phase registered at Bukkit `HIGHEST` with already-cancelled events ignored. Each entry uses an interceptor factory, for example `{type: add_damage, amount: 2}`, `{type: multiply_damage, factor: 1.5}` or `{type: cancel_event}`. The maximum is 64 local steps. Normal `effects` run from the immutable `MONITOR` snapshot and reuse the exact committed admission once; they do not reserve costs, charges or cooldown again. A separate explicit cast still makes its own admission attempt.
+
+Interception permits only local snapshot predicates, local resource/stat providers and nonpersistent variable bindings. Delay, targeting, mutators, asynchronous providers and ordinary effect/projectile nodes are rejected in the interceptor list. All required entities must already be owned by the callback's region; otherwise interception returns `UNSUPPORTED_CONTEXT` without querying providers. An event facade is invalidated before returning and cannot be used from another thread or retained for later work.
+
+Admission commits before event mutation. Another plugin can cancel the event later, including at the same priority; committed costs are retained and the normal continuation is discarded when cancellation is observed at `MONITOR`. Event changes already applied before an interceptor fails are not rolled back. Native skill-generated damage is guarded at the actual damage application so delayed descendants cannot recursively intercept themselves. No compatibility with arbitrary third-party event ordering is promised.

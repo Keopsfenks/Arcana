@@ -190,11 +190,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** compiled interceptor `apply(SkillEventAccess,SkillInvocation,SkillAdmission): SkillResult`; event access is callback-scoped and invalidated before returning from listener. Interception runs at HIGHEST and ignores previously cancelled events; normal observation remains MONITOR. Normal continuation accepts immutable snapshot+admission only. Compiler permits only locally synchronous providers/predicates, no delayed/async/cross-region nodes. Runtime verifies required local entity ownership before any reads/reservations; unsupported ownership returns `UNSUPPORTED_CONTEXT`. Accepted interception costs are not promised to roll back if another plugin later cancels the event; document this event-order limitation.
 
-- [ ] Test event damage changes before callback return, cancellation compatibility/priority, 65th local step rejection, no retained Event after return, and compile rejection of delay/projectile/async cost in interceptor. Same trigger's normal continuation charges once and a competing cast cannot steal its reservation.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test :arcana-skills-components:test FLAGS`; expect RED.
-- [ ] Implement callback-scoped event façade and dedicated interception registry/listener path. Generated skill damage sets recursion scope at actual application; origin/admission is carried across delayed descendants. Existing MONITOR adapters keep their cancellation policy.
-- [ ] Same Verify GREEN including cancellation by another plugin and reload between intercept/continuation (no stale continuation or second cost).
-- [ ] Commit `feat(skills): add bounded synchronous event interception`.
+- [x] Test event damage changes before callback return, cancellation compatibility/priority, 65th local step rejection, no retained Event after return, and compile rejection of delay/projectile/async cost in interceptor. Same trigger's normal continuation charges once and a competing cast cannot steal its reservation.
+- [x] Verify `.\gradlew.bat :arcana-skills:test :arcana-skills-components:test FLAGS`; expect RED.
+- [x] Implement callback-scoped event façade and dedicated interception registry/listener path. Generated skill damage sets recursion scope at actual application; origin/admission is carried across delayed descendants. Existing MONITOR adapters keep their cancellation policy.
+- [x] Same Verify GREEN including cancellation by another plugin and reload between intercept/continuation (no stale continuation or second cost).
+- [x] Commit `feat(skills): add bounded synchronous event interception`.
 
 ### Task 12: Holder providers and contribution leases
 

@@ -41,7 +41,7 @@ class AdmissionCoordinator(private val engine: DefaultSkillEngine, private val l
         }
     }
 
-    fun admit(revision: DefinitionRevision, context: PlatformExecutionContext): CompletableFuture<AdmissionOutcome> {
+    fun admit(revision: DefinitionRevision, context: PlatformExecutionContext, local: Boolean = false): CompletableFuture<AdmissionOutcome> {
         val native = requireNotNull(revision.native)
         context.state.checkActive(); context.frame.checkActive()
         if (!every.allow(context.invocation().actor().id(), revision, native.every)) return completed(SkillResult.Status.CONDITION_FAILED, "Every-${native.every} gate did not match")
@@ -49,7 +49,7 @@ class AdmissionCoordinator(private val engine: DefaultSkillEngine, private val l
         val gate = actors.computeIfAbsent(actor.id()) { ActorGate() }
         val resources = ResourceReservations(context, native.costs)
         return resources.prepare().thenCompose {
-            context.track(engine.scheduler.on(actor.entity()) {
+            val finalize = {
                 var cooldown: com.keopsfenks.arcana.skills.execution.CooldownStore.CooldownPermit? = null
                 var charge: ChargeStore.ChargePermit? = null
                 try {
@@ -86,7 +86,11 @@ class AdmissionCoordinator(private val engine: DefaultSkillEngine, private val l
                     cooldown?.release(); charge?.release(); resources.rollback()
                     AdmissionOutcome(null, PlatformExecutionState.failure(error))
                 }
-            })
+            }
+            if (local) {
+                check(engine.scheduler.owns(actor.entity())) { "Local admission requires ownership" }
+                CompletableFuture.completedFuture(finalize())
+            } else context.track(engine.scheduler.on(actor.entity(), action = finalize))
         }.handle { outcome, error ->
             if (error == null) outcome else { resources.abort(); AdmissionOutcome(null, PlatformExecutionState.failure(error)) }
         }

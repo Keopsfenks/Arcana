@@ -33,8 +33,8 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | ADMIT | L-E,M-C | Cooldown, every-N, charges/refill, ortak kabul kimliği | 10 | Tamamlandı; test edildi | AdmissionTests |
 | COST | L-E | SkillResourceProvider; health/food/vanilla XP sağlayıcıları | 10 | Tamamlandı; test edildi | ResourceReservationTests |
 | STAT | L-E,M-A | SkillStatProvider ve namespaced binding | 10,12 | Planlandı | StatContributionTests |
-| EVENT-DMG | L-E,M-S | AddDamageInterceptor, MultiplyDamageInterceptor | 11 | Planlandı | InterceptorTests |
-| EVENT-CANCEL | M-S | CancelEventInterceptor; capability/priority sınırları | 11 | Planlandı | InterceptorTests |
+| EVENT-DMG | L-E,M-S | AddDamageInterceptor, MultiplyDamageInterceptor | 11 | Tamamlandı; test edildi | InterceptorTests |
+| EVENT-CANCEL | M-S | CancelEventInterceptor; capability/priority sınırları | 11 | Tamamlandı; test edildi | InterceptorTests |
 | HOLDER | L-E | HolderManager, SkillHolderProvider, slot değişim farkı | 12 | Planlandı | HolderLifecycleTests |
 | PASSIVE | L-E,M-A | AttributeContribution, PotionContribution, katkı lease'leri | 12 | Planlandı | StatContributionTests |
 | AURA-LIFE | M-A | AuraManager; start/tick/end/stack/refresh/removal | 13 | Planlandı | AuraLifecycleTests |

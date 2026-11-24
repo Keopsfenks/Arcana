@@ -11,6 +11,17 @@ import java.util.concurrent.CompletableFuture
 data class CompiledStatBinding(val alias: String, val provider: PlatformRegistration<SkillStatProvider>, val key: SkillKey, val defaultValue: Double?, val local: Boolean, val path: String)
 
 object StatBindings {
+    fun captureLocal(input: SkillInvocation, bindings: List<CompiledStatBinding>, platform: DefaultSkillPlatform): SkillInvocation {
+        val values = LinkedHashMap(input.data())
+        for ((provider, requested) in bindings.groupBy { it.provider }) {
+            check(platform.componentActive(provider)) { "Stat provider ${provider.key} retired" }
+            check(requested.all { it.local }) { "Stat provider is not local" }
+            val snapshot = java.util.Map.copyOf(provider.component.snapshotLocal(input.actor(), java.util.Set.copyOf(requested.map { it.key })))
+            require(snapshot.values.all { it.isFinite() }) { "Nonfinite stat snapshot" }
+            requested.forEach { binding -> values[binding.alias] = SkillValue.of(snapshot[binding.key] ?: binding.defaultValue ?: error("${binding.path}: stat value unavailable")) }
+        }
+        return input.derive().replaceData(values).build()
+    }
     fun capture(input: SkillInvocation, bindings: List<CompiledStatBinding>, state: PlatformExecutionState, frame: InvocationFrame, platform: DefaultSkillPlatform): CompletableFuture<SkillInvocation> {
         if (bindings.isEmpty()) return CompletableFuture.completedFuture(input)
         val values = LinkedHashMap(input.data())

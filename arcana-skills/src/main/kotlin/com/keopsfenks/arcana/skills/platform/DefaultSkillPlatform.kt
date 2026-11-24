@@ -41,7 +41,9 @@ class DefaultSkillPlatform(
     val flowCursors = FlowCursorStore()
     val providers = ProviderRegistry(this)
     val admissions = AdmissionCoordinator(engine, lifecycle, clock)
+    val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorDispatcher(engine, this, lifecycle)
     internal fun componentActive(handle: SkillRegistration) = handle.isActive && lifecycle.available(handle.owner)
+    val interceptorListener = com.keopsfenks.arcana.skills.platform.events.InterceptorListener(engine, this)
     private val runner = PlatformRunner(engine, this)
     val repository = DefinitionRepository(lifecycle, engine::compileSourceLegacy,
         { definition -> SourceSkillCompiler(this, environment, definition.key().namespace(), environmentFactory).compile(definition) },
@@ -60,7 +62,7 @@ class DefaultSkillPlatform(
     override fun registerSource(owner: Plugin, source: SkillDefinitionSource) = repository.register(owner, source)
     override fun reloadSource(source: SkillKey): SkillReloadResult = repository.commit(repository.prepare(setOf(source)))
     override fun definitions() = repository.definitions()
-    internal fun close() { variables.close(); flowCursors.close(); admissions.close() }
+    internal fun close() { interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)
