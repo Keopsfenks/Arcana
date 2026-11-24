@@ -32,7 +32,7 @@ open class PlatformSkillCompiler(
     fun compile(definition: SkillDefinition): CompiledPlatformSkill {
         dependencies.clear(); references.clear(); nodes = 0; depth = 0
         val args = SkillArguments(definition.configuration(), definition.origin())
-        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors")
+        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors", "passives", "activation")
         args.values.keys.firstOrNull { it !in allowed }?.let { throw args.error(it, "unsupported skill option") }
         val parameters = ParameterBindings.declarations(args, namespace)
         val variables = VariableBinding.declarations(args, namespace)
@@ -63,8 +63,17 @@ open class PlatformSkillCompiler(
         localOnly = args.list("interceptors", emptyList<Any>()).isNotEmpty()
         val conditions = predicates(args.list("conditions", emptyList<Any>()), "${args.path}.conditions")
         localOnly = false
-        val effects = effects(args.list("effects"), "${args.path}.effects")
-        require(effects.isNotEmpty()) { "${args.path}.effects: at least one effect is required" }
+        val effects = effects(args.list("effects", emptyList<Any>()), "${args.path}.effects")
+        val passives = args.list("passives", emptyList<Any>()).mapIndexed { index, raw ->
+            val node = args.child("passives[$index]", raw); count(node.path)
+            val key = resolve(SkillComponentType.CONTRIBUTION, node.string("type"))
+            val handle = platform.registry(SkillComponentType.CONTRIBUTION).get(key) ?: throw node.error("type", "unknown passive contribution $key")
+            dependencies.add(handle)
+            handle.component.compile(node, this)
+        }
+        require(effects.isNotEmpty() || passives.isNotEmpty()) { "${args.path}.effects: at least one effect or passive is required" }
+        val activation = args.string("activation", "global")
+        require(activation in setOf("global", "holder")) { "${args.path}.activation: expected global or holder" }
         val every = args.number("every", 1.0).also { require(it in 1.0..1_000_000.0 && kotlin.math.floor(it) == it) { "${args.path}.every: expected an integer between 1 and 1000000" } }.toInt()
         val costs = costs(args)
         val charges = if (!args.has("charges")) null else {
@@ -87,7 +96,7 @@ open class PlatformSkillCompiler(
             if (args.has("permission")) args.string("permission").also { require(it.isNotBlank()) { "${args.path}.permission: must not be blank" } } else null,
             chance, SkillArgumentsReader.durationNanos(args.raw("cooldown", "0s"), "${args.path}.cooldown"),
             SkillKey.parse(args.string("cooldown-group", definition.key().value()), namespace), conditions, effects,
-            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables, costs, charges, every, stats, interceptors)
+            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables, costs, charges, every, stats, interceptors, java.util.List.copyOf(passives), activation == "holder")
     }
 
     private fun costs(args: SkillArguments): List<CompiledCost> = java.util.List.copyOf(args.list("costs", emptyList<Any>()).mapIndexed { index, raw ->

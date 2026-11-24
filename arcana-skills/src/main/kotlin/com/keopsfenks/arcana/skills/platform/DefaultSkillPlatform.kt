@@ -41,6 +41,9 @@ class DefaultSkillPlatform(
     val flowCursors = FlowCursorStore()
     val providers = ProviderRegistry(this)
     val admissions = AdmissionCoordinator(engine, lifecycle, clock)
+    val managed = com.keopsfenks.arcana.skills.platform.managed.ManagedWorkRegistry(lifecycle, engine::reportProviderFailure)
+    val contributions = com.keopsfenks.arcana.skills.platform.holders.ContributionStore(managed, lifecycle, engine::reportProviderFailure)
+    val holderManager = com.keopsfenks.arcana.skills.platform.holders.HolderManager(engine, this, lifecycle)
     val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorDispatcher(engine, this, lifecycle)
     internal fun componentActive(handle: SkillRegistration) = handle.isActive && lifecycle.available(handle.owner)
     val interceptorListener = com.keopsfenks.arcana.skills.platform.events.InterceptorListener(engine, this)
@@ -62,7 +65,9 @@ class DefaultSkillPlatform(
     override fun registerSource(owner: Plugin, source: SkillDefinitionSource) = repository.register(owner, source)
     override fun reloadSource(source: SkillKey): SkillReloadResult = repository.commit(repository.prepare(setOf(source)))
     override fun definitions() = repository.definitions()
-    internal fun close() { interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
+    override fun refreshHolders(actor: SkillActor) = holderManager.refresh(actor)
+    override fun holders(actor: SkillActor) = holderManager.holders(actor)
+    internal fun close() { holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)
@@ -110,8 +115,14 @@ class DefaultSkillPlatform(
 
     override fun trigger(key: SkillKey, invocation: SkillInvocation): CompletionStage<List<SkillResult>> {
         val snapshot = repository.snapshot()
-        val work = snapshot.entries.values.filter { revision -> revision.enabled && (revision.native?.triggers?.contains(key) == true || revision.legacy?.triggers?.contains(DefinitionRevision.legacyId(key)) == true) }
-            .map { castInSnapshot(it.key, invocation, snapshot) }
+        val global = snapshot.entries.values.filter { revision -> revision.enabled && (revision.native?.let { !it.holderOnly && it.interceptors.isEmpty() && key in it.triggers } == true || revision.legacy?.triggers?.contains(DefinitionRevision.legacyId(key)) == true) }
+            .map { it.key to invocation }
+        val held = holderManager.active(invocation.actor()).flatMap { binding -> binding.revisions.mapNotNull { revision ->
+            val skill = revision.native
+            if (skill != null && skill.enabled && skill.holderOnly && skill.interceptors.isEmpty() && key in skill.triggers && snapshot.entries[revision.key] === revision)
+                revision.key to invocation.derive().parameters(binding.holder.parameters()).build() else null
+        } }
+        val work = (global + held).distinctBy { it.first to it.second.parameters() }.map { (skill, supplied) -> castInSnapshot(skill, supplied, snapshot) }
         return CompletableFuture.allOf(*work.toTypedArray()).thenApply { java.util.List.copyOf(work.map { it.join() }) }
     }
 }

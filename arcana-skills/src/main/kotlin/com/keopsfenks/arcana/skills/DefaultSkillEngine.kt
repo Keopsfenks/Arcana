@@ -183,6 +183,8 @@ class DefaultSkillEngine(
 
     override fun cancel(playerId: UUID) {
         executions.filter { it.playerId == playerId }.forEach { it.cancel("Player left") }
+        generalPlatform.holderManager.removeActor(playerId)
+        generalPlatform.managed.removeActor(playerId)
         generalPlatform.admissions.removeActor(playerId)
         generalPlatform.variables.evictActor(playerId)
         generalPlatform.flowCursors.removeActor(playerId)
@@ -218,6 +220,8 @@ class DefaultSkillEngine(
     private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot() + generalPlatform.registrations()
 
     private fun invalidate(handle: SkillRegistration) {
+        generalPlatform.holderManager.remove(handle)
+        generalPlatform.managed.remove(handle)
         generalPlatform.admissions.remove(handle)
         generalPlatform.flowCursors.remove(handle)
         executions.filter { handle in it.dependencies }.forEach { it.cancel("Component ${handle.id} was removed") }

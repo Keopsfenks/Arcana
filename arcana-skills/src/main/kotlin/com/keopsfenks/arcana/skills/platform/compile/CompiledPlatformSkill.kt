@@ -27,5 +27,7 @@ data class CompiledPlatformSkill(
     val charges: CompiledCharges? = null,
     val every: Int = 1,
     val stats: List<CompiledStatBinding> = emptyList(),
-    val interceptors: List<CompiledSkillInterceptor> = emptyList()
+    val interceptors: List<CompiledSkillInterceptor> = emptyList(),
+    val passives: List<CompiledSkillContribution> = emptyList(),
+    val holderOnly: Boolean = false
 )

@@ -43,7 +43,14 @@ class InterceptorListener(private val engine: DefaultSkillEngine, private val pl
     }
     fun intercept(trigger: SkillKey, invocation: SkillInvocation, event: Event, append: Boolean = false) {
         if (closed.get()) return
-        val revisions = platform.repository.snapshot().entries.values.filter { it.enabled && it.native?.let { skill -> trigger in skill.triggers && skill.interceptors.isNotEmpty() } == true }
+        val snapshot = platform.repository.snapshot()
+        val global = snapshot.entries.values.filter { it.enabled && it.native?.let { skill -> !skill.holderOnly && trigger in skill.triggers && skill.interceptors.isNotEmpty() } == true }.map { it to invocation }
+        val held = platform.holderManager.active(invocation.actor()).flatMap { binding -> binding.revisions.mapNotNull { revision ->
+            val skill = revision.native
+            if (skill != null && skill.enabled && skill.holderOnly && trigger in skill.triggers && skill.interceptors.isNotEmpty() && snapshot.entries[revision.key] === revision)
+                revision to invocation.derive().parameters(binding.holder.parameters()).build() else null
+        } }
+        val revisions = (global + held).distinctBy { it.first.key to it.second.parameters() }
         if (revisions.isEmpty()) return
         val identity = key(event)
         synchronized(pending) {
@@ -51,7 +58,7 @@ class InterceptorListener(private val engine: DefaultSkillEngine, private val pl
             if (pending.size >= 1024) return
             if (!append && pending.containsKey(identity)) { pending.remove(identity)?.let(::discard); return }
             val batch = pending[identity] ?: Batch(mutableListOf()).also { pending[identity] = it }
-            for (revision in revisions) platform.interceptors.intercept(revision.key, invocation, event).continuation?.let(batch.continuations::add)
+            for ((revision, supplied) in revisions) platform.interceptors.intercept(revision.key, supplied, event).continuation?.let(batch.continuations::add)
             if (batch.continuations.isEmpty()) { pending.remove(identity, batch); return }
             if (batch.expiry == null) {
                 batch.expiry = engine.scheduler.on(invocation.actor().entity(), 1) {

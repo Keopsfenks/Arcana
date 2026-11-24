@@ -202,11 +202,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** holder provider `holders(SkillActor): CompletionStage<List<SkillHolder>>`; holder key/slot/definition keys/parameters are immutable. Contribution store applies/removes one owner-qualified contribution ID and returns an idempotent lease. Managed registry indexes handles by owner, actor and definition revisions with engine/actor instance caps.
 
-- [ ] Assert slot changes apply only differences, duplicate reevaluation is idempotent, owner removal closes leases once, another owner's stat modifier survives, expired potion is not restored over a new external potion, and raced refresh/unload cannot resurrect a lease. No full catalog scan runs every tick.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test --tests '*HolderLifecycleTests' --tests '*StatContributionTests' FLAGS`; expect RED.
-- [ ] Implement event/dirty-driven reevaluation with bounded 20-tick fallback, owner-qualified modifiers and effect ownership/reconciliation. Do not blindly reset whole attributes or clear all potion effects.
-- [ ] Same Verify GREEN with two fake owners, logout, provider disappearance and shutdown.
-- [ ] Commit `feat(skills): manage holder-driven passive contribution leases`.
+- [x] Assert slot changes apply only differences, duplicate reevaluation is idempotent, owner removal closes leases once, another owner's stat modifier survives, expired potion is not restored over a new external potion, and raced refresh/unload cannot resurrect a lease. No full catalog scan runs every tick.
+- [x] Verify `.\gradlew.bat :arcana-skills:test --tests '*HolderLifecycleTests' --tests '*StatContributionTests' FLAGS`; expect RED.
+- [x] Implement event/dirty-driven reevaluation with bounded 20-tick fallback, owner-qualified modifiers and effect ownership/reconciliation. Do not blindly reset whole attributes or clear all potion effects.
+- [x] Same Verify GREEN with two fake owners, logout, provider disappearance and shutdown.
+- [x] Commit `feat(skills): manage holder-driven passive contribution leases`.
 
 ### Task 13: Owned aura lifetime engine
 

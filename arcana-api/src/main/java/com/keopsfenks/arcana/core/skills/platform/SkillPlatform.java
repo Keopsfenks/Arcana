@@ -15,4 +15,6 @@ public interface SkillPlatform {
     SkillRegistration registerSource(Plugin owner, SkillDefinitionSource source);
     SkillReloadResult reloadSource(SkillKey source);
     List<SkillDefinitionInfo> definitions();
+    default CompletionStage<List<SkillHolder>> refreshHolders(SkillActor actor) { return java.util.concurrent.CompletableFuture.completedFuture(List.of()); }
+    default List<SkillHolder> holders(SkillActor actor) { return List.of(); }
 }
