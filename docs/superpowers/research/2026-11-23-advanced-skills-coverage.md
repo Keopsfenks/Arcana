@@ -37,7 +37,7 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | EVENT-CANCEL | M-S | CancelEventInterceptor; capability/priority sınırları | 11 | Tamamlandı; test edildi | InterceptorTests |
 | HOLDER | L-E | HolderManager, SkillHolderProvider, slot değişim farkı | 12 | Tamamlandı; test edildi | HolderLifecycleTests |
 | PASSIVE | L-E,M-A | AttributeContribution, PotionContribution, katkı lease'leri | 12 | Tamamlandı; test edildi | StatContributionTests |
-| AURA-LIFE | M-A | AuraManager; start/tick/end/stack/refresh/removal | 13 | Planlandı | AuraLifecycleTests |
+| AURA-LIFE | M-A | AuraManager; start/tick/end/stack/refresh/removal | 13 | Tamamlandı; test edildi | AuraLifecycleTests |
 | AURA-OPS | M-A | ApplyAuraMechanic, RemoveAuraMechanic, AddAuraChargeMechanic | 14 | Planlandı | AuraMechanicTests |
 | AURA-COMP | M-A | AuraTickComponent, AuraAttackComponent, AuraDamagedComponent, AuraStatComponent | 14 | Planlandı | AuraMechanicTests |
 | PROJECTILE | M-P | ProjectileManager, bölge geçişi, segment çarpışması | 15 | Planlandı | ProjectileSimulationTests |

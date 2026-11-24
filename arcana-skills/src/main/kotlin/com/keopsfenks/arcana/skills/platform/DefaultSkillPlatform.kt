@@ -36,6 +36,7 @@ class DefaultSkillPlatform(
     environmentFactory: ((Array<String>) -> ExpressionEnvironment)? = null,
     clock: () -> Long = System::nanoTime
 ) : SkillPlatform {
+    internal val monotonicClock = clock
     private val registries = ConcurrentHashMap<SkillComponentType<*>, PlatformRegistry<*>>()
     val variables = VariableStore(clock, persistence = PersistentVariableStore())
     val flowCursors = FlowCursorStore()
@@ -43,6 +44,7 @@ class DefaultSkillPlatform(
     val admissions = AdmissionCoordinator(engine, lifecycle, clock)
     val managed = com.keopsfenks.arcana.skills.platform.managed.ManagedWorkRegistry(lifecycle, engine::reportProviderFailure)
     val contributions = com.keopsfenks.arcana.skills.platform.holders.ContributionStore(managed, lifecycle, engine::reportProviderFailure)
+    val auras = com.keopsfenks.arcana.skills.platform.auras.AuraManager(engine, this, lifecycle, clock)
     val holderManager = com.keopsfenks.arcana.skills.platform.holders.HolderManager(engine, this, lifecycle)
     val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorDispatcher(engine, this, lifecycle)
     internal fun componentActive(handle: SkillRegistration) = handle.isActive && lifecycle.available(handle.owner)
@@ -67,7 +69,7 @@ class DefaultSkillPlatform(
     override fun definitions() = repository.definitions()
     override fun refreshHolders(actor: SkillActor) = holderManager.refresh(actor)
     override fun holders(actor: SkillActor) = holderManager.holders(actor)
-    internal fun close() { holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
+    internal fun close() { auras.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)
@@ -104,7 +106,7 @@ class DefaultSkillPlatform(
     }
 
     internal fun attach(root: ExecutionState): PlatformExecutionState = synchronized(root) {
-        root.platformState ?: PlatformExecutionState(root, root.snapshot.definitions ?: repository.snapshot()).also { root.platformState = it }
+        root.platformState ?: PlatformExecutionState(root, root.snapshot.definitions ?: repository.snapshot(), ::componentActive).also { root.platformState = it }
     }
     internal fun runNested(key: SkillKey, invocation: SkillInvocation, state: PlatformExecutionState, depth: Int, parent: InvocationFrame? = null): CompletableFuture<SkillResult> {
         state.checkActive()

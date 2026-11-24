@@ -20,12 +20,12 @@ class ParallelScope(private val context: PlatformExecutionContext) {
         val stopped = AtomicBoolean()
         val result = CompletableFuture<List<SkillResult>>()
         result.whenComplete { _, _ -> permit.close() }
-        fun close(branch: PlatformBranch) { context.state.release(branch.scope); branch.ready.cancel(false) }
+        fun close(branch: PlatformBranch, cancelled: Boolean = false) { context.state.release(branch.scope, cancelled); branch.ready.cancel(false) }
         fun complete(index: Int, outcome: SkillResult) {
             slots[index].complete(outcome)
             if (!outcome.isSuccess && (failFast || hard(outcome)) && stopped.compareAndSet(false, true)) {
                 for (other in slots.indices) if (other != index) {
-                    scopes.get(other)?.let(::close)
+                    scopes.get(other)?.let { close(it, cancelled = true) }
                     slots[other].complete(SkillResult.of(SkillResult.Status.CANCELLED, "Sibling branch stopped"))
                 }
             }
@@ -36,7 +36,7 @@ class ParallelScope(private val context: PlatformExecutionContext) {
             try {
                 val branch = context.branch(context.invocation())
                 scopes.set(index, branch)
-                if (stopped.get()) { close(branch); continue }
+                if (stopped.get()) { close(branch, cancelled = true); continue }
                 branch.ready.thenCompose { child ->
                     if (stopped.get()) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.CANCELLED, "Sibling branch stopped"))
                     else child.execute(immutable[index]).toCompletableFuture()

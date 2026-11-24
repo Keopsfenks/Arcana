@@ -3,24 +3,30 @@ package com.keopsfenks.arcana.skills.platform.values
 import com.keopsfenks.arcana.core.skills.platform.*
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import com.keopsfenks.arcana.skills.execution.ScheduledWork
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /** Mutable local variables are isolated from the immutable public invocation snapshot. */
 class InvocationFrame(val invocation: SkillInvocation, private val parent: InvocationFrame? = null, private val shared: InvocationFrame? = null) : AutoCloseable {
     internal val locals: ConcurrentHashMap<SkillKey, VariableEntry> = shared?.locals ?: ConcurrentHashMap()
-    private val closed = AtomicBoolean(false)
+    private val terminal = AtomicInteger() // active, completed, explicitly cancelled
+    private val cancellationCallbacks = ConcurrentLinkedQueue<() -> Unit>()
     private val children = ConcurrentHashMap.newKeySet<InvocationFrame>()
     private val work = ConcurrentHashMap.newKeySet<ScheduledWork<*>>()
     private val callbacks = ConcurrentLinkedQueue<() -> Unit>()
     fun checkActive() {
-        if (closed.get()) throw CancellationException("Invocation frame is closed")
+        if ((terminal.get() != 0)) throw CancellationException("Invocation frame is closed")
         parent?.checkActive()
     }
     fun fork(invocation: SkillInvocation = this.invocation): InvocationFrame {
         checkActive()
         return child(invocation, false).also { it.locals.putAll(locals) }
+    }
+    /** Copies local values without a parent lifetime link, for explicitly adopted managed work. */
+    fun detachedCopy(invocation: SkillInvocation = this.invocation): InvocationFrame {
+        checkActive()
+        return InvocationFrame(invocation).also { it.locals.putAll(locals) }
     }
     /** Sequential nodes copy invocation data while retaining this sequence's local variable scope. */
     fun view(invocation: SkillInvocation): InvocationFrame = child(invocation, true)
@@ -29,17 +35,17 @@ class InvocationFrame(val invocation: SkillInvocation, private val parent: Invoc
         val child = InvocationFrame(invocation, this, if (share) this else null)
         children.add(child)
         child.onClose { children.remove(child) }
-        if (closed.get()) child.close()
+        if ((terminal.get() != 0)) child.close()
         return child
     }
     fun onClose(callback: () -> Unit) {
         callbacks.add(callback)
-        if (closed.get() && callbacks.remove(callback)) callback()
+        if ((terminal.get() != 0) && callbacks.remove(callback)) callback()
     }
     fun <T> track(task: ScheduledWork<T>): ScheduledWork<T> {
         work.add(task)
         task.future.whenComplete { _, _ -> work.remove(task) }
-        if (closed.get()) task.cancel()
+        if ((terminal.get() != 0)) task.cancel()
         return task
     }
     fun snapshot(bindings: List<VariableBinding>, variables: SkillVariables): SkillInvocation {
@@ -55,9 +61,20 @@ class InvocationFrame(val invocation: SkillInvocation, private val parent: Invoc
         }
         return invocation.derive().replaceData(values).build()
     }
-    override fun close() {
-        if (closed.compareAndSet(false, true)) {
-            children.toList().forEach { it.close() }; children.clear()
+    fun onCancel(callback: () -> Unit): AutoCloseable {
+        cancellationCallbacks.add(callback)
+        if (terminal.get() == 2 && cancellationCallbacks.remove(callback)) callback()
+        else if (terminal.get() == 1) cancellationCallbacks.remove(callback)
+        return AutoCloseable { cancellationCallbacks.remove(callback) }
+    }
+    /** Normal scope completion retires unadopted work without cancelling detached managed children. */
+    fun complete() = retire(1)
+    override fun close() = retire(2)
+    private fun retire(mode: Int) {
+        if (terminal.compareAndSet(0, mode)) {
+            if (mode == 2) while (true) (cancellationCallbacks.poll() ?: break).invoke()
+            else cancellationCallbacks.clear()
+            children.toList().forEach { if (mode == 2) it.close() else it.complete() }; children.clear()
             work.toList().forEach { it.cancel() }; work.clear()
             if (shared == null) locals.clear()
             while (true) (callbacks.poll() ?: break).invoke()

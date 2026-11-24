@@ -208,6 +208,7 @@ class DefaultSkillEngine(
             closed.set(true)
             allHandles()
         } ?: return
+        generalPlatform.managed.close()
         executions.toList().forEach { it.cancel("Skill engine stopped") }
         handles.forEach { it.close() }
         listeners.values.toList().forEach { safelyClose(it) }
@@ -220,8 +221,8 @@ class DefaultSkillEngine(
     private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot() + generalPlatform.registrations()
 
     private fun invalidate(handle: SkillRegistration) {
-        generalPlatform.holderManager.remove(handle)
         generalPlatform.managed.remove(handle)
+        generalPlatform.holderManager.remove(handle)
         generalPlatform.admissions.remove(handle)
         generalPlatform.flowCursors.remove(handle)
         executions.filter { handle in it.dependencies }.forEach { it.cancel("Component ${handle.id} was removed") }

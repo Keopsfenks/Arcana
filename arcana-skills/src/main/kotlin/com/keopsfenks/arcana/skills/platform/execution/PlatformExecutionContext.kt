@@ -38,6 +38,8 @@ class PlatformExecutionContext(
         put(SkillVariables::class.java, variables); put(SkillTargetQuery::class.java, query); put(ParallelScope::class.java, flow)
         put(FlowCursorStore::class.java, platform.flowCursors); put(DoubleSupplier::class.java, DoubleSupplier { engine.random() })
         admission?.let { put(SkillAdmission::class.java, it) }
+        state.managedState?.let { put(com.keopsfenks.arcana.skills.platform.managed.ManagedExecutionState::class.java, it) }
+        put(com.keopsfenks.arcana.skills.platform.auras.AuraManager::class.java, platform.auras.forContext(this@PlatformExecutionContext))
     })
     fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame)
         .thenCompose { StatBindings.capture(it, definition.stats, state, frame, platform) }.thenCompose { captured ->

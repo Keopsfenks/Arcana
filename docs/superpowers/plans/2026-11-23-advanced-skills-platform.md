@@ -214,11 +214,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** `AuraManager.apply(AuraDefinition,SkillInvocation,AuraOptions): CompletionStage<SkillManagedHandle>`; definition contains compiled hook/component lists and their dependencies; options contain duration/interval/stack limit/share-caster/refresh/overwrite/charges. Handle exposes instance UUID, revision and `remove(reason)`. Managed adoption outlives normal parent completion but inherits owner/actor/revision cancellation; root completion only releases work not explicitly adopted. All tick children borrow the instance's total budget.
 
-- [ ] Test start once, tick intervals, expiry/end once, stack/refresh/overwrite policies and caster-sharing keys. Concurrent expiry/dispel/unload closes once; invalidated owner/revision never runs user on-end. Parent success leaves adopted aura active, explicit cancel/unload cleans it, and callback4,097 / step65,537 fail closed.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test --tests '*AuraLifecycleTests' --tests '*ManagedBudgetTests' FLAGS`; expect RED.
-- [ ] Implement finite managed lifecycle on owning actor/target contexts, separate root completion from explicit cancellation, and shared actor/engine caps. Cleanup removes native contributions even when skill callbacks are no longer callable.
-- [ ] Same Verify GREEN including target retirement and registration-removal races.
-- [ ] Commit `feat(skills): implement owned bounded aura lifecycles`.
+- [x] Test start once, tick intervals, expiry/end once, stack/refresh/overwrite policies and caster-sharing keys. Concurrent expiry/dispel/unload closes once; invalidated owner/revision never runs user on-end. Parent success leaves adopted aura active, explicit cancel/unload cleans it, and callback4,097 / step65,537 fail closed.
+- [x] Verify `.\gradlew.bat :arcana-skills:test --tests '*AuraLifecycleTests' --tests '*ManagedBudgetTests' FLAGS`; expect RED.
+- [x] Implement finite managed lifecycle on owning actor/target contexts, separate root completion from explicit cancellation, and shared actor/engine caps. Cleanup removes native contributions even when skill callbacks are no longer callable.
+- [x] Same Verify GREEN including target retirement and registration-removal races.
+- [x] Commit `feat(skills): implement owned bounded aura lifecycles`.
 
 ### Task 14: Aura mechanics and components
 

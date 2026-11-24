@@ -11,27 +11,33 @@ class PlatformBudgetException(message: String) : IllegalStateException(message)
 class PlatformDependencyException(message: String) : IllegalStateException(message)
 
 /** Native and legacy descendants borrow the exact same root state and scheduled work set. */
-class PlatformExecutionState(val root: ExecutionState, val snapshot: DefinitionSnapshot) {
+class PlatformExecutionState @JvmOverloads constructor(val root: ExecutionState, val snapshot: DefinitionSnapshot, private val available: (SkillRegistration) -> Boolean = { it.isActive }) {
+    @Volatile var managedState: com.keopsfenks.arcana.skills.platform.managed.ManagedExecutionState? = null
     private val frames = ConcurrentHashMap.newKeySet<InvocationFrame>()
     private val branches = AtomicInteger()
-    init { root.result.whenComplete { _, _ -> frames.toList().forEach { it.close() }; frames.clear() } }
+    init { root.result.whenComplete { result, error ->
+        val cancelled = error != null || result?.status() == com.keopsfenks.arcana.core.skills.SkillResult.Status.CANCELLED
+        frames.toList().forEach { if (cancelled) it.close() else it.complete() }; frames.clear()
+    } }
     fun checkActive() {
         root.checkActive()
-        if (root.dependencies.any { !it.isActive }) throw PlatformDependencyException("A definition or provider was removed")
+        if (root.appliedSteps > root.stepLimit) throw PlatformBudgetException("Skill execution exceeds ${root.stepLimit} effect steps")
+        managedState?.checkBudget()
+        if (root.dependencies.any { !available(it) }) throw PlatformDependencyException("A definition or provider was removed")
     }
     fun step() {
         checkActive()
         try { root.step() } catch (error: IllegalStateException) {
-            if (root.appliedSteps > 1024) throw PlatformBudgetException("Skill execution exceeds 1024 effect steps")
+            if (root.appliedSteps > root.stepLimit) throw PlatformBudgetException("Skill execution exceeds ${root.stepLimit} effect steps")
             throw error
         }
     }
     fun frame(frame: InvocationFrame): InvocationFrame {
         checkActive(); frames.add(frame); frame.onClose { frames.remove(frame) }
-        try { checkActive() } catch (error: Throwable) { release(frame); throw error }
+        try { checkActive() } catch (error: Throwable) { release(frame, cancelled = true); throw error }
         return frame
     }
-    fun release(frame: InvocationFrame) { frames.remove(frame); frame.close() }
+    fun release(frame: InvocationFrame, cancelled: Boolean = false) { frames.remove(frame); if (cancelled) frame.close() else frame.complete() }
     fun reserveBranches(count: Int): AutoCloseable {
         require(count > 0) { "Parallel fan-out must be positive" }
         if (count > 16) throw PlatformBudgetException("Parallel fan-out exceeds 16")

@@ -36,6 +36,7 @@ class DefinitionRevision(
     val directDependencies: Set<SkillRegistration>,
     private val invalidated: (SkillRegistration) -> Unit
 ) : SkillRegistration {
+    val revisionId: java.util.UUID = java.util.UUID.randomUUID()
     val key: SkillKey get() = definition.key()
     private val active = AtomicBoolean(true)
     var dependencies: Set<SkillRegistration> = emptySet()
