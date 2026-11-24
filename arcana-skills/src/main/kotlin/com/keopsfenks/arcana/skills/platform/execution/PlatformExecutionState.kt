@@ -49,6 +49,7 @@ class PlatformExecutionState(val root: ExecutionState, val snapshot: DefinitionS
                 is PlatformBudgetException -> SkillResult.Status.BUDGET_EXCEEDED
                 is EffectStepLimitException -> SkillResult.Status.BUDGET_EXCEEDED
                 is PlatformDependencyException -> SkillResult.Status.DEPENDENCY_UNAVAILABLE
+                is MissingSkillTargetException -> SkillResult.Status.NO_TARGET
                 is com.keopsfenks.arcana.skills.platform.legacy.LegacyActorException -> return cause.result
                 else -> SkillResult.Status.ERROR
             }, cause.message ?: cause.javaClass.simpleName)

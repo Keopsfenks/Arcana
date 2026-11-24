@@ -7,6 +7,7 @@ public record SkillComponentType<T extends SkillPlatformComponent>(String id, Cl
     public static final SkillComponentType<SkillMechanic> MECHANIC = new SkillComponentType<>("mechanic", SkillMechanic.class);
     public static final SkillComponentType<SkillPredicateType> PREDICATE = new SkillComponentType<>("predicate", SkillPredicateType.class);
     public static final SkillComponentType<SkillTargeter> TARGETER = new SkillComponentType<>("targeter", SkillTargeter.class);
+    public static final SkillComponentType<SkillMutator> MUTATOR = new SkillComponentType<>("mutator", SkillMutator.class);
     public SkillComponentType {
         Objects.requireNonNull(componentClass);
         new SkillKey("arcana", id);

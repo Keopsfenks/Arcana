@@ -154,11 +154,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** mutator compiled `mutate(SkillInvocation): SkillInvocation`; `PlatformSkillCompiler.compile(SkillDefinition): CompiledPlatformSkill`; node options store targeter/mutators/conditions/chance/delay/repeat/failure policy. Generic compilation exposes typed token lookup; references are recorded by qualified SkillKey.
 
-- [ ] Assert a mutator changes only its child's origin/actor/data, not sibling or parent; correct degree rotation and clamping; unknown key/type and invalid expression paths; required argument/default behavior; max64 nesting/1,024 static nodes and unsafe YAML reject. Schema1 fixtures are unchanged.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test --tests '*PlatformCompilerTests' :arcana-skills-components:test --tests '*MutatorTests' FLAGS`; expect RED.
-- [ ] Implement schema 2 compiler and per-node pipeline target→copy/mutate→conditions/chance→execute. Default node failure stops sequence; `on-failure: skip` is explicit. Node delay/repeat share root budgets and do not re-admit the root.
-- [ ] Same Verify GREEN plus existing SkillYamlLoader/SkillCompiler tests.
-- [ ] Commit `feat(skills): compile schema two nodes with immutable context mutators`.
+- [x] Assert a mutator changes only its child's origin/actor/data, not sibling or parent; correct degree rotation and clamping; unknown key/type and invalid expression paths; required argument/default behavior; max64 nesting/1,024 static nodes and unsafe YAML reject. Schema1 fixtures are unchanged.
+- [x] Verify `.\gradlew.bat :arcana-skills:test --tests '*PlatformCompilerTests' :arcana-skills-components:test --tests '*MutatorTests' FLAGS`; expect RED.
+- [x] Implement schema 2 compiler and per-node pipeline target→copy/mutate→conditions/chance→execute. Default node failure stops sequence; `on-failure: skip` is explicit. Node delay/repeat share root budgets and do not re-admit the root.
+- [x] Same Verify GREEN plus existing SkillYamlLoader/SkillCompiler tests.
+- [x] Commit `feat(skills): compile schema two nodes with immutable context mutators`.
 
 ### Task 9: Parameterized and bounded flow controls
 

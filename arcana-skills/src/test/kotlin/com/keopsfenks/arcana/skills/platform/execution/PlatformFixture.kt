@@ -7,6 +7,7 @@ import io.mockk.every
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.util.Vector
+import org.bukkit.util.BoundingBox
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
@@ -31,6 +32,7 @@ class PlatformFixture(directory: Path, immediate: Boolean = true) {
         every { entity.maxHealth } answers { scheduler.assertOwner(entity); 20.0 }
         every { entity.velocity } answers { scheduler.assertOwner(entity); Vector(0.0, 0.0, 1.0) }
         every { entity.world } answers { scheduler.assertOwner(entity); legacy.world }
+        every { entity.boundingBox } answers { scheduler.assertOwner(entity); val point = entity.location; BoundingBox(point.x - .3, point.y, point.z - .3, point.x + .3, point.y + 1.8, point.z + .3) }
     }
     fun register(id: String, factory: (SkillArguments, SkillCompilation) -> CompiledSkillMechanic) =
         platform.register(legacy.plugin, SkillComponentType.MECHANIC, SkillKey("arcana", id), object : SkillMechanic(SkillDescriptor.of(id, "test")) {

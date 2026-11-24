@@ -23,10 +23,10 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | T-AREA | M-T | EntitiesInRadiusTargeter, PlayersInRadiusTargeter, BoxTargeter | 7 | Tamamlandı | TargeterGeometryTests |
 | T-SHAPE | M-T | ConeTargeter, LineTargeter, RayTargeter | 7 | Tamamlandı | TargeterGeometryTests |
 | T-SELECT | M-T | TargetSelectionPolicy: filtre/sıra/limit/rastgele | 7 | Tamamlandı | TargeterTests |
-| M-ROLE | L-M | SwapActorTargetMutator, TargetAsActorMutator, TriggerAsTargetMutator | 8 | Planlandı | MutatorTests |
-| M-LOC | L-M | OffsetLocationMutator, RotateLocationMutator, CenterLocationMutator | 8 | Planlandı | MutatorTests |
-| M-DATA | L-M | SetValueMutator, MultiplyValueMutator, ClampValueMutator | 8 | Planlandı | MutatorTests |
-| NODE | L-E,M-C | Node başına koşul/şans/delay/repeat/filter/skip | 8 | Planlandı | PlatformCompilerTests |
+| M-ROLE | L-M | SwapActorTargetMutator, TargetAsActorMutator, TriggerAsTargetMutator | 8 | Tamamlandı | MutatorTests |
+| M-LOC | L-M | OffsetLocationMutator, RotateLocationMutator, CenterLocationMutator | 8 | Tamamlandı | MutatorTests |
+| M-DATA | L-M | SetValueMutator, MultiplyValueMutator, ClampValueMutator | 8 | Tamamlandı | MutatorTests |
+| NODE | L-E,M-C | Node başına koşul/şans/delay/repeat/filter/skip | 8 | Tamamlandı | PlatformCompilerTests |
 | FLOW-BASE | L-C,M-C | SequenceMechanic, DelayMechanic, RepeatMechanic, BranchMechanic, CastMechanic | 9 | Planlandı | FlowMechanicTests |
 | FLOW-MULTI | L-C,M-T | ForEachMechanic, ParallelMechanic, WaitUntilMechanic | 9 | Planlandı | FlowMechanicTests |
 | FLOW-PICK | L-C | WeightedRandomMechanic, CycleMechanic, ShuffleMechanic | 9 | Planlandı | FlowMechanicTests |

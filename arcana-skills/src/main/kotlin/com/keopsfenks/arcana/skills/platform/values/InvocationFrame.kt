@@ -6,8 +6,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Mutable local variables are isolated from the immutable public invocation snapshot. */
-class InvocationFrame(val invocation: SkillInvocation, private val parent: InvocationFrame? = null) : AutoCloseable {
-    internal val locals = ConcurrentHashMap<SkillKey, VariableEntry>()
+class InvocationFrame(val invocation: SkillInvocation, private val parent: InvocationFrame? = null, private val shared: InvocationFrame? = null) : AutoCloseable {
+    internal val locals: ConcurrentHashMap<SkillKey, VariableEntry> = shared?.locals ?: ConcurrentHashMap()
     private val closed = AtomicBoolean(false)
     fun checkActive() {
         if (closed.get()) throw CancellationException("Invocation frame is closed")
@@ -17,6 +17,8 @@ class InvocationFrame(val invocation: SkillInvocation, private val parent: Invoc
         checkActive()
         return InvocationFrame(invocation, this).also { it.locals.putAll(locals) }
     }
+    /** Sequential nodes copy invocation data while retaining this sequence's local variable scope. */
+    fun view(invocation: SkillInvocation): InvocationFrame { checkActive(); return InvocationFrame(invocation, this, this) }
     fun snapshot(bindings: List<VariableBinding>, variables: SkillVariables): SkillInvocation {
         checkActive()
         val values = LinkedHashMap(invocation.data())
@@ -30,7 +32,7 @@ class InvocationFrame(val invocation: SkillInvocation, private val parent: Invoc
         }
         return invocation.derive().replaceData(values).build()
     }
-    override fun close() { closed.set(true); locals.clear() }
+    override fun close() { closed.set(true); if (shared == null) locals.clear() }
 }
 
 data class VariableBinding(

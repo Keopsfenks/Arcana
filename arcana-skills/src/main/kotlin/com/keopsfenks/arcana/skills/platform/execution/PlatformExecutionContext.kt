@@ -5,6 +5,7 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.DefaultSkillEngine
 import com.keopsfenks.arcana.skills.platform.DefaultSkillPlatform
 import com.keopsfenks.arcana.skills.platform.compile.CompiledPlatformSkill
+import com.keopsfenks.arcana.skills.platform.compile.CompiledNode
 import com.keopsfenks.arcana.skills.platform.values.InvocationFrame
 import com.keopsfenks.arcana.skills.platform.values.VariableStore
 import com.keopsfenks.arcana.skills.platform.targets.RegionQuery
@@ -26,6 +27,15 @@ class PlatformExecutionContext(
     private val query: SkillTargetQuery = RegionQuery(engine.scheduler, state = state)
     override fun invocation(): SkillInvocation { state.checkActive(); return frame.snapshot(definition.bindings, variables) }
     override fun services(): SkillServices = SkillServices.of(mapOf<Class<*>, Any>(SkillVariables::class.java to variables, SkillTargetQuery::class.java to query))
+    fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state).thenCompose { captured ->
+        val view = state.frame(if (isolateLocals) frame.fork(captured) else frame.view(captured))
+        try {
+            val persistent = definition.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { it.value.map { value -> value.key }.toSet() }
+            val access = platform.variables.access(view, persistent)
+            access.prepare().thenApply { PlatformExecutionContext(engine, platform, state, view, definition, depth, access) }
+                .whenComplete { _, error -> if (error != null) state.release(view) }
+        } catch (error: Throwable) { state.release(view); CompletableFuture.failedFuture(error) }
+    }
     override fun on(actor: SkillActor, action: Function<LivingEntity, SkillResult>): CompletionStage<SkillResult> =
         state.track(engine.scheduler.on(actor.entity()) {
             state.checkActive(); frame.checkActive()
@@ -52,8 +62,9 @@ class PlatformExecutionContext(
                 state.checkActive(); frame.checkActive()
                 var cursor = index
                 while (cursor < immutable.size && !result.isDone) {
-                    state.step()
-                    val next = immutable[cursor++].execute(this).toCompletableFuture()
+                    val mechanic = immutable[cursor++]
+                    if (mechanic !is CompiledNode) state.step()
+                    val next = mechanic.execute(this).toCompletableFuture()
                     if (next.isDone) {
                         val outcome = next.join()
                         if (!outcome.isSuccess) { result.complete(outcome); return }
