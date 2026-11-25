@@ -15,6 +15,7 @@ class InvocationFrame(val invocation: SkillInvocation, private val parent: Invoc
     private val children = ConcurrentHashMap.newKeySet<InvocationFrame>()
     private val work = ConcurrentHashMap.newKeySet<ScheduledWork<*>>()
     private val callbacks = ConcurrentLinkedQueue<() -> Unit>()
+    fun descendsFrom(frame: InvocationFrame): Boolean = this === frame || parent?.descendsFrom(frame) == true
     fun checkActive() {
         if ((terminal.get() != 0)) throw CancellationException("Invocation frame is closed")
         parent?.checkActive()

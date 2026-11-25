@@ -25,7 +25,9 @@ class ManagedExecutionState private constructor(
     private val lineage: Lineage = source.state.managedState?.lineage ?: Lineage(platform.monotonicClock())
     val state = PlatformExecutionState(ExecutionState(input.actor().id(), source.state.snapshot.legacy, 65536, lineage.steps), source.state.snapshot, platform::componentActive)
     val originId = source.state.root.id
-    private val definition = source.definition
+    internal val definition = source.definition
+    @Volatile var aura: com.keopsfenks.arcana.skills.platform.auras.AuraInstance? = null
+        internal set
     private val depth = source.depth
     private val admission = source.admission
     private val base = state.frame(source.frame.detachedCopy(input))
@@ -81,12 +83,20 @@ class ManagedExecutionState private constructor(
     private fun disposeOwned(action: OwnedCleanup) {
         try { action.close() } catch (error: Exception) { engine.reportProviderFailure("Could not remove managed native contribution: ${error.message}") }
     }
-    fun cancelCallbacks() { scopes.toList().forEach { state.release(it, cancelled = true) } }
-    fun execute(hooks: List<CompiledSkillMechanic>, values: Map<String, Any> = emptyMap()): CompletableFuture<SkillResult> {
+    fun invocation() = base.invocation
+    internal fun localFrame(input: SkillInvocation) = state.frame(base.view(input))
+    internal fun eventAdmission(): SkillAdmission = admission ?: object : SkillAdmission {
+        override fun id() = lease.id
+        override fun skill() = revision.key
+        override fun actor() = base.invocation.actor()
+        override fun committed() = true // Successful passive activation has no normal admission costs.
+    }
+    fun cancelCallbacks(except: InvocationFrame? = null) { scopes.toList().filter { except == null || !except.descendsFrom(it) }.forEach { state.release(it, cancelled = true) } }
+    fun execute(hooks: List<CompiledSkillMechanic>, values: Map<String, Any> = emptyMap(), input: SkillInvocation = base.invocation): CompletableFuture<SkillResult> {
         val result = CompletableFuture<SkillResult>()
         try {
             callback()
-            val seed = state.frame(base.view(base.invocation.derive().data(values).build()))
+            val seed = state.frame(base.view(input.derive().data(values).build()))
             scopes.add(seed)
             seed.onClose { scopes.remove(seed); result.complete(SkillResult.of(SkillResult.Status.CANCELLED, "Managed callback retired")) }
             val persistent = definition.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { (_, values) -> values.map { it.key }.toSet() }

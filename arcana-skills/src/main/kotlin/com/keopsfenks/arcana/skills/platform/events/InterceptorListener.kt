@@ -30,6 +30,8 @@ class InterceptorListener(private val engine: DefaultSkillEngine, private val pl
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onHighest(event: EntityDamageEvent) {
         if (closed.get() || event.isCancelled || SkillDamageScope.isActive()) return
+        platform.auraEvents.onHighest(event)
+        if (event.isCancelled) return
         val victim = event.entity as? LivingEntity ?: return
         val damage = event.damage
         if (!damage.isFinite() || damage < 0) return
@@ -69,7 +71,7 @@ class InterceptorListener(private val engine: DefaultSkillEngine, private val pl
         }
     }
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
-    fun onMonitor(event: EntityDamageEvent) = observe(event)
+    fun onMonitor(event: EntityDamageEvent) { platform.auraEvents.onMonitor(event); observe(event) }
     fun observe(event: Event) {
         val batch = synchronized(pending) { pending.remove(key(event)) } ?: return
         batch.expiry?.cancel()

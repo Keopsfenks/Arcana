@@ -23,6 +23,8 @@ open class PlatformSkillCompiler(
 ) : SkillCompilation {
     private val dependencies = LinkedHashSet<SkillRegistration>()
     private val references = LinkedHashMap<SkillKey, String>()
+    private val templates = LinkedHashMap<Pair<SkillKey, SkillKey>, SkillArguments>()
+    private var localBindings: ((String) -> Unit)? = null
     private var localOnly = false
     private var nodes = 0
     private var depth = 0
@@ -30,13 +32,17 @@ open class PlatformSkillCompiler(
     override fun namespace() = namespace
 
     fun compile(definition: SkillDefinition): CompiledPlatformSkill {
-        dependencies.clear(); references.clear(); nodes = 0; depth = 0
+        dependencies.clear(); references.clear(); templates.clear(); nodes = 0; depth = 0; localOnly = false
         val args = SkillArguments(definition.configuration(), definition.origin())
-        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors", "passives", "activation")
+        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors", "passives", "activation", "templates")
         args.values.keys.firstOrNull { it !in allowed }?.let { throw args.error(it, "unsupported skill option") }
         val parameters = ParameterBindings.declarations(args, namespace)
         val variables = VariableBinding.declarations(args, namespace)
         val stats = statBindings(args)
+        localBindings = { path ->
+            require(stats.all { it.local }) { "$path: local interception requires local stat providers" }
+            require(variables.none { it.persistent }) { "$path: local interception cannot prefetch persistent variables" }
+        }
         val numeric = LinkedHashMap(baseBindings())
         parameters.filter { it.type() == SkillValue.Kind.NUMBER }.forEach { parameter ->
             numeric["param_${parameter.name()}"] = { invocation ->
@@ -48,6 +54,22 @@ open class PlatformSkillCompiler(
         }
         stats.forEach { binding -> numeric[binding.alias] = { invocation -> requireNotNull(invocation.data()[binding.alias]) { "${binding.path}: stat snapshot is unavailable" }.number() } }
         numbers = PlatformExpressionCompiler(environment, environmentFactory, numeric)
+        if (args.has("templates")) {
+            val groups = args.section("templates")
+            groups.values.forEach { (groupName, _) ->
+                val group = SkillKey.parse(groupName, namespace)
+                require(group.namespace() == namespace) { "${groups.path}.$groupName: template group must belong to $namespace" }
+                val values = groups.section(groupName)
+                values.values.forEach { (name, _) ->
+                    val key = SkillKey.parse(name, namespace)
+                    require(key.namespace() == namespace) { "${values.path}.$name: template must belong to $namespace" }
+                    require(templates.put(group to key, values.section(name)) == null) { "${values.path}.$name: duplicate template" }
+                }
+            }
+            require(templates.size <= 256) { "${groups.path}: maximum 256 templates per definition" }
+        }
+        // Validate declared templates even when no effect currently references them.
+        templates.values.forEach { template -> effects(listOf(template.values), template.path) }
         val chance = args.number("chance", 100.0)
         require(chance in 0.0..100.0) { "${args.path}.chance: must be between 0 and 100" }
         val triggers = args.list("triggers", emptyList<Any>()).mapIndexed { i, value ->
@@ -124,9 +146,37 @@ open class PlatformSkillCompiler(
         })
     }
 
+    override fun auraComponents(definitions: List<*>, path: String): List<CompiledSkillMechanic> {
+        require(definitions.size <= 64) { "$path: maximum 64 aura components" }
+        return java.util.List.copyOf(definitions.mapIndexed { index, raw ->
+            val args = SkillArguments(emptyMap<String, Any>(), path).child("[$index]", raw)
+            count(args.path)
+            nested(args.path) {
+                val key = resolve(SkillComponentType.AURA_COMPONENT, args.string("type"))
+                val handle = platform.registry(SkillComponentType.AURA_COMPONENT).get(key) ?: throw args.error("type", "unknown aura component $key")
+                dependencies.add(handle)
+                val compiled = handle.component.compile(args, this)
+                CompiledSkillMechanic { context ->
+                    if (!platform.componentActive(handle)) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "Aura component $key retired"))
+                    else compiled.execute(context)
+                }
+            }
+        })
+    }
+    override fun template(group: SkillKey, name: SkillKey, path: String): SkillArguments = templates[group to name] ?: throw IllegalArgumentException("$path: unknown template $group/$name")
+    override fun requireLocalBindings(path: String) { requireNotNull(localBindings) { "$path: binding declarations unavailable" }.invoke(path) }
+    override fun localPredicates(definitions: List<*>, path: String): SkillPredicate {
+        val previous = localOnly; localOnly = true
+        return try { predicates(definitions, path) } finally { localOnly = previous }
+    }
+    override fun interceptors(definitions: List<*>, path: String): List<CompiledSkillInterceptor> {
+        val previous = localOnly; localOnly = true
+        return try { com.keopsfenks.arcana.skills.platform.events.InterceptorCompiler(this, platform, dependencies).compile(SkillArguments(mapOf("interceptors" to definitions), path)) }
+        finally { localOnly = previous }
+    }
     override fun number(value: Any?, path: String) = numbers.number(value, path)
 
-    private fun baseBindings(): Map<String, (SkillInvocation) -> Double> = SkillCompilerImpl.VARIABLES.associateWith { name ->
+    private fun baseBindings(): Map<String, (SkillInvocation) -> Double> = (SkillCompilerImpl.VARIABLES + arrayOf("aura_stacks", "aura_charges")).associateWith { name ->
         { invocation: SkillInvocation ->
             val value = invocation.data()[name]
             if (value == null && name == "damage") 0.0 else requireNotNull(value) { "Snapshot binding $name is unavailable" }.number()

@@ -42,8 +42,10 @@ class DefaultSkillPlatform(
     val flowCursors = FlowCursorStore()
     val providers = ProviderRegistry(this)
     val admissions = AdmissionCoordinator(engine, lifecycle, clock)
+    val cleanup = com.keopsfenks.arcana.skills.platform.managed.DefaultSkillCleanup(engine.scheduler)
     val managed = com.keopsfenks.arcana.skills.platform.managed.ManagedWorkRegistry(lifecycle, engine::reportProviderFailure)
     val contributions = com.keopsfenks.arcana.skills.platform.holders.ContributionStore(managed, lifecycle, engine::reportProviderFailure)
+    val auraEvents = com.keopsfenks.arcana.skills.platform.auras.AuraEventDispatcher(engine, this, lifecycle)
     val auras = com.keopsfenks.arcana.skills.platform.auras.AuraManager(engine, this, lifecycle, clock)
     val holderManager = com.keopsfenks.arcana.skills.platform.holders.HolderManager(engine, this, lifecycle)
     val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorDispatcher(engine, this, lifecycle)
@@ -69,7 +71,7 @@ class DefaultSkillPlatform(
     override fun definitions() = repository.definitions()
     override fun refreshHolders(actor: SkillActor) = holderManager.refresh(actor)
     override fun holders(actor: SkillActor) = holderManager.holders(actor)
-    internal fun close() { auras.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
+    internal fun close() { auraEvents.close(); auras.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)
@@ -116,6 +118,7 @@ class DefaultSkillPlatform(
     private fun completed(status: SkillResult.Status, message: String) = CompletableFuture.completedFuture(SkillResult.of(status, message))
 
     override fun trigger(key: SkillKey, invocation: SkillInvocation): CompletionStage<List<SkillResult>> {
+        auraEvents.emit(key, invocation.actor(), invocation)
         val snapshot = repository.snapshot()
         val global = snapshot.entries.values.filter { revision -> revision.enabled && (revision.native?.let { !it.holderOnly && it.interceptors.isEmpty() && key in it.triggers } == true || revision.legacy?.triggers?.contains(DefinitionRevision.legacyId(key)) == true) }
             .map { it.key to invocation }

@@ -121,4 +121,12 @@ class ManagedBudgetTests {
         f.engine.closeOwner(f.legacy.plugin); assertEquals(0, f.platform.managed.size)
     }
 
+    @Test fun hostCleanupServiceRemainsOwnerSafeAfterTheInvocationFrameHasCompleted() {
+        val f = PlatformFixture(directory); lateinit var cleanup: SkillCleanup; var calls = 0
+        f.register("capture_cleanup") { _, _ -> CompiledSkillMechanic { execution -> cleanup = execution.services().require(SkillCleanup::class.java); f.success() } }
+        f.write(effects = "  - type: capture_cleanup"); f.load(); f.cast().join()
+        val result = cleanup.on(f.invocation().actor()) { entity -> f.scheduler.assertOwner(entity); calls++; SkillResult.success() }.toCompletableFuture().join()
+        assertTrue(result.isSuccess); assertEquals(1, calls)
+    }
+
 }

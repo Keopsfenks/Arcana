@@ -83,4 +83,25 @@ class PlatformBindingIntegrationTests {
         assertEquals(14.0, evaluated)
         engine.shutdown()
     }
+    @Test fun auraIntrinsicSlotsUseTheActualExpressionEngineWithoutReparsingInputText() {
+        val plugin = mockk<ArcanaPlugin>(relaxed = true); every { plugin.name } returns "Arcana"
+        val base = ArcanaExpressionEnvironmentBuilder().variables(*SkillCompilerImpl.VARIABLES).build()
+        val engine = DefaultSkillEngine(plugin, directory, base, expressionEnvironmentFactory = { names -> ArcanaExpressionEnvironmentBuilder().variables(*names).build() })
+        var value = 0.0
+        engine.platform().register(plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "capture"), object : SkillMechanic(SkillDescriptor.of("capture", "test")) {
+            override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
+                val number = compilation.number(arguments.raw("amount"), "${arguments.path}.amount")
+                return CompiledSkillMechanic { value = number.evaluate(it.invocation()); CompletableFuture.completedFuture(SkillResult.success()) }
+            }
+        })
+        Files.writeString(directory.resolve("aura.yml"), "schema: 2\nid: aura\nparameters:\n  power: {type: number, default: 9}\neffects:\n  - type: capture\n    amount: 'param_power + aura_stacks * 10 + aura_charges'\n")
+        val report = engine.reload(); assertTrue(report.success(), report.errors().toString())
+        val skill = requireNotNull((engine.platform() as DefaultSkillPlatform).repository.revision(SkillKey("arcana", "aura"))?.native)
+        val player = mockk<Player>(); every { player.uniqueId } returns UUID.randomUUID()
+        val input = SkillInvocation.builder(SkillActor.of(player)).data(mapOf("aura_stacks" to 2, "aura_charges" to 3)).parameters(ParameterBindings.bind(skill.parameters, emptyMap())).build()
+        val execution = mockk<SkillExecutionContext>(); every { execution.invocation() } returns input
+        assertTrue(skill.effects.single().execute(execution).toCompletableFuture().join().isSuccess); assertEquals(32.0, value)
+        engine.shutdown()
+    }
+
 }

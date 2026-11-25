@@ -13,8 +13,8 @@ import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
-class NativeComponentFixture(directory: Path) {
-    val root = EngineFixture(directory)
+class NativeComponentFixture(directory: Path, expressionEnvironmentFactory: ((Array<String>) -> com.keopsfenks.arcana.core.math.ExpressionEnvironment)? = null) {
+    val root = EngineFixture(directory, expressionEnvironmentFactory = expressionEnvironmentFactory)
     val engine get() = root.engine
     val platform get() = engine.platform()
     val scheduler get() = root.scheduler

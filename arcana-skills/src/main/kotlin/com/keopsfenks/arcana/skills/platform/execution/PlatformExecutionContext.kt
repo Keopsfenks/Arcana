@@ -35,10 +35,18 @@ class PlatformExecutionContext(
     fun <T> track(work: ScheduledWork<T>): CompletableFuture<T> = state.track(frame.track(work))
     override fun invocation(): SkillInvocation { state.checkActive(); return frame.snapshot(definition.bindings, variables) }
     override fun services(): SkillServices = SkillServices.of(buildMap<Class<*>, Any> {
+        put(SkillCleanup::class.java, platform.cleanup)
         put(SkillVariables::class.java, variables); put(SkillTargetQuery::class.java, query); put(ParallelScope::class.java, flow)
         put(FlowCursorStore::class.java, platform.flowCursors); put(DoubleSupplier::class.java, DoubleSupplier { engine.random() })
         admission?.let { put(SkillAdmission::class.java, it) }
-        state.managedState?.let { put(com.keopsfenks.arcana.skills.platform.managed.ManagedExecutionState::class.java, it) }
+        state.managedState?.let {
+            put(com.keopsfenks.arcana.skills.platform.managed.ManagedExecutionState::class.java, it)
+            it.aura?.let { aura ->
+                put(com.keopsfenks.arcana.skills.platform.auras.AuraInstance::class.java, aura)
+                put(SkillAuraContext::class.java, aura)
+                put(SkillManagedHandle::class.java, aura)
+            }
+        }
         put(com.keopsfenks.arcana.skills.platform.auras.AuraManager::class.java, platform.auras.forContext(this@PlatformExecutionContext))
     })
     fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame)

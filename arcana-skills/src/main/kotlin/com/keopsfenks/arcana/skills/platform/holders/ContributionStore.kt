@@ -37,6 +37,14 @@ class ContributionStore(private val registry: ManagedWorkRegistry, private val l
         } catch (error: Throwable) { result.completeExceptionally(error); lease.close() }
         return result
     }
+    fun update(lease: ManagedWorkRegistry.ManagedLease, values: Map<SkillKey, Double>): Boolean {
+        val copy = java.util.Map.copyOf(values)
+        require(copy.size <= 256 && copy.values.all { it.isFinite() }) { "Expected at most 256 finite stat values" }
+        return lifecycle.locked {
+            if (!lease.active || !entries.containsKey(lease.id)) false
+            else { entries[lease.id] = Entry(lease.actor.id(), copy); true }
+        }
+    }
     fun snapshot(actor: SkillActor): Map<SkillKey, Double> {
         val values = LinkedHashMap<SkillKey, Double>()
         lifecycle.locked { entries.values.filter { it.actor == actor.id() }.forEach { entry -> entry.stats.forEach { (key, amount) -> values.merge(key, amount, Double::plus) } } }

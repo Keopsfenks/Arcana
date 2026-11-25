@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 import java.util.logging.Logger
 
-class EngineFixture(val directory: Path, immediate: Boolean = true) {
+class EngineFixture(val directory: Path, immediate: Boolean = true, expressionEnvironmentFactory: ((Array<String>) -> com.keopsfenks.arcana.core.math.ExpressionEnvironment)? = null) {
     val scheduler = ControlledSkillScheduler(immediate)
     val clock = AtomicLong(0)
     var roll = 0.0
@@ -60,7 +60,7 @@ class EngineFixture(val directory: Path, immediate: Boolean = true) {
         every { victim.isValid } answers { scheduler.assertOwner(victim); true }
         every { victim.isDead } returns false
         every { victim.location } answers { scheduler.assertOwner(victim); Location(world, 3.0, 60.0, 0.0) }
-        engine = DefaultSkillEngine(plugin, directory, CompilerFixture().environment, scheduler, clock::get, random = { roll })
+        engine = DefaultSkillEngine(plugin, directory, CompilerFixture().environment, scheduler, clock::get, random = { roll }, expressionEnvironmentFactory = expressionEnvironmentFactory)
         register("mark") { arguments, _ -> CompiledSkillEffect {
             marks.add(arguments.string("name", "mark"))
             CompletableFuture.completedFuture(SkillResult.success())

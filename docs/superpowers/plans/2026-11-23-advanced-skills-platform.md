@@ -226,11 +226,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** aura components register by token and compile with explicit dependencies; timed/event subscriptions return managed leases. Charge zero removes with its reason. Matching supports name/type/tag plus explicit caster policy.
 
-- [ ] Assert inline/named hook compilation, tag-specific removal, charge exhaustion, stack-scaled stat contribution, generated damage recursion prevention and subscriptions removed on every shutdown path. Bad hook/unknown aura rejects candidate before mutation.
-- [ ] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*AuraMechanicTests' FLAGS`; expect RED.
-- [ ] Implement separate mechanics/components using AuraManager and interception/holder contribution contracts; callbacks do not create unbounded fresh roots.
-- [ ] Same Verify GREEN with a working shield and periodic buff example fixture, disabled by default.
-- [ ] Commit `feat(skills): expose modular aura mechanics and components`.
+- [x] Assert inline/named hook compilation, tag-specific removal, charge exhaustion, stack-scaled stat contribution, generated damage recursion prevention and subscriptions removed on every shutdown path. Bad hook/unknown aura rejects candidate before mutation.
+- [x] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*AuraMechanicTests' FLAGS`; expect RED.
+- [x] Implement separate mechanics/components using AuraManager and interception/holder contribution contracts; callbacks do not create unbounded fresh roots.
+- [x] Same Verify GREEN with a working shield and periodic buff example fixture, disabled by default.
+- [x] Commit `feat(skills): expose modular aura mechanics and components`.
 
 ### Task 15: Region-safe projectile simulation
 

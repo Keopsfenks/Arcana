@@ -13,4 +13,12 @@ public interface SkillCompilation {
     SkillPredicate predicates(List<?> definitions, String path);
     <T extends SkillPlatformComponent> T component(SkillComponentType<T> type, SkillKey key);
     void referenceSkill(SkillKey key, String path);
+    default List<CompiledSkillMechanic> auraComponents(List<?> definitions, String path) { throw new UnsupportedOperationException("Aura component compilation is unavailable"); }
+    /** Local callback helpers are explicitly enforced by the native compiler. */
+    default List<CompiledSkillInterceptor> interceptors(List<?> definitions, String path) { throw new UnsupportedOperationException("Synchronous interception compilation is unavailable"); }
+    default SkillPredicate localPredicates(List<?> definitions, String path) { throw new UnsupportedOperationException("Local predicate compilation is unavailable"); }
+    default void requireLocalBindings(String path) { throw new UnsupportedOperationException("Local binding validation is unavailable"); }
+    /** Definition-local named mechanic template; group and name remain owner-qualified. */
+    default SkillArguments template(SkillKey group, SkillKey name, String path) { throw new IllegalArgumentException(path + ": unknown template " + group + "/" + name); }
+
 }
