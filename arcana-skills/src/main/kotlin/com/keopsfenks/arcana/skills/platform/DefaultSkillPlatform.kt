@@ -52,6 +52,9 @@ class DefaultSkillPlatform(
     val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorDispatcher(engine, this, lifecycle)
     internal fun componentActive(handle: SkillRegistration) = handle.isActive && lifecycle.available(handle.owner)
     val interceptorListener = com.keopsfenks.arcana.skills.platform.events.InterceptorListener(engine, this)
+    val generatedSources = com.keopsfenks.arcana.skills.platform.events.GeneratedDamageSources(clock)
+    val triggerSubscriptions = com.keopsfenks.arcana.skills.platform.events.TriggerSubscriptions(engine, this, lifecycle)
+    val actorLifecycleListener = com.keopsfenks.arcana.skills.platform.events.ActorLifecycleListener(engine)
     private val runner = PlatformRunner(engine, this)
     val repository = DefinitionRepository(lifecycle, engine::compileSourceLegacy,
         { definition -> SourceSkillCompiler(this, environment, definition.key().namespace(), environmentFactory).compile(definition) },
@@ -63,8 +66,12 @@ class DefaultSkillPlatform(
     fun <T : SkillPlatformComponent> registry(type: SkillComponentType<T>): PlatformRegistry<T> =
         registries.computeIfAbsent(type) { PlatformRegistry(type, lifecycle) { engine.invalidateRegistration(it) } } as PlatformRegistry<T>
 
-    override fun <T : SkillPlatformComponent> register(owner: Plugin, type: SkillComponentType<T>, key: SkillKey, component: T): SkillRegistration =
-        registry(type).register(owner, key, component)
+    override fun <T : SkillPlatformComponent> register(owner: Plugin, type: SkillComponentType<T>, key: SkillKey, component: T): SkillRegistration {
+        val handle = registry(type).register(owner, key, component)
+        if (component is SkillPlatformTrigger) try { triggerSubscriptions.install(handle, key, component) } catch (error: Throwable) { handle.close(); throw error }
+        return handle
+    }
+    override fun subscribeTimer(owner: Plugin, trigger: SkillKey, actor: SkillActor, intervalTicks: Long) = triggerSubscriptions.timer(owner, trigger, actor, intervalTicks)
 
     internal fun registrations(): List<SkillRegistration> = registries.values.flatMap { it.snapshot() } + repository.registrations()
     override fun registerSource(owner: Plugin, source: SkillDefinitionSource) = repository.register(owner, source)
@@ -72,7 +79,7 @@ class DefaultSkillPlatform(
     override fun definitions() = repository.definitions()
     override fun refreshHolders(actor: SkillActor) = holderManager.refresh(actor)
     override fun holders(actor: SkillActor) = holderManager.holders(actor)
-    internal fun close() { auraEvents.close(); auras.close(); projectiles.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
+    internal fun close() { actorLifecycleListener.close(); triggerSubscriptions.close(); generatedSources.close(); auraEvents.close(); auras.close(); projectiles.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)
@@ -121,14 +128,21 @@ class DefaultSkillPlatform(
     override fun trigger(key: SkillKey, invocation: SkillInvocation): CompletionStage<List<SkillResult>> {
         auraEvents.emit(key, invocation.actor(), invocation)
         val snapshot = repository.snapshot()
-        val global = snapshot.entries.values.filter { revision -> revision.enabled && (revision.native?.let { !it.holderOnly && it.interceptors.isEmpty() && key in it.triggers } == true || revision.legacy?.triggers?.contains(DefinitionRevision.legacyId(key)) == true) }
-            .map { it.key to invocation }
+        val native = prepareTrigger(key, invocation, snapshot)
+        val legacy = snapshot.legacy.byTrigger[DefinitionRevision.legacyId(key)].orEmpty().mapNotNull { skill -> snapshot.entries.values.find { it.legacy === skill } }.map { it.key to invocation }
+        val work = legacy.map { (skill, supplied) -> castInSnapshot(skill, supplied, snapshot) } + (native?.invoke() ?: emptyList())
+        return CompletableFuture.allOf(*work.toTypedArray()).thenApply { java.util.List.copyOf(work.map { it.join() }) }
+    }
+    /** Captures revisions and holder identities at emission; never reselects after a handoff. */
+    internal fun prepareTrigger(key: SkillKey, invocation: SkillInvocation, snapshot: DefinitionSnapshot = repository.snapshot()): (() -> List<CompletableFuture<SkillResult>>)? {
+        val global = snapshot.normalTriggers[key].orEmpty().map { Triple(it.key, invocation, { true }) }
         val held = holderManager.active(invocation.actor()).flatMap { binding -> binding.revisions.mapNotNull { revision ->
             val skill = revision.native
             if (skill != null && skill.enabled && skill.holderOnly && skill.interceptors.isEmpty() && key in skill.triggers && snapshot.entries[revision.key] === revision)
-                revision.key to invocation.derive().parameters(binding.holder.parameters()).build() else null
+                Triple(revision.key, invocation.derive().parameters(binding.holder.parameters()).build(), { holderManager.active(invocation.actor()).any { it === binding } }) else null
         } }
-        val work = (global + held).distinctBy { it.first to it.second.parameters() }.map { (skill, supplied) -> castInSnapshot(skill, supplied, snapshot) }
-        return CompletableFuture.allOf(*work.toTypedArray()).thenApply { java.util.List.copyOf(work.map { it.join() }) }
+        val work = (global + held).distinctBy { it.first to it.second.parameters() }
+        if (work.isEmpty()) return null
+        return { work.filter { it.third() }.map { (skill, supplied) -> castInSnapshot(skill, supplied, snapshot) } }
     }
 }

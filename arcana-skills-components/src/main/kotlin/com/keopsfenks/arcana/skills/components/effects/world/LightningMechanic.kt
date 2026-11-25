@@ -11,7 +11,14 @@ class LightningMechanic : SkillMechanic(SkillDescriptor.of("lightning", "Native 
         ComponentArguments.keys(arguments, "target", "effect-only"); val location = WorldActions.location(arguments); val visual = arguments.bool("effect-only", true)
         return CompiledSkillMechanic { context -> val point = location(context.invocation())
             if (point == null) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.NO_TARGET, "Lightning location missing")) else WorldActions.at(context, point, true) { at ->
-                SkillWorldMutationScope.during { SkillDamageScope.during { if (visual) at.world!!.strikeLightningEffect(at) else at.world!!.strikeLightning(at) } }; SkillResult.success()
+                if (visual) at.world!!.strikeLightningEffect(at) else {
+                    val platform = (context as? com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext)?.platform
+                        ?: throw IllegalStateException("Damaging lightning requires the managed host")
+                    platform.generatedSources.reserve().use { permit ->
+                        val bolt = SkillWorldMutationScope.during { SkillDamageScope.during { at.world!!.strikeLightning(at) } }
+                        permit.bind(bolt.uniqueId)
+                    }
+                }; SkillResult.success()
             }
         }
     }

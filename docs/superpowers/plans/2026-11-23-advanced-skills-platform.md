@@ -298,11 +298,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** trigger `listen(Consumer<SkillInvocation>): AutoCloseable`; prepare captures definition revisions at event emission. Custom triggers expose a namespaced API dispatch, not a generic arbitrary Event retained for later. Timer subscriptions are managed jobs with interval≥1 tick and bounded recipients.
 
-- [ ] Test cancelled events, main hand, attack-vs-thorns, projectile shooter, move/jump transitions, slot diff, consume/shoot/kill and entity actor events; no duplicate emissions. Empty index queues nothing; reload between emission and handoff runs neither replacement nor disposed definition. Owner close removes listeners/timers and pending callbacks.
-- [ ] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*PlatformTriggerTests' FLAGS`; expect RED.
-- [ ] Implement separate adapters and snapshot capability metadata. New triggers use the same causality guard, ownership boundaries and definition binding as legacy adapters.
-- [ ] Same Verify GREEN with existing trigger tests and no event reads after callback return.
-- [ ] Commit `feat(skills): expand owned general skill trigger adapters`.
+- [x] Test cancelled events, main hand, attack-vs-thorns, projectile shooter, move/jump transitions, slot diff, consume/shoot/kill and entity actor events; no duplicate emissions. Empty index queues nothing; reload between emission and handoff runs neither replacement nor disposed definition. Owner close removes listeners/timers and pending callbacks.
+- [x] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*PlatformTriggerTests' FLAGS`; expect RED.
+- [x] Implement separate adapters and snapshot capability metadata. New triggers use the same causality guard, ownership boundaries and definition binding as legacy adapters.
+- [x] Same Verify GREEN with existing trigger tests and no event reads after callback return.
+- [x] Commit `feat(skills): expand owned general skill trigger adapters`.
 
 ### Task 21: Diagnostics, documentation, coverage completion and release validation
 

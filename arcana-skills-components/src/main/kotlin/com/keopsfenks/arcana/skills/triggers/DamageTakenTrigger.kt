@@ -19,6 +19,10 @@ class DamageTakenTrigger(plugin: ArcanaPlugin) : BukkitSkillTrigger("damage_take
         val source = (event as? EntityDamageByEntityEvent)?.damager
         val counterpart = if (source is Projectile) source.shooter as? LivingEntity else source as? LivingEntity
         val damage = event.finalDamage
-        if (damage.isFinite()) emit(SkillContext.builder(player).victim(counterpart).value("damage", damage).build())
+        if (damage.isFinite()) {
+            val builder = SkillContext.builder(player).victim(counterpart).value("damage", damage)
+            source?.let { builder.value("damage_source_id", it.uniqueId.toString()) }
+            emit(builder.build())
+        }
     }
 }

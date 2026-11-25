@@ -120,8 +120,9 @@ class AuraEventDispatcher(private val engine: DefaultSkillEngine, private val pl
         val damager = (event as? EntityDamageByEntityEvent)?.damager
         return if (damager is Projectile) damager.shooter as? LivingEntity else damager as? LivingEntity
     }
+    private fun generated(event: EntityDamageEvent) = event is EntityDamageByEntityEvent && platform.generatedSources.contains(event.damager.uniqueId)
     fun onHighest(event: EntityDamageEvent) {
-        if (SkillDamageScope.isActive() || event.isCancelled) return
+        if (SkillDamageScope.isActive() || event.isCancelled || generated(event)) return
         val victim = event.entity as? LivingEntity ?: return
         val actor = SkillActor.of(victim)
         val data = mapOf("damage" to event.damage, "damage_cause" to event.cause.name)
@@ -132,7 +133,7 @@ class AuraEventDispatcher(private val engine: DefaultSkillEngine, private val pl
         }
     }
     fun onMonitor(event: EntityDamageEvent) {
-        if (SkillDamageScope.isActive() || event.isCancelled || !event.finalDamage.isFinite()) return
+        if (SkillDamageScope.isActive() || event.isCancelled || generated(event) || !event.finalDamage.isFinite()) return
         val victim = event.entity as? LivingEntity ?: return
         val source = counterpart(event)?.let(SkillActor::of)
         val actor = SkillActor.of(victim)

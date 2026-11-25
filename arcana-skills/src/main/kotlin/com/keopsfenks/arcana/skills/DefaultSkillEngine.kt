@@ -64,9 +64,13 @@ class DefaultSkillEngine(
             val listener = trigger.listen(object : SkillTriggerDispatch {
                 override fun prepare(context: SkillContext): Runnable? {
                     val snapshot = current.get()
-                    if (!handle.isActive || closed.get() || snapshot.byTrigger[trigger.id].isNullOrEmpty()) return null
+                    if (!handle.isActive || closed.get()) return null
+                    val input = LegacyInvocationAdapter.fromLegacy(context)
+                    if (generalPlatform.triggerSubscriptions.generated(input)) return null
+                    val native = generalPlatform.prepareTrigger(SkillKey("arcana", trigger.id), input, snapshot.definitions ?: generalPlatform.repository.snapshot())
+                    if (snapshot.byTrigger[trigger.id].isNullOrEmpty() && native == null) return null
                     return Runnable {
-                        if (handle.isActive && !closed.get()) triggerInSnapshot(trigger.id, context, snapshot)
+                        if (handle.isActive && !closed.get()) { triggerInSnapshot(trigger.id, context, snapshot); native?.invoke() }
                     }
                 }
             })
@@ -129,7 +133,11 @@ class DefaultSkillEngine(
     }
 
     override fun trigger(triggerId: String, context: SkillContext): CompletionStage<List<SkillResult>> {
-        return triggerInSnapshot(triggerId, context, current.get())
+        val snapshot = current.get(); val input = LegacyInvocationAdapter.fromLegacy(context); val key = SkillKey.parse(triggerId, "arcana")
+        if (generalPlatform.triggerSubscriptions.generated(input)) return CompletableFuture.completedFuture(emptyList())
+        generalPlatform.auraEvents.emit(key, input.actor(), input)
+        val native = generalPlatform.prepareTrigger(key, input, snapshot.definitions ?: generalPlatform.repository.snapshot())?.invoke().orEmpty()
+        return triggerInSnapshot(triggerId, context, snapshot).toCompletableFuture().thenCombine(CompletableFuture.allOf(*native.toTypedArray())) { legacy, _ -> java.util.List.copyOf(legacy + native.map { it.join() }) }
     }
 
     private fun triggerInSnapshot(triggerId: String, context: SkillContext, snapshot: SkillSnapshot): CompletionStage<List<SkillResult>> {
@@ -182,6 +190,7 @@ class DefaultSkillEngine(
     } })
 
     override fun cancel(playerId: UUID) {
+        generalPlatform.triggerSubscriptions.removeActor(playerId)
         executions.filter { it.playerId == playerId }.forEach { it.cancel("Player left") }
         generalPlatform.holderManager.removeActor(playerId)
         generalPlatform.managed.removeActor(playerId)
@@ -199,6 +208,7 @@ class DefaultSkillEngine(
             allHandles().filter { it.owner === owner }
         }
         handles.forEach { it.close() }
+        generalPlatform.triggerSubscriptions.closeOwner(owner)
     }
 
     fun enableOwner(owner: Plugin) = lifecycle.enable(owner)
@@ -221,6 +231,7 @@ class DefaultSkillEngine(
     private fun allHandles(): List<SkillRegistration> = effects.snapshot() + conditions.snapshot() + triggers.snapshot() + generalPlatform.registrations()
 
     private fun invalidate(handle: SkillRegistration) {
+        generalPlatform.triggerSubscriptions.remove(handle)
         generalPlatform.managed.remove(handle)
         generalPlatform.holderManager.remove(handle)
         generalPlatform.admissions.remove(handle)

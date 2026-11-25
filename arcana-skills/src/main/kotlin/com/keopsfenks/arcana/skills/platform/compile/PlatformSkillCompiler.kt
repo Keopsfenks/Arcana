@@ -76,12 +76,13 @@ open class PlatformSkillCompiler(
         require(chance in 0.0..100.0) { "${args.path}.chance: must be between 0 and 100" }
         val triggers = args.list("triggers", emptyList<Any>()).mapIndexed { i, value ->
             require(value is String) { "${args.path}.triggers[$i]: expected a string" }
-            SkillKey.parse(value, "arcana")
+            val own = SkillKey.parse(value, definition.key().namespace())
+            if (platform.registry(SkillComponentType.TRIGGER).get(own) != null) own else SkillKey.parse(value, "arcana")
         }
         // Trigger component resolution is added with the general-trigger contract; currently only
         // explicitly registered legacy trigger keys are accepted through the host's capability query.
         triggers.forEachIndexed { index, key ->
-            val handle = platform.legacyTrigger(key) ?: throw args.error("triggers[$index]", "unknown trigger $key")
+            val handle = platform.registry(SkillComponentType.TRIGGER).get(key) ?: platform.legacyTrigger(key) ?: throw args.error("triggers[$index]", "unknown trigger $key")
             dependencies.add(handle)
         }
         localOnly = args.list("interceptors", emptyList<Any>()).isNotEmpty()

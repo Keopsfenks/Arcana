@@ -219,6 +219,9 @@ class TriggerAdapterTests {
     @Test fun `Paper cancelled death events do not emit death skills`() {
         val host = Host()
         val event = mockk<PlayerDeathEvent>()
+        val source = mockk<org.bukkit.damage.DamageSource>()
+        every { event.damageSource } returns source
+        every { source.directEntity } returns null
         every { event.isCancelled } returns true
         val trigger = DeathTrigger(host.plugin)
         val handle = trigger.listen {}

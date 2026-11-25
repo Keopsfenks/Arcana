@@ -8,6 +8,8 @@ import java.util.Collections
 class DefinitionSnapshot(entries: Map<SkillKey, DefinitionRevision>) {
     val entries: Map<SkillKey, DefinitionRevision> = Collections.unmodifiableMap(LinkedHashMap(entries))
     val legacy = SkillSnapshot(entries.values.mapNotNull { it.legacy }, this)
+    val normalTriggers = this.entries.values.filter { it.enabled && it.native?.let { skill -> !skill.holderOnly && skill.interceptors.isEmpty() } == true }
+        .flatMap { revision -> revision.native!!.triggers.map { it to revision } }.groupBy({ it.first }, { it.second })
     companion object { val EMPTY = DefinitionSnapshot(emptyMap()) }
 }
 

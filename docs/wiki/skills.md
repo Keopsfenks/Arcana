@@ -401,3 +401,35 @@ effects:
 ```
 
 Extension conditions declare extra data through immutable `SkillSnapshotRequest` and `SkillCompilation.snapshot(request, path)`, receiving a reserved alias to read from invocation data. A compiled definition allows at most 256 distinct requests. Normal and synchronous interception requirements are tracked separately; async world/LOS providers are rejected in the local phase. Unused templates are preflighted without fetching their runtime snapshots. Custom targeters can use `SkillTargetQuery.project`/`projectLocation` to obtain the host's owned binding projection before pure filtering. All previous Java contracts remain available through their existing entry points.
+
+
+### General event adapters
+
+Schema2 accepts the existing12 player keys (`join`, `respawn`, `death`, `block_break`,
+`block_place`, `melee_attack`, `projectile_hit`, `damage_taken`, `right_click`,
+`left_click`, `sneak`, `sprint`) and native `move`, `jump`, `equip`, `held_slot`,
+`consume`, `shoot`, `kill`, `entity_attack`, `entity_damaged`, `custom`, `timer`.
+The entity attack/damaged keys cover non-player actors; player damage uses the
+existing keys, so one event does not produce duplicate player casts. Attack means
+direct or sweep attacks, excluding thorns. Equipment changes emit once with a
+copied slot map; movement ignores rotations and teleports. Consume/shoot include
+`hand` so off-hand behavior can be selected explicitly. All retained event data
+is immutable; no Bukkit Event or item stack crosses a handoff.
+
+Adapters select definition revisions and holder identities when the event is
+emitted. Reloading before the entity handoff never selects replacement code.
+Empty trigger indexes schedule no cast jobs. Pending native emissions are capped
+at1024, and close/actor retirement removes pending jobs. Synchronous generated
+damage and later lightning damage are guarded against fresh trigger roots;
+lightning identity tracking is capped4096, expires60seconds after creation, and
+keeps a1second retirement grace. Native protection events still reach other
+plugins. These guarantees have unit/ownership-spy coverage, not a live Folia run.
+
+Timers require explicit API recipients: `platform.subscribeTimer(owner,
+new SkillKey("arcana", "timer"), actor, intervalTicks)`. Intervals are1..1728000
+ticks; each recipient consumes the shared64-per-actor/4096-per-engine managed
+limit. Closing the returned handle, owner, trigger, actor or engine stops future
+emissions and queued callbacks. Declaring a YAML timer never scans players or
+loads entities. Namespaced custom events can use `platform.trigger(key, input)`;
+a registered `CustomSkillTrigger.fire(input)` also provides event-time deferred
+root dispatch.

@@ -9,6 +9,9 @@ import org.bukkit.event.entity.PlayerDeathEvent
 class DeathTrigger(plugin: ArcanaPlugin) : BukkitSkillTrigger("death", plugin) {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onEvent(event: PlayerDeathEvent) {
-        if (!cancelled(event)) emit(SkillContext.builder(event.entity).build())
+        if (com.keopsfenks.arcana.skills.execution.SkillDamageScope.isActive() || cancelled(event)) return
+        val builder = SkillContext.builder(event.entity)
+        event.damageSource.directEntity?.let { builder.value("damage_source_id", it.uniqueId.toString()) }
+        emit(builder.build())
     }
 }
