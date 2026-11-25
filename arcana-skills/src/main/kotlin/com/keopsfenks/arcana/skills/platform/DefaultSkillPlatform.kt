@@ -47,6 +47,7 @@ class DefaultSkillPlatform(
     val contributions = com.keopsfenks.arcana.skills.platform.holders.ContributionStore(managed, lifecycle, engine::reportProviderFailure)
     val auraEvents = com.keopsfenks.arcana.skills.platform.auras.AuraEventDispatcher(engine, this, lifecycle)
     val auras = com.keopsfenks.arcana.skills.platform.auras.AuraManager(engine, this, lifecycle, clock)
+    val projectiles = com.keopsfenks.arcana.skills.platform.projectiles.ProjectileManager(engine, this)
     val holderManager = com.keopsfenks.arcana.skills.platform.holders.HolderManager(engine, this, lifecycle)
     val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorDispatcher(engine, this, lifecycle)
     internal fun componentActive(handle: SkillRegistration) = handle.isActive && lifecycle.available(handle.owner)
@@ -71,7 +72,7 @@ class DefaultSkillPlatform(
     override fun definitions() = repository.definitions()
     override fun refreshHolders(actor: SkillActor) = holderManager.refresh(actor)
     override fun holders(actor: SkillActor) = holderManager.holders(actor)
-    internal fun close() { auraEvents.close(); auras.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
+    internal fun close() { auraEvents.close(); auras.close(); projectiles.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)

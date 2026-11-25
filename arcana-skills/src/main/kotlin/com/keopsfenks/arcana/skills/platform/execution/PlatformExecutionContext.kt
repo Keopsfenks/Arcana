@@ -48,6 +48,7 @@ class PlatformExecutionContext(
             }
         }
         put(com.keopsfenks.arcana.skills.platform.auras.AuraManager::class.java, platform.auras.forContext(this@PlatformExecutionContext))
+        put(com.keopsfenks.arcana.skills.platform.projectiles.ProjectileManager::class.java, platform.projectiles.forContext(this@PlatformExecutionContext))
     })
     fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame)
         .thenCompose { StatBindings.capture(it, definition.stats, state, frame, platform) }.thenCompose { captured ->

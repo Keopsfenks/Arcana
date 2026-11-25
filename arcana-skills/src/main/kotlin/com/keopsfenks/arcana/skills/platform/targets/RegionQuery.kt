@@ -60,6 +60,19 @@ class RegionQuery(
             }
         }
     }
+    override fun loaded(bounds: SkillBounds): CompletionStage<Boolean> {
+        val partitions = chunks(bounds)
+        return world(bounds.world()).thenCompose { world ->
+            if (world == null) CompletableFuture.completedFuture(false) else {
+                var result = CompletableFuture.completedFuture(true)
+                for ((x, z) in partitions) result = result.thenCompose { previous ->
+                    if (!previous) CompletableFuture.completedFuture(false)
+                    else track(scheduler.at(Location(world, x * 16.0, 0.0, z * 16.0)) { check(); world.isChunkLoaded(x, z) })
+                }
+                result
+            }
+        }
+    }
     override fun snapshot(actor: SkillActor): CompletionStage<Optional<SkillEntitySnapshot>> =
         track(scheduler.on(actor.entity()) {
             check()

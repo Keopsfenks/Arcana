@@ -238,11 +238,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** `ProjectileManager.launch(SkillInvocation,ProjectileOptions,ProjectileHooks): CompletionStage<SkillManagedHandle>` uses immutable segment snapshots and SkillTargetQuery; motion advances only after required owner-context collision results are available. Options carry finite speed/gravity/lifetime/radius/homing/bounce/pierce/max-hit/immune-delay; hooks contain compiled start/tick/hit/end lists and dependency handles.
 
-- [ ] Test deterministic seeded paths, fast segment crossing a narrow entity/block, chunk/region handoff, unloaded chunk termination, retired target, homing, bounce energy/direction, piercing, per-target immunity and total hits. Query spy rejects global/foreign reads. Tick/hit/end races and callback budgets are bounded.
-- [ ] Verify `.\gradlew.bat :arcana-skills:test --tests '*ProjectileSimulationTests' FLAGS`; expect RED.
-- [ ] Implement swept segment collision and nearest hit ordering, moving owner-location scheduling, and managed lifetime adoption. Visual interpolation cannot increase damage hits; no implicit chunk loading or unsafe global ticking.
-- [ ] Same Verify GREEN, including reload/owner-unload mid-flight and at most one end/cleanup.
-- [ ] Commit `feat(skills): simulate bounded projectiles across region ownership boundaries`.
+- [x] Test deterministic seeded paths, fast segment crossing a narrow entity/block, chunk/region handoff, unloaded chunk termination, retired target, homing, bounce energy/direction, piercing, per-target immunity and total hits. Query spy rejects global/foreign reads. Tick/hit/end races and callback budgets are bounded.
+- [x] Verify `.\gradlew.bat :arcana-skills:test --tests '*ProjectileSimulationTests' FLAGS`; expect RED.
+- [x] Implement swept segment collision and nearest hit ordering, moving owner-location scheduling, and managed lifetime adoption. Visual interpolation cannot increase damage hits; no implicit chunk loading or unsafe global ticking.
+- [x] Same Verify GREEN, including reload/owner-unload mid-flight and at most one end/cleanup.
+- [x] Commit `feat(skills): simulate bounded projectiles across region ownership boundaries`.
 
 ### Task 16: Projectile, beam and chain catalog
 
