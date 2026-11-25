@@ -262,11 +262,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** mechanics consume SkillExecutionContext and snapshots; operations requiring a Player declare capability and return `UNSUPPORTED_ACTOR`. Timed stun/freeze use managed contribution leases. Teleport uses the server's supported asynchronous ownership-safe path, not an off-owner synchronous teleport.
 
-- [ ] Test health/absorption/dead-target clamps, no-target results, actual damage guard, potion ownership, impulse normalization/zero-distance cases, dash cancellation, safe teleport completion/failure and stun teardown retaining unrelated movement contributions. No state read before target context.
-- [ ] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*CombatMechanicTests' --tests '*MovementMechanicTests' FLAGS`; expect RED.
-- [ ] Implement each file separately, sharing actions with legacy effects where behavior is identical; do not change normal armor/invulnerability behavior without an explicit supported argument.
-- [ ] Same Verify GREEN and legacy effect/damage-recursion tests GREEN.
-- [ ] Commit `feat(skills): expand native combat status and movement mechanics`.
+- [x] Test health/absorption/dead-target clamps, no-target results, actual damage guard, potion ownership, impulse normalization/zero-distance cases, dash cancellation, safe teleport completion/failure and stun teardown retaining unrelated movement contributions. No state read before target context.
+- [x] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*CombatMechanicTests' --tests '*MovementMechanicTests' FLAGS`; expect RED.
+- [x] Implement each file separately, sharing actions with legacy effects where behavior is identical; do not change normal armor/invulnerability behavior without an explicit supported argument.
+- [x] Same Verify GREEN and legacy effect/damage-recursion tests GREEN.
+- [x] Commit `feat(skills): expand native combat status and movement mechanics`.
 
 ### Task 18: Presentation, item and world catalog
 

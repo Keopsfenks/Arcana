@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Owner-thread reconciliation; external effects are never overwritten or restored from snapshots. */
 class PotionContributions(private val scheduler: SkillScheduler) : Listener, AutoCloseable {
     private data class Key(val actor: UUID, val potion: NamespacedKey)
-    private data class Claim(val id: SkillKey, val effect: PotionEffect)
+    private data class Claim(val id: SkillKey, val effect: PotionEffect, val dispellable: Boolean, val onDispel: () -> Unit)
     private class Group(val actor: SkillActor, val type: PotionEffectType) {
         val claims = LinkedHashMap<SkillKey, Claim>()
         var owned: PotionEffect? = null
@@ -26,10 +26,13 @@ class PotionContributions(private val scheduler: SkillScheduler) : Listener, Aut
     private val installed = AtomicBoolean()
     fun install(plugin: Plugin) { check(installed.compareAndSet(false, true)); try { plugin.server.pluginManager.registerEvents(this, plugin) } catch (error: Throwable) { installed.set(false); throw error } }
     fun add(actor: SkillActor, identity: SkillKey, type: PotionEffectType, amplifier: Int, ambient: Boolean, particles: Boolean, icon: Boolean): SkillContributionLease {
+        return add(actor, identity, type, amplifier, ambient, particles, icon, false) {}
+    }
+    fun add(actor: SkillActor, identity: SkillKey, type: PotionEffectType, amplifier: Int, ambient: Boolean, particles: Boolean, icon: Boolean, dispellable: Boolean, onDispel: () -> Unit): SkillContributionLease {
         check(scheduler.owns(actor.entity())) { "Potion contribution requires actor ownership" }; check(!closed.get())
         val key = Key(actor.id(), type.key)
         val group = groups.computeIfAbsent(key) { Group(actor, type) }
-        val claim = Claim(identity, PotionEffect(type, 40, amplifier, ambient, particles, icon))
+        val claim = Claim(identity, PotionEffect(type, 40, amplifier, ambient, particles, icon), dispellable, onDispel)
         check(group.claims.putIfAbsent(identity, claim) == null) { "Duplicate potion contribution identity" }
         reconcile(key, group); schedule(key, group)
         val ended = AtomicBoolean()
@@ -44,6 +47,15 @@ class PotionContributions(private val scheduler: SkillScheduler) : Listener, Aut
         }
     }
     private fun matches(current: PotionEffect?, owned: PotionEffect) = current != null && current.type == owned.type && current.amplifier == owned.amplifier && current.isAmbient == owned.isAmbient && current.hasParticles() == owned.hasParticles() && current.hasIcon() == owned.hasIcon() && current.duration in 1..40
+    fun removeOwned(actor: SkillActor, type: PotionEffectType) {
+        check(scheduler.owns(actor.entity())) { "Potion removal requires actor ownership" }
+        val key = Key(actor.id(), type.key); val group = groups[key] ?: return
+        val removed = group.claims.values.filter { it.dispellable }
+        removed.forEach { group.claims.remove(it.id, it) }
+        reconcile(key, group)
+        if (group.claims.isEmpty()) { groups.remove(key, group); group.task?.cancel(); group.task = null }
+        removed.forEach { it.onDispel() }
+    }
     private fun reconcile(key: Key, group: Group) {
         check(scheduler.owns(group.actor.entity()))
         val entity = group.actor.entity()

@@ -69,10 +69,10 @@ class ManagedPulse private constructor(
     }
     companion object {
         fun start(context: PlatformExecutionContext, duration: Long, period: Long,
-            onStart: List<CompiledSkillMechanic> = emptyList(), pulse: List<CompiledSkillMechanic> = emptyList(), onEnd: List<CompiledSkillMechanic> = emptyList()): CompletableFuture<SkillManagedHandle> {
+            onStart: List<CompiledSkillMechanic> = emptyList(), pulse: List<CompiledSkillMechanic> = emptyList(), onEnd: List<CompiledSkillMechanic> = emptyList(), recipient: SkillActor? = null): CompletableFuture<SkillManagedHandle> {
             require(duration in 1..1_728_000 && period in 1..1_728_000)
             val input = context.invocation()
-            val managed = ManagedExecutionState.adopt(context, input.target().orElse(input.actor()))
+            val managed = ManagedExecutionState.adopt(context, recipient ?: input.target().orElse(input.actor()))
             return try {
                 val instance = ManagedPulse(managed, duration, period, java.util.List.copyOf(onStart), java.util.List.copyOf(pulse), java.util.List.copyOf(onEnd))
                 instance.timer(duration) { instance.remove(SkillRemovalReason.EXPIRED) }; instance.run(true); instance.started

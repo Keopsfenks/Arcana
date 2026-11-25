@@ -43,9 +43,9 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | PROJECTILE | M-P | ProjectileManager, bölge geçişi, segment çarpışması | 15 | Tamamlandı; test edildi | ProjectileSimulationTests |
 | PROJECTILE-OPS | M-P | ProjectileMechanic, MissileMechanic, RayMechanic, BeamMechanic | 16 | Tamamlandı; test edildi | ProjectileMechanicTests |
 | PROJECTILE-CHAIN | M-P,M-T | ChainMechanic; hit filtresi/homing/pierce/bounce | 15,16 | Tamamlandı; test edildi | ProjectileSimulationTests + ProjectileMechanicTests |
-| COMBAT | L-E,M-S | DamageMechanic, HealMechanic, FeedMechanic, IgniteMechanic, ExtinguishMechanic, AbsorptionMechanic | 17 | Planlandı | CombatMechanicTests |
-| STATUS | L-E,M-S | PotionMechanic, RemovePotionMechanic, FreezeMechanic, StunMechanic | 17 | Planlandı | CombatMechanicTests |
-| MOVE | L-E,M-S | VelocityMechanic, KnockbackMechanic, PullMechanic, LaunchMechanic, DashMechanic, TeleportMechanic | 17 | Planlandı | MovementMechanicTests |
+| COMBAT | L-E,M-S | DamageMechanic, HealMechanic, FeedMechanic, IgniteMechanic, ExtinguishMechanic, AbsorptionMechanic | 17 | Tamamlandı; test edildi | CombatMechanicTests + NativeContributionTests |
+| STATUS | L-E,M-S | PotionMechanic, RemovePotionMechanic, FreezeMechanic, StunMechanic | 17 | Tamamlandı; test edildi | CombatMechanicTests + NativeContributionTests |
+| MOVE | L-E,M-S | VelocityMechanic, KnockbackMechanic, PullMechanic, LaunchMechanic, DashMechanic, TeleportMechanic | 17 | Tamamlandı; test edildi | MovementMechanicTests |
 | VISUAL | L-E,M-S | ParticleMechanic, ParticleLineMechanic, ParticleRingMechanic, SoundMechanic, StopSoundMechanic | 18 | Planlandı | VisualMechanicTests |
 | TEXT | L-E,M-S | MessageMechanic, ActionBarMechanic, TitleMechanic, BossBarMechanic | 18 | Planlandı | PresentationMechanicTests |
 | ITEM | L-E | GiveItemMechanic, RemoveItemMechanic, DurabilityMechanic, EnchantMechanic | 18 | Planlandı | ItemMechanicTests |

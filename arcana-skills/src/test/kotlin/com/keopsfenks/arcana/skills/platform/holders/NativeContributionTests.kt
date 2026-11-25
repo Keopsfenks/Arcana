@@ -113,5 +113,39 @@ class NativeContributionTests {
         strong.close(); assertEquals(1, current!!.amplifier)
         weak.close(); assertNull(current); potions.close()
     }
+    @Test fun nativeTimedPotionMechanicsExpireIndependentlyAndRemovalKeepsExternalEffects() {
+        val f = fixture(); val type = potionType(); var current: PotionEffect? = null
+        every { f.legacy.caster.getPotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current }
+        every { f.legacy.caster.addPotionEffect(any()) } answers { f.scheduler.assertOwner(f.legacy.caster); current = firstArg(); true }
+        every { f.legacy.caster.removePotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current = null; Unit }
+        val potions = PotionContributions(f.scheduler)
+        val apply = com.keopsfenks.arcana.skills.components.effects.status.PotionMechanic(potions) { type }
+        val remove = com.keopsfenks.arcana.skills.components.effects.status.RemovePotionMechanic(potions) { type }
+        f.platform.register(f.legacy.plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "potion"), apply)
+        f.platform.register(f.legacy.plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "remove_potion"), remove)
+        f.write("short", effects = "  - {type: potion, potion: speed, amplifier: 3, duration: 3t}")
+        f.write("long", effects = "  - {type: potion, potion: speed, amplifier: 1, duration: 10t}")
+        f.write("remove", effects = "  - {type: remove_potion, potion: speed}"); f.load()
+        assertTrue(f.cast("short").join().isSuccess); assertTrue(f.cast("long").join().isSuccess); assertEquals(3, current!!.amplifier)
+        f.scheduler.advance(3); assertEquals(1, current!!.amplifier)
+        val external = PotionEffect(type, 200, 4)
+        f.scheduler.on(f.legacy.caster) { current = external; potions.externalChange(f.invocation().actor(), type) }.future.join()
+        assertTrue(f.cast("remove").join().isSuccess); assertSame(external, current)
+        f.engine.closeOwner(f.legacy.plugin); assertSame(external, current); assertEquals(0, f.platform.managed.size); potions.close()
+    }
+    @Test fun removingTimedPotionsDoesNotDestroyAPersistentHolderContribution() {
+        val f = fixture(); val type = potionType(); var current: PotionEffect? = null
+        every { f.legacy.caster.getPotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current }
+        every { f.legacy.caster.addPotionEffect(any()) } answers { f.scheduler.assertOwner(f.legacy.caster); current = firstArg(); true }
+        every { f.legacy.caster.removePotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current = null; Unit }
+        val potions = PotionContributions(f.scheduler); val actor = f.invocation().actor()
+        val holder = f.scheduler.on(f.legacy.caster) { potions.add(actor, SkillKey("other", "holder"), type, 0, false, true, true) }.future.join()
+        f.platform.register(f.legacy.plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "potion"), com.keopsfenks.arcana.skills.components.effects.status.PotionMechanic(potions) { type })
+        f.platform.register(f.legacy.plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "remove_potion"), com.keopsfenks.arcana.skills.components.effects.status.RemovePotionMechanic(potions) { type })
+        f.write(effects = "  - {type: potion, potion: speed, amplifier: 3, duration: 100t}"); f.write("remove", effects = "  - {type: remove_potion, potion: speed}"); f.load()
+        f.cast().join(); assertEquals(3, current!!.amplifier); f.cast("remove").join()
+        assertNotNull(current); assertEquals(0, current!!.amplifier); assertEquals(0, f.platform.managed.size)
+        f.engine.shutdown(); assertEquals(0, current!!.amplifier); holder.close(); assertNull(current); potions.close()
+    }
 
 }
