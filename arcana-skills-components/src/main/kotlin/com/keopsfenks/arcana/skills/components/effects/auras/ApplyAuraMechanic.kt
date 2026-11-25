@@ -7,10 +7,10 @@ import com.keopsfenks.arcana.skills.platform.auras.*
 import com.keopsfenks.arcana.skills.platform.compile.NodeOptions
 import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 
-class ApplyAuraMechanic : SkillMechanic(SkillDescriptor.of("apply_aura", "Apply an owned finite aura with immutable hooks and components")) {
+class ApplyAuraMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("apply_aura", "Apply an owned finite aura with immutable hooks and components", "aura", "name", "aura-type", "tags", "duration", "period", "stack-limit", "share-caster", "refresh", "overwrite", "charges", "on-start", "on-tick", "on-end", "components")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
         val args = AuraSupport.resolve(arguments, compilation)
-        ComponentArguments.keys(args, "aura", "name", "aura-type", "tags", "duration", "period", "stack-limit", "share-caster", "refresh", "overwrite", "charges", "on-start", "on-tick", "on-end", "components")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(args, descriptor())
         val name = SkillKey.parse(args.string("name"), compilation.namespace())
         val type = if (args.has("aura-type")) SkillKey.parse(args.string("aura-type"), compilation.namespace()) else name
         val tags = args.list("tags", emptyList<Any>()).map { require(it is String) { "${args.path}.tags: expected strings" }; SkillKey.parse(it, compilation.namespace()) }.toSet()

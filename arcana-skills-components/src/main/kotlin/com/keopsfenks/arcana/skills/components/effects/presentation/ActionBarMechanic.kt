@@ -8,9 +8,9 @@ import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 
-class ActionBarMechanic(private val audience: (Player) -> Audience = PlayerUtils::getAudience, private val parser: (String) -> Component = StringUtils::formatToRichComponent) : SkillMechanic(SkillDescriptor.of("action_bar", "Player-only action bar with literal snapshot replacements")) {
+class ActionBarMechanic(private val audience: (Player) -> Audience = PlayerUtils::getAudience, private val parser: (String) -> Component = StringUtils::formatToRichComponent) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("action_bar", "Player-only action bar with literal snapshot replacements", "text", "target")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "text", "target"); val recipient = NativeActions.recipient(arguments); val text = NativeText.template(arguments, "text")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments); val text = NativeText.template(arguments, "text")
         return CompiledSkillMechanic { context -> NativeActions.run(context, recipient) { entity ->
             if (entity !is Player) SkillResult.of(SkillResult.Status.UNSUPPORTED_ACTOR, "Action bar requires a player") else { audience(entity).sendActionBar(NativeText.render(text, context.invocation(), parser)); SkillResult.success() }
         } }

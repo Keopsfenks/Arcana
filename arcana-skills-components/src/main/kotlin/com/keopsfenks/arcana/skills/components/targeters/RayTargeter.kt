@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.platform.targets.*
 import java.util.concurrent.CompletableFuture
 
-class RayTargeter : SkillTargeter(SkillDescriptor.of("ray", "Select the nearest eligible ray contact; blocks stop the ray")) {
+class RayTargeter : SkillTargeter(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("ray", "Select the nearest eligible ray contact; blocks stop the ray", *com.keopsfenks.arcana.skills.platform.targets.TargetSelectionPolicy.OPTIONS, "length", "radius")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillTargeter {
-        TargeterSupport.keys(arguments, "length", "radius")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val length = TargeterSupport.number(arguments, compilation, "length", 10, 0.0, 256.0)
         val radius = TargeterSupport.number(arguments, compilation, "radius", 0, 0.0, 16.0)
         val policy = TargetSelectionPolicy.compile(arguments, compilation, excludeSelf = true)

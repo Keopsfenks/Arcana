@@ -12,6 +12,7 @@ class PlatformDependencyException(message: String) : IllegalStateException(messa
 
 /** Native and legacy descendants borrow the exact same root state and scheduled work set. */
 class PlatformExecutionState @JvmOverloads constructor(val root: ExecutionState, val snapshot: DefinitionSnapshot, private val available: (SkillRegistration) -> Boolean = { it.isActive }) {
+    @Volatile var traceId: java.util.UUID? = null
     @Volatile var managedState: com.keopsfenks.arcana.skills.platform.managed.ManagedExecutionState? = null
     private val frames = ConcurrentHashMap.newKeySet<InvocationFrame>()
     private val branches = AtomicInteger()

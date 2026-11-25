@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 
-class BranchMechanic : SkillMechanic(SkillDescriptor.of("branch", "Execute the matching side of a typed predicate")) {
+class BranchMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("branch", "Execute the matching side of a typed predicate", "condition", "then", "else")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "condition", "then", "else")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val condition = compilation.predicate(arguments.section("condition"))
         val yes = FlowSupport.effects(arguments, compilation, "then", true)
         val no = FlowSupport.effects(arguments, compilation, "else", true)

@@ -4,9 +4,9 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.platform.targets.*
 
-class BoxTargeter : SkillTargeter(SkillDescriptor.of("box", "Select entities whose positions are inside a centered box")) {
+class BoxTargeter : SkillTargeter(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("box", "Select entities whose positions are inside a centered box", *com.keopsfenks.arcana.skills.platform.targets.TargetSelectionPolicy.OPTIONS, "width", "height", "depth")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillTargeter {
-        TargeterSupport.keys(arguments, "width", "height", "depth")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val width = TargeterSupport.number(arguments, compilation, "width", 10, 0.0, 256.0)
         val height = TargeterSupport.number(arguments, compilation, "height", 10, 0.0, 256.0)
         val depth = TargeterSupport.number(arguments, compilation, "depth", 10, 0.0, 256.0)

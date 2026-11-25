@@ -7,9 +7,9 @@ import com.keopsfenks.arcana.skills.platform.targets.TargetGeometry
 import java.util.*
 import java.util.concurrent.*
 
-class ChainMechanic : SkillMechanic(SkillDescriptor.of("chain", "Visit at most 100 distinct nearby actors in stable distance order")) {
+class ChainMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("chain", "Visit at most 100 distinct nearby actors in stable distance order", *ProjectileArguments.HOOK_KEYS, "radius", "jumps", "hit-caster")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, *ProjectileArguments.HOOK_KEYS, "radius", "jumps", "hit-caster")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val radius = ProjectileArguments.number(arguments, compilation, "radius", 8, .001, 64.0)
         val jumps = ProjectileArguments.number(arguments, compilation, "jumps", 5, 1.0, 100.0, true)
         val caster = arguments.bool("hit-caster", false); val hooks = ProjectileArguments.Hooks(arguments, compilation)

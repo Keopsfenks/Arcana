@@ -8,9 +8,9 @@ import com.keopsfenks.arcana.skills.platform.compile.NodeOptions
 import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 import java.util.concurrent.CompletableFuture
 
-class WaitUntilMechanic : SkillMechanic(SkillDescriptor.of("wait_until", "Poll fresh snapshots until a condition succeeds or a finite timeout expires")) {
+class WaitUntilMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("wait_until", "Poll fresh snapshots until a condition succeeds or a finite timeout expires", "condition", "timeout", "poll", "effects")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "condition", "timeout", "poll", "effects")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         require(arguments.has("timeout")) { "${arguments.path}.timeout: required" }
         val timeout = NodeOptions.duration(arguments, compilation, "timeout")
         val adjusted = if (arguments.has("poll")) arguments else SkillArguments(arguments.values + ("poll" to "1t"), arguments.path)

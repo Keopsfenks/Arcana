@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.effects.EffectValues
 import org.bukkit.entity.Player
 
-class FeedMechanic : SkillMechanic(SkillDescriptor.of("feed", "Player-only bounded food and saturation addition")) {
+class FeedMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("feed", "Player-only bounded food and saturation addition", "amount", "saturation", "target")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "amount", "saturation", "target")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val recipient = NativeActions.recipient(arguments); val amount = NativeActions.number(arguments, compilation, "amount", 1, 0.0, 20.0, true)
         val saturation = NativeActions.number(arguments, compilation, "saturation", 0, 0.0, 20.0)
         return CompiledSkillMechanic { context -> NativeActions.run(context, recipient) { entity ->

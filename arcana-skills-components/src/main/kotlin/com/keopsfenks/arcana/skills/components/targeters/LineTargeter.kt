@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.platform.targets.*
 import kotlin.math.*
 
-class LineTargeter : SkillTargeter(SkillDescriptor.of("line", "Select a finite forward segment with an inclusive half-width")) {
+class LineTargeter : SkillTargeter(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("line", "Select a finite forward segment with an inclusive half-width", *com.keopsfenks.arcana.skills.platform.targets.TargetSelectionPolicy.OPTIONS, "length", "width")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillTargeter {
-        TargeterSupport.keys(arguments, "length", "width")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val length = TargeterSupport.number(arguments, compilation, "length", 10, 0.0, 256.0)
         val width = TargeterSupport.number(arguments, compilation, "width", 1, 0.0, 16.0)
         val policy = TargetSelectionPolicy.compile(arguments, compilation, "nearest")

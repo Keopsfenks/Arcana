@@ -4,9 +4,9 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 
-class CastMechanic : SkillMechanic(SkillDescriptor.of("cast", "Call a namespaced skill with explicit immutable parameters")) {
+class CastMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("cast", "Call a namespaced skill with explicit immutable parameters", "skill", "parameters")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "skill", "parameters")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val key = SkillKey.parse(arguments.string("skill"), compilation.namespace())
         compilation.referenceSkill(key, "${arguments.path}.skill")
         val parameters = if (!arguments.has("parameters")) emptyMap() else arguments.section("parameters").values.mapValues { (name, raw) ->

@@ -433,3 +433,6 @@ emissions and queued callbacks. Declaring a YAML timer never scans players or
 loads entities. Namespaced custom events can use `platform.trigger(key, input)`;
 a registered `CustomSkillTrigger.fire(input)` also provides event-time deferred
 root dispatch.
+
+
+Advanced extension contracts: [API](skills-api.md); generated option inventory and limits: [native catalog](skills-components.md).

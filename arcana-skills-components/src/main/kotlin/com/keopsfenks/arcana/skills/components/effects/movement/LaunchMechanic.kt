@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.skills.components.actions.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.effects.EffectValues
 
-class LaunchMechanic : SkillMechanic(SkillDescriptor.of("launch", "Replace vertical velocity with bounded upward strength")) {
+class LaunchMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("launch", "Replace vertical velocity with bounded upward strength", "strength", "target")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "strength", "target"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         val strength = NativeActions.number(arguments, compilation, "strength", 1, 0.0, 16.0)
         return CompiledSkillMechanic { context -> NativeActions.run(context, recipient) { entity -> EffectValues.alive(entity) { val previous = entity.velocity; entity.velocity = MovementActions.bounded(SkillVector(previous.x, strength.evaluate(context.invocation()), previous.z)) } } }
     }

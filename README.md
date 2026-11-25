@@ -7,7 +7,7 @@ Arcana, **Semih Gürbüz (Keopsfenks)** tarafından sürdürülen bir Minecraft 
 - Eklenti adı: `Arcana`
 - Paket: `com.keopsfenks.arcana`
 - API: `com.keopsfenks:arcana-api`
-- YAML beceri/efekt motoru: ayrı `arcana-skills` modülü, aynı kurulum JAR'ı
+- Gelişmiş YAML beceri motoru ve bileşen kataloğu: ayrı modüller, aynı kurulum JAR'ı
 - Ana sınıf: `com.keopsfenks.arcana.internal.spigot.ArcanaImpl`
 - Geliştirici: [Keopsfenks](https://github.com/Keopsfenks)
 - [Belgeler](docs/wiki/home.md) · [Sürümler](https://github.com/Keopsfenks/Arcana/releases) · [Hata bildir](https://github.com/Keopsfenks/Arcana/issues)
@@ -28,7 +28,7 @@ Sunucuya `build/libs/arcana-<sürüm>-all.jar` dosyasını kur. Normal JAR bağ�
 
 ## API kullanımı
 
-`arcana-api` ortak Java sözleşmelerini, `arcana-core` sunucu uygulamasını, `arcana-skills` bağımsız YAML motorunu barındırır. Her efekt, koşul ve tetikleyici ayrı sınıftır. [Arcana Skills kılavuzu](docs/wiki/skills.md), etkinleştirme örnekleri ve Java genişletme API'sini anlatır.
+`arcana-api` ortak Java sözleşmelerini, `arcana-core` sunucu uygulamasını, `arcana-skills` beceri motorunu ve `arcana-skills-components` yerleşik bileşen kataloğunu barındırır. Efektler, koşullar, hedefleyiciler ve tetikleyiciler ayrı sınıflardır. Oyuncu ve mob aktörleri; aura, mermi, kaynak maliyeti ve sahipli yaşam döngüsü aynı motoru kullanır. [YAML kılavuzu](docs/wiki/skills.md), [Java API](docs/wiki/skills-api.md) ve [125 bileşenlik katalog](docs/wiki/skills-components.md) yapılandırmayı ve genişletmeyi anlatır.
 
 Önce `.\gradlew.bat :arcana-api:publishToMavenLocal` komutunu çalıştır; ardından kendi eklentinde:
 

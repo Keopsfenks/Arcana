@@ -10,9 +10,9 @@ import net.kyori.adventure.title.Title
 import org.bukkit.entity.Player
 import java.time.Duration
 
-class TitleMechanic(private val audience: (Player) -> Audience = PlayerUtils::getAudience, private val parser: (String) -> Component = StringUtils::formatToRichComponent) : SkillMechanic(SkillDescriptor.of("title", "Player-only title with finite native client timings")) {
+class TitleMechanic(private val audience: (Player) -> Audience = PlayerUtils::getAudience, private val parser: (String) -> Component = StringUtils::formatToRichComponent) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("title", "Player-only title with finite native client timings", "title", "subtitle", "target", "fade-in", "stay", "fade-out")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "title", "subtitle", "target", "fade-in", "stay", "fade-out")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val recipient = NativeActions.recipient(arguments); val title = NativeText.template(arguments, "title"); val subtitle = arguments.string("subtitle", "").also { require(it.length <= 8192) { "${arguments.path}.subtitle: maximum 8192 characters" } }
         val fadeIn = NativeText.duration(arguments, compilation, "fade-in", "10t"); val stay = NativeText.duration(arguments, compilation, "stay", "70t"); val fadeOut = NativeText.duration(arguments, compilation, "fade-out", "20t")
         return CompiledSkillMechanic { context -> NativeActions.run(context, recipient) { entity ->

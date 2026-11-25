@@ -10,9 +10,9 @@ import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 
-class TeleportMechanic : SkillMechanic(SkillDescriptor.of("teleport", "Await the server's ownership-safe asynchronous teleport result")) {
+class TeleportMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("teleport", "Await the server's ownership-safe asynchronous teleport result", "target", "destination")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "destination"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         val destination = arguments.section("destination")
         destination.values.keys.firstOrNull { it !in setOf("world", "x", "y", "z", "yaw", "pitch") }?.let { throw destination.error(it, "unknown destination field") }
         for (coordinate in listOf("x", "y", "z")) require(destination.has(coordinate)) { "${destination.path}.$coordinate: required" }

@@ -11,9 +11,9 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import java.util.concurrent.CompletableFuture
 
-class BreakBlockMechanic(private val air: () -> BlockData = { Material.AIR.createBlockData() }, private val events: (Event) -> Unit = BlockSupport::event) : SkillMechanic(SkillDescriptor.of("break_block", "Loaded-location block removal obeying cancellable native break/change events")) {
+class BreakBlockMechanic(private val air: () -> BlockData = { Material.AIR.createBlockData() }, private val events: (Event) -> Unit = BlockSupport::event) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("break_block", "Loaded-location block removal obeying cancellable native break/change events", "target", "drops", "physics")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "drops", "physics"); val location = WorldActions.location(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val location = WorldActions.location(arguments)
         val empty = air(); val drops = arguments.bool("drops", false); val physics = arguments.bool("physics", false)
         return CompiledSkillMechanic { context ->
             val input = context.invocation(); val point = location(input); val source = input.actor()

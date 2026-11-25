@@ -4,9 +4,9 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.platform.targets.*
 
-class ForwardTargeter : SkillTargeter(SkillDescriptor.of("forward", "Select a location ahead using yaw and pitch")) {
+class ForwardTargeter : SkillTargeter(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("forward", "Select a location ahead using yaw and pitch", *com.keopsfenks.arcana.skills.platform.targets.TargetSelectionPolicy.OPTIONS, "distance")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillTargeter {
-        TargeterSupport.keys(arguments, "distance")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val distance = TargeterSupport.number(arguments, compilation, "distance", 1, 0.0, 256.0)
         val policy = TargetSelectionPolicy.compile(arguments, compilation)
         return CompiledSkillTargeter { context ->

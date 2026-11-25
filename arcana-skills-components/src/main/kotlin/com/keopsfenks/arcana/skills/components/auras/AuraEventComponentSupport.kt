@@ -5,8 +5,8 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.auras.AuraInstance
 import java.util.concurrent.CompletableFuture
 internal object AuraEventComponentSupport {
-    fun compile(kind: SkillKey, arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "effects", "interceptors", "conditions", "consume-charge")
+    fun compile(kind: SkillKey, arguments: SkillArguments, compilation: SkillCompilation, descriptor: SkillDescriptor): CompiledSkillMechanic {
+        ComponentArguments.keys(arguments, descriptor)
         val effects = AuraSupport.hook(arguments, compilation, "effects")
         val interceptors = compilation.interceptors(arguments.list("interceptors", emptyList<Any>()), "${arguments.path}.interceptors")
         require(effects.isNotEmpty() || interceptors.isNotEmpty()) { "${arguments.path}: effects or interceptors required" }

@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 import com.keopsfenks.arcana.skills.platform.projectiles.ProjectileHitLedger
 import java.util.concurrent.CompletableFuture
 
-class RayMechanic : SkillMechanic(SkillDescriptor.of("ray", "Run one bounded swept ray with contact hooks")) {
+class RayMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("ray", "Run one bounded swept ray with contact hooks", *RaySupport.KEYS, *ProjectileArguments.HOOK_KEYS)) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, *RaySupport.KEYS, *ProjectileArguments.HOOK_KEYS)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val ray = RaySupport(arguments, compilation)
         return CompiledSkillMechanic { context ->
             if (context !is PlatformExecutionContext) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.UNSUPPORTED_CONTEXT, "Ray requires Arcana execution"))

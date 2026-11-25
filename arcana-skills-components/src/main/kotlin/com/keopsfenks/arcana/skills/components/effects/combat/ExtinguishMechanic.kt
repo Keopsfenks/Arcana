@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.skills.components.actions.NativeActions
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.effects.EffectValues
 
-class ExtinguishMechanic : SkillMechanic(SkillDescriptor.of("extinguish", "Clear a living actor's native burning")) {
+class ExtinguishMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("extinguish", "Clear a living actor's native burning", "target")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         return CompiledSkillMechanic { context -> NativeActions.run(context, recipient) { entity -> EffectValues.alive(entity) { entity.fireTicks = 0 } } }
     }
 }

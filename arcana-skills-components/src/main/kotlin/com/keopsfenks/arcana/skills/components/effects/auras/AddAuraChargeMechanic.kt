@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.compile.NodeOptions
 import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 import java.util.concurrent.CompletableFuture
-class AddAuraChargeMechanic : SkillMechanic(SkillDescriptor.of("add_aura_charge", "Change matching aura charges, removing exhausted instances")) {
+class AddAuraChargeMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("add_aura_charge", "Change matching aura charges, removing exhausted instances", "name", "aura-type", "tag", "caster", "current", "amount")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "name", "aura-type", "tag", "caster", "current", "amount")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val matcher = AuraMatcher(arguments, compilation)
         val amount = NodeOptions.number(arguments, compilation, "amount", 1, -1_000_000.0, 1_000_000.0, integer = true)
         return CompiledSkillMechanic { context -> if (context !is PlatformExecutionContext) AuraSupport.unsupported() else {

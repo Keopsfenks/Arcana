@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.execution.*
 import java.util.concurrent.CompletableFuture
 
-class LightningMechanic : SkillMechanic(SkillDescriptor.of("lightning", "Native loaded-location lightning, visual-only by default")) {
+class LightningMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("lightning", "Native loaded-location lightning, visual-only by default", "target", "effect-only")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "effect-only"); val location = WorldActions.location(arguments); val visual = arguments.bool("effect-only", true)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val location = WorldActions.location(arguments); val visual = arguments.bool("effect-only", true)
         return CompiledSkillMechanic { context -> val point = location(context.invocation())
             if (point == null) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.NO_TARGET, "Lightning location missing")) else WorldActions.at(context, point, true) { at ->
                 if (visual) at.world!!.strikeLightningEffect(at) else {

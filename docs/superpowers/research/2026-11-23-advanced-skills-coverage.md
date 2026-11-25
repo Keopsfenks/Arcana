@@ -56,14 +56,14 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | COND-WORLD | L-E,M-S | WorldPredicate, BiomePredicate, TimePredicate, WeatherPredicate, HeightPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
 | COND-TARGET | M-T,M-C | DistancePredicate, LineOfSightPredicate, EntityTypePredicate, HasTargetPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
 | COND-DATA | L-E,M-V,M-A | EquipmentPredicate, VariablePredicate, ResourcePredicate, StatPredicate, HasAuraPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
-| TRIGGER-BASE | L-E,M-S | Mevcut 12 tetikleyici için invocation bridge | 20 | Planlandı | PlatformTriggerTests |
-| TRIGGER-MOVE | L-E,M-S | MoveSkillTrigger, JumpSkillTrigger, TimerSkillTrigger | 20 | Planlandı | PlatformTriggerTests |
-| TRIGGER-ITEM | L-E,M-S | EquipSkillTrigger, HeldSlotSkillTrigger, ConsumeSkillTrigger, ShootSkillTrigger | 20 | Planlandı | PlatformTriggerTests |
-| TRIGGER-FIGHT | L-E,M-S | KillSkillTrigger, EntityAttackSkillTrigger, EntityDamagedSkillTrigger, CustomSkillTrigger | 20 | Planlandı | PlatformTriggerTests |
-| BIND | L-C,M-V,M-C | Tipli param/var/stat/snapshot binding ve güvenli metin | 5,6,21 | Planlandı | BindingIntegrationTests |
-| TOOLS | M-S | validate/inspect/trace, metadata/schema, bütçe sayaçları | 21 | Planlandı | SkillDiagnosticsTests |
-| LIMITS | L-C,M-P,M-A | Hedef/fan-out/callback/hit/actor/server sınırları | 6,9,13,15,21 | Planlandı | PlatformLimitsTests |
-| V1 | Mevcut Arcana | Şemasız YAML, eski Java çağrıları ve sonuçlar | 1,2,21 | Mevcut; regresyon gerekli | PlatformCompatibilityTests |
+| TRIGGER-BASE | L-E,M-S | Mevcut 12 tetikleyici için invocation bridge | 20 | Tamamlandı; test edildi | PlatformTriggerTests |
+| TRIGGER-MOVE | L-E,M-S | MoveSkillTrigger, JumpSkillTrigger, TimerSkillTrigger | 20 | Tamamlandı; test edildi | PlatformTriggerTests |
+| TRIGGER-ITEM | L-E,M-S | EquipSkillTrigger, HeldSlotSkillTrigger, ConsumeSkillTrigger, ShootSkillTrigger | 20 | Tamamlandı; test edildi | PlatformTriggerTests |
+| TRIGGER-FIGHT | L-E,M-S | KillSkillTrigger, EntityAttackSkillTrigger, EntityDamagedSkillTrigger, CustomSkillTrigger | 20 | Tamamlandı; test edildi | PlatformTriggerTests |
+| BIND | L-C,M-V,M-C | Tipli param/var/stat/snapshot binding ve güvenli metin | 5,6,21 | Tamamlandı; test edildi | BindingIntegrationTests |
+| TOOLS | M-S | validate/inspect/trace, metadata/schema, bütçe sayaçları | 21 | Tamamlandı; test edildi | SkillDiagnosticsTests |
+| LIMITS | L-C,M-P,M-A | Hedef/fan-out/callback/hit/actor/server sınırları | 6,9,13,15,21 | Tamamlandı; test edildi | PlatformLimitsTests + PlatformSelectionLimitsTests + ManagedBudgetTests |
+| V1 | Mevcut Arcana | Şemasız YAML, eski Java çağrıları ve sonuçlar | 1,2,21 | Korundu; 96 eski imza ve Java tüketici test edildi | PlatformCompatibilityTests |
 | PROVIDER | L-E,M-S | Economy/mana/özel stat/özel item API'si için genel sözleşme | 3,10,12 | Yalnızca genel API | ProviderLifecycleTests |
 | NO-ADDONS | Kullanıcı kapsamı | Ayrı RPG/Items/Mobs eklenti veya ürün örnekleri | — | Kapsam dışı | Dağıtımda ek eklenti yok |
 | NO-MOBS | Kullanıcı kapsamı | Mob/boss tanımı, AI ve faction/threat yönetimi | — | Kapsam dışı | Yalnızca aktör/skill API'si |
@@ -72,3 +72,14 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | NO-COMPAT | Onaylı native şema | Libreforge/MythicMobs YAML veya paket uyumluluğu | — | Kapsam dışı | Native schema 1/2 |
 
 Her `Planlandı` satırı, plandaki dosya ve testlerle tamamlanmadan bitmiş olarak raporlanamaz. Kaynak CSV daha geniş referans yüzeyini görünür tutar; satır sayısı Arcana'da o sayıda mekanik üretildiği anlamına gelmez. Yeni bir referans işlevinin bu sınırın dışında kaldığı anlaşılırsa bunun native karşılığı, provider bağımlılığı veya kapsam dışı gerekçesi kaydedilir; sessizce mevcut bir sınıfa alias verilerek eşdeğerlik iddia edilmez.
+
+
+### Reference dispositions
+
+The [805-row disposition inventory](2026-11-23-libreforge-reference-dispositions.csv)
+records every pinned Libreforge identifier. `native-family` means an explicitly
+named family analogue with Arcana's own options/bounds; it is not YAML, ID or
+behavioral compatibility. `provider-contract-only` ships no external product
+adapter. `reference-only` is outside the approved native catalog and is not
+claimed implemented. Native catalog registration counts and behavior tests,
+not the reference inventory size, determine delivered coverage.

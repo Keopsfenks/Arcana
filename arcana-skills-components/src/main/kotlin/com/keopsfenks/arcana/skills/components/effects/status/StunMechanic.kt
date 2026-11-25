@@ -11,9 +11,9 @@ import org.bukkit.attribute.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
-class StunMechanic(private val resolver: (String) -> Attribute? = StatusSupport::attribute) : SkillMechanic(SkillDescriptor.of("stun", "Temporarily suppress walking and supported jumping using owned transient modifiers")) {
+class StunMechanic(private val resolver: (String) -> Attribute? = StatusSupport::attribute) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("stun", "Temporarily suppress walking and supported jumping using owned transient modifiers", "duration", "target")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "duration", "target"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         val duration = AuraSupport.duration(arguments, compilation, "duration", "1s")
         val movement = resolver("movement_speed") ?: throw arguments.error("type", "movement_speed attribute unavailable")
         val jump = resolver("jump_strength")

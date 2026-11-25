@@ -35,7 +35,7 @@ open class PlatformSkillCompiler(
     fun compile(definition: SkillDefinition): CompiledPlatformSkill {
         dependencies.clear(); references.clear(); templates.clear(); snapshots.clear(); nodes = 0; depth = 0; localOnly = false
         val args = SkillArguments(definition.configuration(), definition.origin())
-        val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors", "passives", "activation", "templates")
+        val allowed = ROOT_OPTIONS
         args.values.keys.firstOrNull { it !in allowed }?.let { throw args.error(it, "unsupported skill option") }
         val parameters = ParameterBindings.declarations(args, namespace)
         val variables = VariableBinding.declarations(args, namespace)
@@ -283,4 +283,5 @@ open class PlatformSkillCompiler(
         try { return action() } finally { depth-- }
     }
     private fun count(path: String) { require(++nodes <= 1024) { "$path: too many component nodes (maximum 1024)" } }
+    companion object { val ROOT_OPTIONS = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors", "passives", "activation", "templates") }
 }

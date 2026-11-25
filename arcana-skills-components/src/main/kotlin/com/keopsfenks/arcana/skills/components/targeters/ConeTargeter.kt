@@ -4,9 +4,9 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.platform.targets.*
 
-class ConeTargeter : SkillTargeter(SkillDescriptor.of("cone", "Select a forward cone with an aperture in degrees")) {
+class ConeTargeter : SkillTargeter(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("cone", "Select a forward cone with an aperture in degrees", *com.keopsfenks.arcana.skills.platform.targets.TargetSelectionPolicy.OPTIONS, "radius", "angle")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillTargeter {
-        TargeterSupport.keys(arguments, "radius", "angle")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val radius = TargeterSupport.number(arguments, compilation, "radius", 10, 0.0, 128.0)
         val angle = TargeterSupport.number(arguments, compilation, "angle", 90, 0.0, 360.0)
         val policy = TargetSelectionPolicy.compile(arguments, compilation, "nearest")

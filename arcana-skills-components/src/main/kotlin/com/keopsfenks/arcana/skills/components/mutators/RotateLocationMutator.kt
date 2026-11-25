@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import kotlin.math.*
 
-class RotateLocationMutator : SkillMutator(SkillDescriptor.of("rotate_location", "Rotate a child point horizontally around its origin, in degrees")) {
+class RotateLocationMutator : SkillMutator(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("rotate_location", "Rotate a child point horizontally around its origin, in degrees", "field", "angle")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMutator {
-        ComponentArguments.keys(arguments, "field", "angle")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val field = MutatorSupport.field(arguments); val angle = MutatorSupport.number(arguments, compilation, "angle", 0)
         return CompiledSkillMutator { input ->
             val location = MutatorSupport.location(input, field); val pivot = input.origin().orElse(location)

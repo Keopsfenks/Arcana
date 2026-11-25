@@ -12,13 +12,13 @@ import java.util.Locale
 
 /** Resolved native operations allow bounds tests without bootstrapping Paper's static registries. */
 internal class EnchantBinding(val maximum: Int, val canApply: (ItemStack) -> Boolean, val apply: (ItemMeta, Int, Boolean) -> Boolean, val remove: (ItemMeta) -> Boolean)
-class EnchantMechanic internal constructor(private val resolve: (String) -> EnchantBinding?) : SkillMechanic(SkillDescriptor.of("enchant", "Player-only main-hand enchantment bounded by native compatibility and level")) {
+class EnchantMechanic internal constructor(private val resolve: (String) -> EnchantBinding?) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("enchant", "Player-only main-hand enchantment bounded by native compatibility and level", "target", "enchantment", "level", "unsafe")) {
     constructor() : this({ key ->
         val type = Registry.ENCHANTMENT.get(requireNotNull(NamespacedKey.fromString(if (':' in key) key else "minecraft:$key")))
         type?.let { EnchantBinding(it.maxLevel, it::canEnchantItem, { meta, level, unsafe -> meta.addEnchant(it, level, unsafe) }, { meta -> meta.removeEnchant(it) }) }
     })
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "enchantment", "level", "unsafe"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         val level = NativeActions.number(arguments, compilation, "level", 1, 0.0, 255.0, true)
         val binding = resolve(arguments.string("enchantment").lowercase(Locale.ROOT)) ?: throw arguments.error("enchantment", "unknown enchantment")
         val unsafe = arguments.bool("unsafe", false)

@@ -104,6 +104,10 @@ class DefaultSkillEngine(
             }
         }
         state.result.whenComplete { _, _ -> executions.remove(state); state.release() }
+        val traceKey = try { SkillKey.parse(skillId, "arcana") } catch (_: IllegalArgumentException) { null }
+        val trace = traceKey?.let { generalPlatform.traces.begin(it, playerId, snapshot.definitions?.entries?.get(it)?.revisionId ?: UUID(0, 0)) }
+        generalPlatform.traces.event(trace, "start", mapOf("schema" to "1"))
+        state.result.whenComplete { result, _ -> generalPlatform.traces.event(trace, "complete", mapOf("status" to (result?.status()?.name ?: "ERROR"), "steps" to state.appliedSteps.toString())) }
         try {
             InvocationSnapshots.capture(context, state, scheduler)
                 .thenCompose { runner.run(skill, it, state, 1) }

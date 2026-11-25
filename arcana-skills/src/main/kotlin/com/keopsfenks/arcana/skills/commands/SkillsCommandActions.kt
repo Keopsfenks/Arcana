@@ -12,6 +12,42 @@ class SkillsCommandActions(
     private val players: SkillPlayers = BukkitSkillPlayers,
     private val reply: (CommandSender, String) -> Unit = { sender, text -> replyOnOwner(plugin, sender, text) }
 ) {
+    private fun diagnostics(sender: CommandSender): com.keopsfenks.arcana.skills.DefaultSkillEngine? {
+        if (!authorized(sender)) return null
+        return (engine() as? com.keopsfenks.arcana.skills.DefaultSkillEngine).also { if (it == null) reply(sender, "Skill diagnostics unavailable on this host.") }
+    }
+    fun validate(sender: CommandSender) {
+        val host = diagnostics(sender) ?: return
+        val result = com.keopsfenks.arcana.skills.platform.diagnostics.SkillInspector(host).validate()
+        if (result.success()) reply(sender, "Validated ${result.loaded()} skills; active definitions preserved.")
+        else result.errors().take(10).forEach { reply(sender, it) }
+    }
+    fun inspect(sender: CommandSender, args: List<String>) {
+        val host = diagnostics(sender) ?: return
+        if (args.size !in 1..2) { reply(sender, "Usage: /arcana skills inspect <id> | <component-kind> <component-id>"); return }
+        val key = key(sender, args.last()) ?: return
+        val inspector = com.keopsfenks.arcana.skills.platform.diagnostics.SkillInspector(host)
+        (if (args.size == 1) inspector.inspect(key) else inspector.component(args[0], key)).forEach { reply(sender, it) }
+    }
+    fun trace(sender: CommandSender, args: List<String>) {
+        val host = diagnostics(sender) ?: return
+        if (args.size !in 1..2) { reply(sender, "Usage: /arcana skills trace <namespace:id> [on|off|show]"); return }
+        val key = key(sender, args[0]) ?: return
+        val traces = host.platform().traces
+        when (args.getOrElse(1) { "show" }) {
+            "on" -> { traces.enable(key); reply(sender, "Tracing $key for 60 seconds.") }
+            "off" -> { traces.disable(key); reply(sender, "Tracing $key disabled.") }
+            "show" -> {
+                val found = traces.traces().filter { it.skill == key }.takeLast(10)
+                if (found.isEmpty()) reply(sender, "No recent trace for $key.")
+                found.forEach { trace -> reply(sender, "trace=${trace.id} actor=${trace.actor} revision=${trace.revision}"); trace.events.takeLast(8).forEach { reply(sender, "${it.stage}: ${it.summary}") } }
+            }
+            else -> reply(sender, "Usage: /arcana skills trace <namespace:id> [on|off|show]")
+        }
+    }
+    private fun key(sender: CommandSender, text: String): com.keopsfenks.arcana.core.skills.platform.SkillKey? = try {
+        com.keopsfenks.arcana.core.skills.platform.SkillKey.parse(text, "arcana")
+    } catch (_: IllegalArgumentException) { reply(sender, "Invalid skill key: $text"); null }
     fun list(sender: CommandSender) {
         if (!authorized(sender)) return
         val skills = engine().skills()

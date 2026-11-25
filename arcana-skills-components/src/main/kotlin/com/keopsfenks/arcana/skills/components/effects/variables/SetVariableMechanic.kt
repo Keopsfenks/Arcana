@@ -7,9 +7,9 @@ import com.keopsfenks.arcana.skills.config.SkillArgumentsReader
 import com.keopsfenks.arcana.skills.platform.values.ParameterBindings
 import java.time.Duration
 
-class SetVariableMechanic : SkillMechanic(SkillDescriptor.of("set_variable", "Set one typed variable in an explicit scope")) {
+class SetVariableMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("set_variable", "Set one typed variable in an explicit scope", "scope", "key", "value", "value-type", "expression", "ttl")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "scope", "key", "value", "value-type", "expression", "ttl")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val scope = VariableArguments.scope(arguments)
         val key = SkillKey.parse(arguments.string("key"), compilation.namespace())
         require(arguments.has("value") != arguments.has("expression")) { "${arguments.path}: supply either value or expression" }

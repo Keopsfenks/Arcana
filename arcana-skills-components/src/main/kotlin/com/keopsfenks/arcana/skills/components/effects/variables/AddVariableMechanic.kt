@@ -4,9 +4,9 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 
-class AddVariableMechanic : SkillMechanic(SkillDescriptor.of("add_variable", "Atomically add a finite amount to a numeric variable")) {
+class AddVariableMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("add_variable", "Atomically add a finite amount to a numeric variable", "scope", "key", "amount")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "scope", "key", "amount")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val scope = VariableArguments.scope(arguments)
         val key = SkillKey.parse(arguments.string("key"), compilation.namespace())
         val amount = compilation.number(arguments.raw("amount", 1), "${arguments.path}.amount")

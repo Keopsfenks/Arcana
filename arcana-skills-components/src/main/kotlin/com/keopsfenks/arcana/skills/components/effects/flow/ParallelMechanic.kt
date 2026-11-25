@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.execution.ParallelScope
 
-class ParallelMechanic : SkillMechanic(SkillDescriptor.of("parallel", "Execute up to 16 isolated branches with ordered outcomes")) {
+class ParallelMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("parallel", "Execute up to 16 isolated branches with ordered outcomes", "branches", "fail-fast")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "branches", "fail-fast")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val raw = arguments.list("branches")
         require(raw.isNotEmpty() && raw.size <= 16) { "${arguments.path}.branches: expected 1..16 branches" }
         val branches = raw.mapIndexed { index, value ->

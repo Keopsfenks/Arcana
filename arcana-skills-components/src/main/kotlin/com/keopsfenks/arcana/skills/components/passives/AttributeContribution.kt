@@ -9,9 +9,9 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.CompletableFuture
 
-class AttributeContribution(private val scheduler: SkillScheduler, private val resolver: (String) -> Attribute? = { Registry.ATTRIBUTE.get(requireNotNull(NamespacedKey.fromString(if (':' in it) it else "minecraft:$it"))) }) : SkillContribution(SkillDescriptor.of("attribute", "Owned attribute modifier; never resets the base value")) {
+class AttributeContribution(private val scheduler: SkillScheduler, private val resolver: (String) -> Attribute? = { Registry.ATTRIBUTE.get(requireNotNull(NamespacedKey.fromString(if (':' in it) it else "minecraft:$it"))) }) : SkillContribution(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("attribute", "Owned attribute modifier; never resets the base value", "attribute", "amount", "operation", "stat")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillContribution {
-        arguments.values.keys.firstOrNull { it !in setOf("type", "attribute", "amount", "operation", "stat") }?.let { throw arguments.error(it, "unknown passive option") }
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val attribute = resolver(arguments.string("attribute").lowercase(Locale.ROOT)) ?: throw arguments.error("attribute", "unknown attribute")
         val amount = compilation.number(arguments.raw("amount", 0), "${arguments.path}.amount")
         val operation = try { AttributeModifier.Operation.valueOf(arguments.string("operation", "ADD_NUMBER").uppercase(Locale.ROOT)) } catch (_: IllegalArgumentException) { throw arguments.error("operation", "unknown modifier operation") }

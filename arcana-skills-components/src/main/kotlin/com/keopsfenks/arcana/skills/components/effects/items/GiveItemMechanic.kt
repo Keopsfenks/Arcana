@@ -7,9 +7,9 @@ import com.keopsfenks.arcana.skills.components.actions.NativeMaterials
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 
-class GiveItemMechanic(private val resolve: (String) -> TestableItem? = Items::lookup) : SkillMechanic(SkillDescriptor.of("give_item", "Player-only cloned Arcana item lookup, at most 64 native stacks")) {
+class GiveItemMechanic(private val resolve: (String) -> TestableItem? = Items::lookup) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("give_item", "Player-only cloned Arcana item lookup, at most 64 native stacks", "target", "item", "amount")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "item", "amount"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         val amount = NativeActions.number(arguments, compilation, "amount", 1, 1.0, 4096.0, true)
         val item = ItemSupport.resolve(arguments, resolve).item; require(!NativeMaterials.empty(item.type)) { "${arguments.path}.item: expected a nonempty item" }
         return CompiledSkillMechanic { context -> ItemSupport.player(context, recipient) { player ->

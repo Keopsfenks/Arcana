@@ -11,9 +11,9 @@ import com.keopsfenks.arcana.skills.platform.managed.ManagedExecutionState
 import org.bukkit.potion.PotionEffectType
 import java.util.concurrent.CompletableFuture
 
-class PotionMechanic(private val potions: PotionContributions, private val resolver: (String) -> PotionEffectType? = StatusSupport::potion) : SkillMechanic(SkillDescriptor.of("potion", "Apply a finite owned potion contribution preserving external effects")) {
+class PotionMechanic(private val potions: PotionContributions, private val resolver: (String) -> PotionEffectType? = StatusSupport::potion) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("potion", "Apply a finite owned potion contribution preserving external effects", "target", "potion", "amplifier", "duration", "ambient", "particles", "icon")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "potion", "amplifier", "duration", "ambient", "particles", "icon")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val recipient = NativeActions.recipient(arguments); val type = StatusSupport.type(arguments, resolver)
         val amplifier = NativeActions.number(arguments, compilation, "amplifier", 0, 0.0, 255.0, true); val duration = AuraSupport.duration(arguments, compilation, "duration", "5s")
         val ambient = arguments.bool("ambient", false); val particles = arguments.bool("particles", true); val icon = arguments.bool("icon", true)

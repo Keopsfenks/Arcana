@@ -37,6 +37,9 @@ class DefaultSkillPlatform(
     clock: () -> Long = System::nanoTime
 ) : SkillPlatform {
     internal val monotonicClock = clock
+    val traces = com.keopsfenks.arcana.skills.platform.diagnostics.SkillTraceRecorder(clock)
+    private val ownedResources = ConcurrentHashMap.newKeySet<AutoCloseable>()
+    fun own(resource: AutoCloseable) { ownedResources.add(resource); if (engine.stopped && ownedResources.remove(resource)) resource.close() }
     private val registries = ConcurrentHashMap<SkillComponentType<*>, PlatformRegistry<*>>()
     val variables = VariableStore(clock, persistence = PersistentVariableStore())
     val flowCursors = FlowCursorStore()
@@ -79,7 +82,7 @@ class DefaultSkillPlatform(
     override fun definitions() = repository.definitions()
     override fun refreshHolders(actor: SkillActor) = holderManager.refresh(actor)
     override fun holders(actor: SkillActor) = holderManager.holders(actor)
-    internal fun close() { actorLifecycleListener.close(); triggerSubscriptions.close(); generatedSources.close(); auraEvents.close(); auras.close(); projectiles.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close() }
+    internal fun close() { actorLifecycleListener.close(); triggerSubscriptions.close(); generatedSources.close(); auraEvents.close(); auras.close(); projectiles.close(); holderManager.close(); managed.close(); interceptorListener.close(); variables.close(); flowCursors.close(); admissions.close(); ownedResources.toList().forEach { if (ownedResources.remove(it)) try { it.close() } catch (error: Exception) { engine.reportProviderFailure("Could not close catalog resource: ${error.message}") } }; traces.close() }
     internal fun prepareReload(): SkillLoadResult {
         val candidate = repository.prepare()
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)
@@ -107,6 +110,9 @@ class DefaultSkillPlatform(
         }
         if (admission is SkillResult) return CompletableFuture.completedFuture(admission)
         val state = admission as PlatformExecutionState
+        state.traceId = traces.begin(key, invocation.actor().id(), revision.revisionId)
+        traces.event(state.traceId, "start", mapOf("schema" to "2", "selectedEntities" to invocation.selection().entities().size.toString()))
+        state.root.result.whenComplete { result, error -> traces.event(state.traceId, "complete", mapOf("status" to (result?.status()?.name ?: "ERROR"), "steps" to state.root.appliedSteps.toString())) }
         try {
             runner.run(revision, invocation, state, 1).whenComplete { result, error ->
                 state.root.result.complete(if (error == null) result else PlatformExecutionState.failure(error))

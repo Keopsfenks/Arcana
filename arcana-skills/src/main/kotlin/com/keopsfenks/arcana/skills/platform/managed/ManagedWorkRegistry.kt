@@ -10,8 +10,15 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** One bounded index for passives and subsequently adopted aura/projectile work. */
-class ManagedWorkRegistry(private val lifecycle: SkillLifecycleGate, private val report: (String) -> Unit, val actorLimit: Int = 64, val engineLimit: Int = 4096) : AutoCloseable {
+class ManagedWorkRegistry(private val lifecycle: SkillLifecycleGate, private val report: (String) -> Unit, actorLimit: Int = 64, engineLimit: Int = 4096) : AutoCloseable {
     init { require(actorLimit in 1..64 && engineLimit in 1..4096) }
+    @Volatile var limits = ManagedLimits(actorInstances = actorLimit, engineInstances = engineLimit)
+        private set
+    val actorLimit get() = limits.actorInstances
+    val engineLimit get() = limits.engineInstances
+    fun configure(value: ManagedLimits) = lifecycle.locked {
+        check(entries.isEmpty()) { "Configure managed limits before starting managed work" }; limits = value
+    }
     private val entries = LinkedHashMap<UUID, ManagedLease>()
     private val actors = HashMap<UUID, Int>()
     private var stopped = false

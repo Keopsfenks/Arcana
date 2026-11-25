@@ -9,9 +9,9 @@ import com.keopsfenks.arcana.skills.platform.managed.ManagedPulse
 import com.keopsfenks.arcana.skills.platform.projectiles.ProjectileHitLedger
 import java.util.concurrent.CompletableFuture
 
-class BeamMechanic : SkillMechanic(SkillDescriptor.of("beam", "Pulse a finite anchored ray within one managed lineage")) {
+class BeamMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("beam", "Pulse a finite anchored ray within one managed lineage", *RaySupport.KEYS, *ProjectileArguments.HOOK_KEYS, "duration", "period", "immune-delay")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, *RaySupport.KEYS, *ProjectileArguments.HOOK_KEYS, "duration", "period", "immune-delay")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val ray = RaySupport(arguments, compilation); val duration = AuraSupport.duration(arguments, compilation, "duration", "1s")
         val period = AuraSupport.duration(arguments, compilation, "period", "1t"); val immunity = NodeOptions.duration(arguments, compilation, "immune-delay")
         return CompiledSkillMechanic { context ->

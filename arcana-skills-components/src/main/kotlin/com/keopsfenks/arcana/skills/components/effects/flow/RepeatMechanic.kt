@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.compile.NodeOptions
 import java.util.concurrent.CompletableFuture
 
-class RepeatMechanic : SkillMechanic(SkillDescriptor.of("repeat", "Repeat child effects up to 100 times with an optional period")) {
+class RepeatMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("repeat", "Repeat child effects up to 100 times with an optional period", "times", "period", "effects")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "times", "period", "effects")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val times = NodeOptions.number(arguments, compilation, "times", 1, 1.0, 100.0, true)
         val period = NodeOptions.duration(arguments, compilation, "period")
         val effects = FlowSupport.effects(arguments, compilation)

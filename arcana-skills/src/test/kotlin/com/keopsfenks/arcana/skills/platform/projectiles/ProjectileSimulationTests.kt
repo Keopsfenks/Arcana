@@ -14,6 +14,11 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 
 class ProjectileSimulationTests {
+    @Test fun oneTickLifetimeAppliesOneSweptStepAndThenDisposes() {
+        val r = Rig(); r.contacts = { _, _ -> listOf(r.hit(1.0, .25)) }
+        r.launch(ProjectileOptions(speed = 4.0, direction = SkillVector(1.0, 0.0, 0.0), lifetimeTicks = 1, pierce = 10, maxHits = 1, hitCaster = true))
+        r.f.scheduler.advance(1); assertEquals(1, r.hits.size); assertFalse(r.handle.active()); assertEquals(0, r.f.platform.managed.size)
+    }
     @TempDir lateinit var directory: Path
     private inner class Rig {
         val f = PlatformFixture(directory)

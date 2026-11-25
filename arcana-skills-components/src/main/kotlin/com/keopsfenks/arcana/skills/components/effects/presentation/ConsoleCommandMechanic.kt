@@ -8,9 +8,9 @@ import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 import org.bukkit.Bukkit
 import java.util.concurrent.CompletableFuture
 
-class ConsoleCommandMechanic(private val dispatch: (String) -> Boolean = { Bukkit.dispatchCommand(Bukkit.getConsoleSender(), it) }) : SkillMechanic(SkillDescriptor.of("console_command", "Dispatch one literal console command on the global scheduler")) {
+class ConsoleCommandMechanic(private val dispatch: (String) -> Boolean = { Bukkit.dispatchCommand(Bukkit.getConsoleSender(), it) }) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("console_command", "Dispatch one literal console command on the global scheduler", "command")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "command"); val template = EffectValues.command(NativeText.template(arguments, "command"))
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val template = EffectValues.command(NativeText.template(arguments, "command"))
         return CompiledSkillMechanic { context ->
             if (context !is PlatformExecutionContext) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.UNSUPPORTED_CONTEXT, "Console command requires Arcana execution"))
             else { val command = NativeText.command(template, context.invocation()); context.track(context.engine.scheduler.global { context.state.checkActive(); context.frame.checkActive(); if (dispatch(command)) SkillResult.success() else SkillResult.of(SkillResult.Status.ERROR, "Server rejected console command") }) }

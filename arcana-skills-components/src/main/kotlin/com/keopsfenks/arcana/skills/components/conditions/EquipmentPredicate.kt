@@ -5,10 +5,10 @@ import com.keopsfenks.arcana.skills.components.actions.NativeActions
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import org.bukkit.Material
 import java.util.Locale
-class EquipmentPredicate : SkillPredicateType(SkillDescriptor.of("equipment", "Match one requested player slot material and amount snapshot")) {
+class EquipmentPredicate : SkillPredicateType(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("equipment", "Match one requested player slot material and amount snapshot", "subject", "slot", "materials", "min-amount")) {
     override fun supportsLocal() = true
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): SkillPredicate {
-        ComponentArguments.keys(arguments, "subject", "slot", "materials", "min-amount")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val slot = arguments.string("slot", "main_hand").lowercase(Locale.ROOT); require(slot in setOf("main_hand", "off_hand", "helmet", "chestplate", "leggings", "boots")) { "${arguments.path}.slot: unknown slot" }
         val materials = ConditionSupport.strings(arguments, "materials").map { value -> try { Material.valueOf(value.removePrefix("minecraft:").uppercase(Locale.ROOT)).name } catch (_: IllegalArgumentException) { throw arguments.error("materials", "unknown material $value") } }.toSet()
         val amount = NativeActions.number(arguments, compilation, "min-amount", 1, 0.0, 4096.0, true)

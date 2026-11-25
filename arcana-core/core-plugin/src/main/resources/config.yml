@@ -324,3 +324,14 @@ leaderboards:
   # reads 1, 2, 2, 4; with false, tied players get their own ranks, 1, 2, 3, 4, ordered
   # by UUID so they do not swap places between refreshes.
   shared-tie-ranks: false
+
+
+# Skill instance budgets. Restart after changing these settings.
+# Values must be positive and may only be lowered from the hard caps below.
+skills:
+  limits:
+    managed-per-actor: 64
+    managed-per-engine: 4096
+    managed-callbacks: 4096
+    managed-steps: 65536
+    managed-lifetime-ticks: 1728000

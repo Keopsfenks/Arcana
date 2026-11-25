@@ -4,9 +4,9 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.platform.targets.*
 
-class EntitiesInRadiusTargeter : SkillTargeter(SkillDescriptor.of("entities_in_radius", "Select living entities in an inclusive radius")) {
+class EntitiesInRadiusTargeter : SkillTargeter(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("entities_in_radius", "Select living entities in an inclusive radius", *com.keopsfenks.arcana.skills.platform.targets.TargetSelectionPolicy.OPTIONS, "radius")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillTargeter {
-        TargeterSupport.keys(arguments, "radius")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val radius = TargeterSupport.number(arguments, compilation, "radius", 5, 0.0, 128.0)
         val policy = TargetSelectionPolicy.compile(arguments, compilation, "nearest")
         return CompiledSkillTargeter { context ->

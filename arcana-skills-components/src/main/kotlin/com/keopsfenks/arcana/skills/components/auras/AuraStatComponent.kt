@@ -8,9 +8,9 @@ import com.keopsfenks.arcana.skills.platform.execution.PlatformExecutionContext
 import com.keopsfenks.arcana.skills.platform.managed.ManagedWorkRegistry
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
-class AuraStatComponent : SkillAuraComponent(SkillDescriptor.of("stat", "Owned cached stat contribution reconciled to the current stack count")) {
+class AuraStatComponent : SkillAuraComponent(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("stat", "Owned cached stat contribution reconciled to the current stack count", "stat", "amount", "per-stack")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "stat", "amount", "per-stack")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val stat = SkillKey.parse(arguments.string("stat"), compilation.namespace())
         val amount = NodeOptions.number(arguments, compilation, "amount", 0, -1_000_000.0, 1_000_000.0)
         val scaled = arguments.bool("per-stack", true)

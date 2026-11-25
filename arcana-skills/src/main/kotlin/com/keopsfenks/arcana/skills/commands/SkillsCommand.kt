@@ -11,9 +11,12 @@ class SkillsCommand(plugin: ArcanaPlugin, engine: () -> SkillEngine) : Subcomman
         addSubcommand(SkillsListCommand(plugin, actions))
         addSubcommand(SkillsCastCommand(plugin, actions))
         addSubcommand(SkillsReloadCommand(plugin, actions))
+        addSubcommand(SkillsValidateCommand(plugin, actions))
+        addSubcommand(SkillsInspectCommand(plugin, actions))
+        addSubcommand(SkillsTraceCommand(plugin, actions))
     }
 
     override fun onExecute(sender: CommandSender, args: List<String>) {
-        sender.sendMessage("Usage: /arcana skills list | cast <id> [player] | reload")
+        sender.sendMessage("Usage: /arcana skills list | cast <id> [player] | reload | validate | inspect <id> | trace <id> [on|off|show]")
     }
 }

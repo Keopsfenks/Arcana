@@ -99,6 +99,7 @@ class PlatformExecutionContext(
                 var last = initial
                 while (cursor < immutable.size && !result.isDone) {
                     val mechanic = immutable[cursor++]
+                    platform.traces.event(state.traceId, "effect", mapOf("skill" to definition.key.toString(), "index" to (cursor - 1).toString(), "depth" to depth.toString()))
                     if (mechanic !is CompiledNode) state.step()
                     val next = mechanic.execute(this).toCompletableFuture()
                     if (next.isDone) {

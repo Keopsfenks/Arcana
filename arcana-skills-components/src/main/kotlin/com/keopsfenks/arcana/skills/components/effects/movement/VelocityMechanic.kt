@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.effects.EffectValues
 import com.keopsfenks.arcana.skills.platform.projectiles.ProjectileMotion
 
-class VelocityMechanic : SkillMechanic(SkillDescriptor.of("velocity", "Set bounded living-actor velocity, optionally normalized")) {
+class VelocityMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("velocity", "Set bounded living-actor velocity, optionally normalized", "x", "y", "z", "normalize", "speed", "target")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "x", "y", "z", "normalize", "speed", "target")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val recipient = NativeActions.recipient(arguments); val x = NativeActions.number(arguments, compilation, "x", 0, -16.0, 16.0)
         val y = NativeActions.number(arguments, compilation, "y", 0, -16.0, 16.0); val z = NativeActions.number(arguments, compilation, "z", 0, -16.0, 16.0)
         val normalize = arguments.bool("normalize", false); val speed = NativeActions.number(arguments, compilation, "speed", 1, 0.0, 16.0)

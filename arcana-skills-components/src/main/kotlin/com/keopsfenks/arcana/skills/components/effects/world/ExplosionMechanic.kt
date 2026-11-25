@@ -7,9 +7,9 @@ import com.keopsfenks.arcana.skills.execution.*
 import com.keopsfenks.arcana.skills.platform.targets.TargetGeometry
 import java.util.concurrent.CompletableFuture
 
-class ExplosionMechanic : SkillMechanic(SkillDescriptor.of("explosion", "Native bounded loaded-area explosion; fire and block damage default false")) {
+class ExplosionMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("explosion", "Native bounded loaded-area explosion; fire and block damage default false", "target", "power", "fire", "break-blocks")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "power", "fire", "break-blocks"); val location = WorldActions.location(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val location = WorldActions.location(arguments)
         val power = NativeActions.number(arguments, compilation, "power", 1, 0.0, 8.0); val fire = arguments.bool("fire", false); val blocks = arguments.bool("break-blocks", false)
         return CompiledSkillMechanic { context -> val input = context.invocation(); val point = location(input); val strength = power.evaluate(input)
             if (point == null) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.NO_TARGET, "Explosion location missing")) else {

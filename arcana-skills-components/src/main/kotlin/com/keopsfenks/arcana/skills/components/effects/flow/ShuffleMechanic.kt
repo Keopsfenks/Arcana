@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.execution.*
 import java.util.UUID
 
-class ShuffleMechanic : SkillMechanic(SkillDescriptor.of("shuffle", "Choose every child once per revision-owned actor shuffle round")) {
+class ShuffleMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("shuffle", "Choose every child once per revision-owned actor shuffle round", "choices")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "choices")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val node = UUID.randomUUID()
         val choices = FlowSupport.choices(arguments).map { ComponentArguments.keys(it, "effects"); FlowSupport.effects(it, compilation) }
         return CompiledSkillMechanic { execution ->

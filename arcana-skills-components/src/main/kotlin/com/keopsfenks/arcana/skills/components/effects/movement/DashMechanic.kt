@@ -13,9 +13,9 @@ import org.bukkit.util.Vector
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 
-class DashMechanic : SkillMechanic(SkillDescriptor.of("dash", "Apply finite owned velocity pulses and release only the last unchanged impulse")) {
+class DashMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("dash", "Apply finite owned velocity pulses and release only the last unchanged impulse", "target", "direction", "speed", "duration", "period")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "direction", "speed", "duration", "period")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val recipient = NativeActions.recipient(arguments); val direction = ProjectileArguments.direction(arguments, compilation)
         val speed = NativeActions.number(arguments, compilation, "speed", 1, 0.0, 16.0)
         val duration = AuraSupport.duration(arguments, compilation, "duration", "5t"); val period = AuraSupport.duration(arguments, compilation, "period", "1t")

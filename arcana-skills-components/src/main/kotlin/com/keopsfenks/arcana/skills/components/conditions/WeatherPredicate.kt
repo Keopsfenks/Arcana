@@ -3,9 +3,9 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import java.util.Locale
-class WeatherPredicate : SkillPredicateType(SkillDescriptor.of("weather", "Match global world clear, rain or thunder snapshots")) {
+class WeatherPredicate : SkillPredicateType(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("weather", "Match global world clear, rain or thunder snapshots", "subject", "states")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): SkillPredicate {
-        ComponentArguments.keys(arguments, "subject", "states"); val states = ConditionSupport.strings(arguments, "states", 3).map { it.lowercase(Locale.ROOT) }.toSet()
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val states = ConditionSupport.strings(arguments, "states", 3).map { it.lowercase(Locale.ROOT) }.toSet()
         require(states.all { it in setOf("clear", "rain", "thunder") }) { "${arguments.path}.states: unknown weather state" }
         val alias = ConditionSupport.snapshot(arguments, compilation, SkillSnapshotRequest.Kind.WEATHER)
         return SkillPredicate { it.data()[alias]?.takeIf { value -> value.kind() == SkillValue.Kind.TEXT }?.text() in states }

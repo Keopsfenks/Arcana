@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.projectiles.ProjectileManager
 import java.util.concurrent.CompletableFuture
 
-class MissileMechanic : SkillMechanic(SkillDescriptor.of("missile", "Launch a target-required homing projectile")) {
+class MissileMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("missile", "Launch a target-required homing projectile", *ProjectileArguments.MOTION_KEYS, *ProjectileArguments.HOOK_KEYS)) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, *ProjectileArguments.MOTION_KEYS, *ProjectileArguments.HOOK_KEYS)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val options = ProjectileArguments.motion(arguments, compilation, 1.0); val hooks = ProjectileArguments.Hooks(arguments, compilation).projectile()
         return CompiledSkillMechanic { context -> val input = context.invocation()
             if (input.target().isEmpty) CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.NO_TARGET, "Missile requires a target"))

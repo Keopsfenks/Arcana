@@ -5,9 +5,9 @@ import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 import com.keopsfenks.arcana.skills.platform.compile.NodeOptions
 
-class WeightedRandomMechanic : SkillMechanic(SkillDescriptor.of("weighted_random", "Choose one child sequence with positive finite weights")) {
+class WeightedRandomMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("weighted_random", "Choose one child sequence with positive finite weights", "choices")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "choices")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val choices = FlowSupport.choices(arguments).map { args ->
             ComponentArguments.keys(args, "weight", "effects")
             NodeOptions.number(args, compilation, "weight", 1, Double.MIN_VALUE, Double.MAX_VALUE) to FlowSupport.effects(args, compilation)

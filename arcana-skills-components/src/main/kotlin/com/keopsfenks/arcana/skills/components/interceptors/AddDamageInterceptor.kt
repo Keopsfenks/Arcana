@@ -1,9 +1,9 @@
 package com.keopsfenks.arcana.skills.components.interceptors
 import com.keopsfenks.arcana.core.skills.*
 import com.keopsfenks.arcana.core.skills.platform.*
-class AddDamageInterceptor : SkillInterceptor(SkillDescriptor.of("add_damage", "Synchronous local damage interception")) {
+class AddDamageInterceptor : SkillInterceptor(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("add_damage", "Synchronous local damage interception", "amount")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillInterceptor {
-        arguments.values.keys.firstOrNull { it !in setOf("type", "amount") }?.let { throw arguments.error(it, "unknown interceptor option") }
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val raw = arguments.raw("amount", 0)
         if (raw is Number) require(raw.toDouble().isFinite() && raw.toDouble() in 0.0..1_000_000.0) { "${arguments.path}.amount: expected a number between 0 and 1000000" }
         val value = compilation.number(raw, "${arguments.path}.amount")

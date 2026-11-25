@@ -7,9 +7,9 @@ import com.keopsfenks.arcana.skills.config.ComponentArguments
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.Damageable
 
-class DurabilityMechanic(private val maximum: (ItemStack) -> Int = { item -> val meta = item.itemMeta; if (meta is Damageable && meta.hasMaxDamage()) meta.maxDamage else item.type.maxDurability.toInt() }) : SkillMechanic(SkillDescriptor.of("durability", "Player-only bounded main-hand item damage adjustment")) {
+class DurabilityMechanic(private val maximum: (ItemStack) -> Int = { item -> val meta = item.itemMeta; if (meta is Damageable && meta.hasMaxDamage()) meta.maxDamage else item.type.maxDurability.toInt() }) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("durability", "Player-only bounded main-hand item damage adjustment", "target", "amount")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "amount"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         val amount = NativeActions.number(arguments, compilation, "amount", 1, -1_000_000.0, 1_000_000.0, true)
         return CompiledSkillMechanic { context -> ItemSupport.player(context, recipient) { player ->
             val copy = player.inventory.itemInMainHand.clone(); val meta = copy.itemMeta

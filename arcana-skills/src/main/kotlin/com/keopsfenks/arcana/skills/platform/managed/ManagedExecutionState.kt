@@ -18,12 +18,12 @@ class ManagedExecutionState private constructor(
     val revision: DefinitionRevision, source: PlatformExecutionContext,
     val lease: ManagedWorkRegistry.ManagedLease, input: SkillInvocation
 ) : AutoCloseable {
-    private class Lineage(val born: Long) {
-        val steps = com.keopsfenks.arcana.skills.execution.ExecutionStepBudget(65536)
+    private class Lineage(val born: Long, val limits: ManagedLimits) {
+        val steps = com.keopsfenks.arcana.skills.execution.ExecutionStepBudget(limits.steps)
         val callbacks = AtomicInteger()
     }
-    private val lineage: Lineage = source.state.managedState?.lineage ?: Lineage(platform.monotonicClock())
-    val state = PlatformExecutionState(ExecutionState(input.actor().id(), source.state.snapshot.legacy, 65536, lineage.steps), source.state.snapshot, platform::componentActive)
+    private val lineage: Lineage = source.state.managedState?.lineage ?: Lineage(platform.monotonicClock(), platform.managed.limits)
+    val state = PlatformExecutionState(ExecutionState(input.actor().id(), source.state.snapshot.legacy, lineage.limits.steps, lineage.steps), source.state.snapshot, platform::componentActive).also { it.traceId = source.state.traceId }
     val originId = source.state.root.id
     internal val definition = source.definition
     @Volatile var aura: com.keopsfenks.arcana.skills.platform.auras.AuraInstance? = null
@@ -65,10 +65,10 @@ class ManagedExecutionState private constructor(
         }
         lease.onClose { subscription.getAndSet(null)?.close() }
     }
-    fun checkBudget() { if (callbacks.get() > 4096) throw PlatformBudgetException("Managed lifetime exceeds 4096 callbacks") }
+    fun checkBudget() { if (callbacks.get() > lineage.limits.callbacks) throw PlatformBudgetException("Managed lifetime exceeds ${lineage.limits.callbacks} callbacks") }
     fun callback() {
         state.checkActive()
-        if (callbacks.incrementAndGet() > 4096) throw PlatformBudgetException("Managed lifetime exceeds 4096 callbacks")
+        if (callbacks.incrementAndGet() > lineage.limits.callbacks) throw PlatformBudgetException("Managed lifetime exceeds ${lineage.limits.callbacks} callbacks")
     }
     fun own(cleanup: AutoCloseable) {
         val action = OwnedCleanup(cleanup)
@@ -113,7 +113,7 @@ class ManagedExecutionState private constructor(
     }
     fun remove(reason: SkillRemovalReason) { lease.remove(reason) }
     private fun deadline() {
-        val remaining = 86_400_000_000_000L - (platform.monotonicClock() - lineage.born)
+        val remaining = lineage.limits.lifetimeTicks * 50_000_000L - (platform.monotonicClock() - lineage.born)
         if (remaining <= 0) throw CancellationException("Managed lineage reached its 24-hour lifetime")
         val ticks = ((remaining + 49_999_999L) / 50_000_000L).coerceIn(1, 1_728_000)
         val work = engine.scheduler.on(lease.actor.entity(), ticks) {

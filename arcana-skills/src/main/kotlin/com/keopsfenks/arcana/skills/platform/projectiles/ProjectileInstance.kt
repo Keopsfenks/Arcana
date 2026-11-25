@@ -47,7 +47,8 @@ class ProjectileInstance internal constructor(
     private fun values() = mapOf<String, Any>("projectile_age" to age, "projectile_hits" to ledger.total, "projectile_bounces" to options.bounces-bounceLeft)
     internal fun start() {
         if (!active()) return
-        timer(options.lifetimeTicks) { remove(SkillRemovalReason.EXPIRED) }
+        // Simulation includes its last movement tick; one bounded tick also retires stalled I/O.
+        timer(options.lifetimeTicks + 1) { remove(SkillRemovalReason.EXPIRED) }
         managed.execute(hooks.onStart, values(), view()).whenComplete { result, error ->
             if (!active()) return@whenComplete
             if (accept(result, error)) { started.complete(this); schedule() }
@@ -80,7 +81,9 @@ class ProjectileInstance internal constructor(
             segment(position, ProjectileMotion.move(position, velocity), 0)
         }.whenComplete { _, error ->
             if (error != null) fail(error)
-            else if (active()) managed.execute(hooks.onTick, values(), view()).whenComplete { result, failure -> if (active() && accept(result, failure)) schedule() }
+            else if (active()) managed.execute(hooks.onTick, values(), view()).whenComplete { result, failure ->
+                if (active() && accept(result, failure)) { if (age >= options.lifetimeTicks) remove(SkillRemovalReason.EXPIRED) else schedule() }
+            }
         }
     }
     private fun segment(from: SkillLocation, to: SkillLocation, depth: Int): CompletableFuture<Unit> {

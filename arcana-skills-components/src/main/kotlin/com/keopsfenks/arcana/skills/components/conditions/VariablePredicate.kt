@@ -3,14 +3,22 @@ import com.keopsfenks.arcana.core.skills.SkillArguments
 import com.keopsfenks.arcana.core.skills.platform.*
 import com.keopsfenks.arcana.skills.components.effects.flow.FlowSupport
 import com.keopsfenks.arcana.skills.config.ComponentArguments
-class VariablePredicate : SkillPredicateType(SkillDescriptor.of("variable", "Compare a declared typed variable binding or numeric inclusive range")) {
+class VariablePredicate : SkillPredicateType(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("variable", "Compare a declared typed variable binding or numeric inclusive range", "binding", "equals", "min", "max")) {
     override fun supportsLocal() = true
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): SkillPredicate {
-        ComponentArguments.keys(arguments, "binding", "equals", "min", "max"); val alias = arguments.string("binding")
-        require(alias.matches(Regex("var_[a-z0-9_]{1,100}"))) { "${arguments.path}.binding: expected a declared var_ alias" }
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val alias = arguments.string("binding")
+        val path = when {
+            alias.matches(Regex("var_[a-z0-9_]{1,100}")) -> listOf(alias)
+            alias.length <= 256 && alias.matches(Regex("(?:data|param)\\.[a-zA-Z0-9_-]+(?:\\.[a-zA-Z0-9_-]+){0,15}")) -> alias.split('.')
+            else -> throw arguments.error("binding", "expected declared var_ alias or data.field / param.name path")
+        }
         val equality = if (arguments.has("equals")) FlowSupport.parameter(arguments.raw("equals"), compilation, "${arguments.path}.equals") else null
         require(equality == null || !arguments.has("min") && !arguments.has("max")) { "${arguments.path}: equals and numeric range cannot be combined" }
         val range = if (equality == null) ConditionSupport.Range(arguments, compilation, -1_000_000.0, 1_000_000.0) else null
-        return SkillPredicate { input -> val actual = input.data()[alias]; actual != null && (if (equality != null) actual == equality(input) else range!!.test(ConditionSupport.number(actual), input)) }
+        return SkillPredicate { input ->
+            var actual = when (path.first()) { "data" -> input.data()[path[1]]; "param" -> input.parameters()[path[1]]; else -> input.data()[alias] }
+            for (part in path.drop(if (path.size == 1) 1 else 2)) actual = actual?.takeIf { it.kind() == SkillValue.Kind.MAP }?.map()?.get(part)
+            actual != null && (if (equality != null) actual == equality(input) else range!!.test(ConditionSupport.number(actual), input))
+        }
     }
 }

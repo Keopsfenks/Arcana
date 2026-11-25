@@ -14,9 +14,9 @@ import org.bukkit.entity.Player
 import java.util.Locale
 import java.util.concurrent.CompletableFuture
 
-class BossBarMechanic(private val audience: (Player) -> Audience = PlayerUtils::getAudience, private val parser: (String) -> Component = StringUtils::formatToRichComponent) : SkillMechanic(SkillDescriptor.of("boss_bar", "Show one uniquely owned finite player boss bar")) {
+class BossBarMechanic(private val audience: (Player) -> Audience = PlayerUtils::getAudience, private val parser: (String) -> Component = StringUtils::formatToRichComponent) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("boss_bar", "Show one uniquely owned finite player boss bar", "text", "target", "duration", "progress", "color", "overlay")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "text", "target", "duration", "progress", "color", "overlay")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val recipient = NativeActions.recipient(arguments); val text = NativeText.template(arguments, "text"); val duration = AuraSupport.duration(arguments, compilation, "duration", "3s")
         val progress = NativeActions.number(arguments, compilation, "progress", 1, 0.0, 1.0)
         val color = try { BossBar.Color.valueOf(arguments.string("color", "PURPLE").uppercase(Locale.ROOT)) } catch (_: IllegalArgumentException) { throw arguments.error("color", "unknown boss bar color") }

@@ -1,0 +1,9 @@
+schema: 2
+id: general_events
+enabled: false
+triggers: [consume, shoot, kill, entity_attack, entity_damaged]
+effects:
+  - type: set_variable
+    scope: actor
+    key: arcana:example_events
+    value: 1

@@ -11,9 +11,9 @@ import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.inventory.EquipmentSlot
 import java.util.concurrent.CompletableFuture
 
-class SetBlockMechanic(private val resolve: (String) -> BlockData? = BlockSupport::resolve, private val events: (Event) -> Unit = BlockSupport::event) : SkillMechanic(SkillDescriptor.of("set_block", "Loaded-location block edit obeying cancellable native placement/change events")) {
+class SetBlockMechanic(private val resolve: (String) -> BlockData? = BlockSupport::resolve, private val events: (Event) -> Unit = BlockSupport::event) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("set_block", "Loaded-location block edit obeying cancellable native placement/change events", "target", "block", "physics")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "block", "physics"); val location = WorldActions.location(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val location = WorldActions.location(arguments)
         val data = resolve(arguments.string("block")) ?: throw arguments.error("block", "unknown block data"); val physics = arguments.bool("physics", false)
         return CompiledSkillMechanic { context ->
             val input = context.invocation(); val point = location(input); val source = input.actor()

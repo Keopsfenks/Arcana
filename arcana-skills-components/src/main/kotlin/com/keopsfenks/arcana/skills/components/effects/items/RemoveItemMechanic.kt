@@ -6,9 +6,9 @@ import com.keopsfenks.arcana.skills.components.actions.NativeActions
 import com.keopsfenks.arcana.skills.components.actions.NativeMaterials
 import com.keopsfenks.arcana.skills.config.ComponentArguments
 
-class RemoveItemMechanic(private val resolve: (String) -> TestableItem? = Items::lookup) : SkillMechanic(SkillDescriptor.of("remove_item", "Player-only exact-count removal after matching-slot preflight")) {
+class RemoveItemMechanic(private val resolve: (String) -> TestableItem? = Items::lookup) : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("remove_item", "Player-only exact-count removal after matching-slot preflight", "target", "item", "amount")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "target", "item", "amount"); val recipient = NativeActions.recipient(arguments)
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor()); val recipient = NativeActions.recipient(arguments)
         val amount = NativeActions.number(arguments, compilation, "amount", 1, 1.0, 4096.0, true); val item = ItemSupport.resolve(arguments, resolve)
         return CompiledSkillMechanic { context -> ItemSupport.player(context, recipient) { player ->
             val requested = amount.evaluate(context.invocation()).toInt(); val storage = player.inventory.storageContents

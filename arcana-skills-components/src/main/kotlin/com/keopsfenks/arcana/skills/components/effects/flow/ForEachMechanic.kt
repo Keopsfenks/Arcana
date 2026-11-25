@@ -7,9 +7,9 @@ import com.keopsfenks.arcana.skills.platform.execution.ParallelScope
 import com.keopsfenks.arcana.skills.platform.targets.TargetSelectionPolicy
 import java.util.concurrent.CompletableFuture
 
-class ForEachMechanic : SkillMechanic(SkillDescriptor.of("for_each", "Execute isolated per-target sequences and aggregate their outcomes")) {
+class ForEachMechanic : SkillMechanic(com.keopsfenks.arcana.skills.config.ComponentArguments.describe("for_each", "Execute isolated per-target sequences and aggregate their outcomes", "select", "effects", "fail-fast")) {
     override fun compile(arguments: SkillArguments, compilation: SkillCompilation): CompiledSkillMechanic {
-        ComponentArguments.keys(arguments, "select", "effects", "fail-fast")
+        com.keopsfenks.arcana.skills.config.ComponentArguments.keys(arguments, descriptor())
         val selector = if (!arguments.has("select")) null else {
             val raw = arguments.raw("select")
             val args = arguments.child("select", if (raw is String) mapOf("type" to raw) else raw)
