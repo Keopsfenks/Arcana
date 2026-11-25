@@ -274,11 +274,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** use existing Arcana particle/item/text APIs; geometry is immutable, each world/block mutation is scheduled at location, each inventory mutation on its entity. Timed bossbars return managed leases. Commands retain explicit player/console semantics and literal context formatting.
 
-- [ ] Test particle resolver once, finite geometry/count cap, safe literal text placeholders, title/bossbar removal, item amount/durability/enchant bounds and missing material errors. Block/world operations respect cancellable native events and loaded chunk bounds; no bypass of protection by editing from a global callback.
-- [ ] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*VisualMechanicTests' --tests '*PresentationMechanicTests' --tests '*ItemMechanicTests' --tests '*WorldMechanicTests' FLAGS`; expect RED.
-- [ ] Implement manifest files and location-safe mutations. Player block edits emit cancellable BlockPlace/BlockBreak events; non-player edits emit EntityChangeBlockEvent and obey cancellation. Default explosion fire/block damage are false; explicit true follows native explosion events. Document these hooks without promising compatibility with every external protection plugin. No custom item product, loot manager or separate plugin is introduced.
-- [ ] Same Verify GREEN with multiple targets on different contexts and cleanup after owner shutdown.
-- [ ] Commit `feat(skills): expand presentation item and world skill mechanics`.
+- [x] Test particle resolver once, finite geometry/count cap, safe literal text placeholders, title/bossbar removal, item amount/durability/enchant bounds and missing material errors. Block/world operations respect cancellable native events and loaded chunk bounds; no bypass of protection by editing from a global callback.
+- [x] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*VisualMechanicTests' --tests '*PresentationMechanicTests' --tests '*ItemMechanicTests' --tests '*WorldMechanicTests' FLAGS`; expect RED.
+- [x] Implement manifest files and location-safe mutations. Player block edits emit cancellable BlockPlace/BlockBreak events; non-player edits emit EntityChangeBlockEvent and obey cancellation. Default explosion fire/block damage are false; explicit true follows native explosion events. Document these hooks without promising compatibility with every external protection plugin. No custom item product, loot manager or separate plugin is introduced.
+- [x] Same Verify GREEN with multiple targets on different contexts and cleanup after owner shutdown.
+- [x] Commit `feat(skills): expand presentation item and world skill mechanics`.
 
 ### Task 19: Snapshot condition catalog
 

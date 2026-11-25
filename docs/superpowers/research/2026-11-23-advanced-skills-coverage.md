@@ -46,11 +46,11 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | COMBAT | L-E,M-S | DamageMechanic, HealMechanic, FeedMechanic, IgniteMechanic, ExtinguishMechanic, AbsorptionMechanic | 17 | Tamamlandı; test edildi | CombatMechanicTests + NativeContributionTests |
 | STATUS | L-E,M-S | PotionMechanic, RemovePotionMechanic, FreezeMechanic, StunMechanic | 17 | Tamamlandı; test edildi | CombatMechanicTests + NativeContributionTests |
 | MOVE | L-E,M-S | VelocityMechanic, KnockbackMechanic, PullMechanic, LaunchMechanic, DashMechanic, TeleportMechanic | 17 | Tamamlandı; test edildi | MovementMechanicTests |
-| VISUAL | L-E,M-S | ParticleMechanic, ParticleLineMechanic, ParticleRingMechanic, SoundMechanic, StopSoundMechanic | 18 | Planlandı | VisualMechanicTests |
-| TEXT | L-E,M-S | MessageMechanic, ActionBarMechanic, TitleMechanic, BossBarMechanic | 18 | Planlandı | PresentationMechanicTests |
-| ITEM | L-E | GiveItemMechanic, RemoveItemMechanic, DurabilityMechanic, EnchantMechanic | 18 | Planlandı | ItemMechanicTests |
-| WORLD | L-E | SetBlockMechanic, BreakBlockMechanic, LightningMechanic, ExplosionMechanic | 18 | Planlandı | WorldMechanicTests |
-| COMMAND | L-E,M-S | ConsoleCommandMechanic, PlayerCommandMechanic | 18 | Planlandı | PresentationMechanicTests |
+| VISUAL | L-E,M-S | ParticleMechanic, ParticleLineMechanic, ParticleRingMechanic, SoundMechanic, StopSoundMechanic | 18 | Tamamlandı; test edildi | VisualMechanicTests |
+| TEXT | L-E,M-S | MessageMechanic, ActionBarMechanic, TitleMechanic, BossBarMechanic | 18 | Tamamlandı; test edildi | PresentationMechanicTests |
+| ITEM | L-E | GiveItemMechanic, RemoveItemMechanic, DurabilityMechanic, EnchantMechanic | 18 | Tamamlandı; test edildi | ItemMechanicTests |
+| WORLD | L-E | SetBlockMechanic, BreakBlockMechanic, LightningMechanic, ExplosionMechanic | 18 | Tamamlandı; test edildi | WorldMechanicTests |
+| COMMAND | L-E,M-S | ConsoleCommandMechanic, PlayerCommandMechanic | 18 | Tamamlandı; test edildi | PresentationMechanicTests |
 | COND-COMMON | L-E,M-S | AllPredicate, AnyPredicate, NotPredicate, ExpressionPredicate | 19 | Planlandı | PlatformConditionTests |
 | COND-ACTOR | L-E,M-S | ActorTypePredicate, PermissionPredicate, HealthPredicate, FoodPredicate, MovementPredicate | 19 | Planlandı | PlatformConditionTests |
 | COND-WORLD | L-E,M-S | WorldPredicate, BiomePredicate, TimePredicate, WeatherPredicate, HeightPredicate | 19 | Planlandı | PlatformConditionTests |
