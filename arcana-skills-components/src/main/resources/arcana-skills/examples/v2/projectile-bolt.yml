@@ -1,0 +1,9 @@
+schema: 2
+id: example_projectile_bolt
+enabled: false
+effects:
+  - type: projectile
+    speed: 2
+    duration: 2s
+    on-hit:
+      - {type: set_variable, scope: actor, key: example_projectile_hit, value: true}

@@ -250,11 +250,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** separate factories compile start/tick/hit/end hooks and inherit origin/hit target/parameters. Beam uses a bounded region query rather than persistent entity ownership; Chain carries visited UUIDs and maximum jumps.
 
-- [ ] Assert hit hooks inherit actual victim/origin, parameter power, hit conditions and no duplicate same-target chain; child recursion/managed budgets remain shared. Unknown hooks and invalid geometry fail with exact node paths. Callbacks after disposal never execute.
-- [ ] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*ProjectileMechanicTests' FLAGS`; expect RED.
-- [ ] Implement five mechanics through shared manager/targeting services; cap chain jumps at100 and keep overall effect/hit limits. Add independently compiling, disabled bolt/beam/chain fixtures.
-- [ ] Same Verify GREEN alongside projectile simulation and aura recursion tests.
-- [ ] Commit `feat(skills): add native projectile ray beam and chain mechanics`.
+- [x] Assert hit hooks inherit actual victim/origin, parameter power, hit conditions and no duplicate same-target chain; child recursion/managed budgets remain shared. Unknown hooks and invalid geometry fail with exact node paths. Callbacks after disposal never execute.
+- [x] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*ProjectileMechanicTests' FLAGS`; expect RED.
+- [x] Implement five mechanics through shared manager/targeting services; cap chain jumps at100 and keep overall effect/hit limits. Add independently compiling, disabled bolt/beam/chain fixtures.
+- [x] Same Verify GREEN alongside projectile simulation and aura recursion tests.
+- [x] Commit `feat(skills): add native projectile ray beam and chain mechanics`.
 
 ### Task 17: General-actor combat, status and movement catalog
 

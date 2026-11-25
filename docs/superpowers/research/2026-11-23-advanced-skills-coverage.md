@@ -41,8 +41,8 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | AURA-OPS | M-A | ApplyAuraMechanic, RemoveAuraMechanic, AddAuraChargeMechanic | 14 | Tamamlandı; test edildi | AuraMechanicTests |
 | AURA-COMP | M-A | AuraTickComponent, AuraAttackComponent, AuraDamagedComponent, AuraStatComponent | 14 | Tamamlandı; test edildi | AuraMechanicTests |
 | PROJECTILE | M-P | ProjectileManager, bölge geçişi, segment çarpışması | 15 | Tamamlandı; test edildi | ProjectileSimulationTests |
-| PROJECTILE-OPS | M-P | ProjectileMechanic, MissileMechanic, RayMechanic, BeamMechanic | 16 | Planlandı | ProjectileMechanicTests |
-| PROJECTILE-CHAIN | M-P,M-T | ChainMechanic; hit filtresi/homing/pierce/bounce | 15,16 | Planlandı | ProjectileSimulationTests |
+| PROJECTILE-OPS | M-P | ProjectileMechanic, MissileMechanic, RayMechanic, BeamMechanic | 16 | Tamamlandı; test edildi | ProjectileMechanicTests |
+| PROJECTILE-CHAIN | M-P,M-T | ChainMechanic; hit filtresi/homing/pierce/bounce | 15,16 | Tamamlandı; test edildi | ProjectileSimulationTests + ProjectileMechanicTests |
 | COMBAT | L-E,M-S | DamageMechanic, HealMechanic, FeedMechanic, IgniteMechanic, ExtinguishMechanic, AbsorptionMechanic | 17 | Planlandı | CombatMechanicTests |
 | STATUS | L-E,M-S | PotionMechanic, RemovePotionMechanic, FreezeMechanic, StunMechanic | 17 | Planlandı | CombatMechanicTests |
 | MOVE | L-E,M-S | VelocityMechanic, KnockbackMechanic, PullMechanic, LaunchMechanic, DashMechanic, TeleportMechanic | 17 | Planlandı | MovementMechanicTests |
