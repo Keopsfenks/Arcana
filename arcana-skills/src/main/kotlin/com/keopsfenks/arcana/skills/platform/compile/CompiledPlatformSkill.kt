@@ -29,5 +29,6 @@ data class CompiledPlatformSkill(
     val stats: List<CompiledStatBinding> = emptyList(),
     val interceptors: List<CompiledSkillInterceptor> = emptyList(),
     val passives: List<CompiledSkillContribution> = emptyList(),
-    val holderOnly: Boolean = false
+    val holderOnly: Boolean = false,
+    val snapshots: List<com.keopsfenks.arcana.skills.platform.execution.CompiledSnapshotRequest> = emptyList()
 )

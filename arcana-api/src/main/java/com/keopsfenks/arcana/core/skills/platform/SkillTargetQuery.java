@@ -12,5 +12,13 @@ public interface SkillTargetQuery {
     }
     CompletionStage<List<SkillActor>> entities(SkillBounds bounds);
     CompletionStage<Optional<SkillEntitySnapshot>> snapshot(SkillActor actor);
+    /** Optional engine-owned binding projection before a candidate's pure filters run. */
+    default CompletionStage<Optional<SkillInvocation>> project(SkillInvocation input, SkillEntitySnapshot candidate) {
+        return java.util.concurrent.CompletableFuture.completedFuture(Optional.empty());
+    }
+    /** Optional projection for a location selection, including missing-target variable defaults. */
+    default CompletionStage<Optional<SkillInvocation>> projectLocation(SkillInvocation input, SkillLocation location) {
+        return java.util.concurrent.CompletableFuture.completedFuture(Optional.empty());
+    }
     CompletionStage<List<SkillCollision>> collisions(SkillLocation from, SkillLocation to, double radius);
 }

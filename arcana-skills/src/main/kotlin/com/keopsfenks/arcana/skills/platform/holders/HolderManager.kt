@@ -121,7 +121,7 @@ class HolderManager(private val engine: DefaultSkillEngine, private val platform
                 }
                 runtime.root(root)
                 val input = SkillInvocation.builder(session.actor).parameters(ParameterBindings.bind(definition.parameters, binding.holder.parameters())).build()
-                InvocationSnapshots.capture(input, engine.scheduler, state).thenCompose { captured ->
+                InvocationSnapshots.capture(input, engine.scheduler, state, requests = definition.snapshots, platform = platform).thenCompose { captured ->
                     val frame = state.frame(InvocationFrame(captured))
                     val persistent = definition.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { (_, values) -> values.map { it.key }.toSet() }
                     val variables = platform.variables.access(frame, persistent)

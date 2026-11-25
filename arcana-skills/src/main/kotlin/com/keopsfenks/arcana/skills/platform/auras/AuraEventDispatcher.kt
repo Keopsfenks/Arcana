@@ -91,7 +91,7 @@ class AuraEventDispatcher(private val engine: DefaultSkillEngine, private val pl
                     managed.callback()
                     val damage = if (access.supportsDamage()) access.damage() else invocation.data()["damage"]?.number() ?: 0.0
                     val supplied = input(sub, invocation, local = true).derive().data(mapOf("damage" to damage) + sub.aura.values()).build()
-                    val captured = InvocationSnapshots.captureLocal(supplied, engine.scheduler)
+                    val captured = InvocationSnapshots.captureLocal(supplied, engine.scheduler, managed.definition.snapshots, platform)
                     val enriched = StatBindings.captureLocal(captured, managed.definition.stats, platform)
                     val local = managed.localFrame(enriched); frame = local
                     val variables = platform.variables.access(local)

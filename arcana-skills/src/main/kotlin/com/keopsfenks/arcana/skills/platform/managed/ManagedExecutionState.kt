@@ -100,7 +100,7 @@ class ManagedExecutionState private constructor(
             scopes.add(seed)
             seed.onClose { scopes.remove(seed); result.complete(SkillResult.of(SkillResult.Status.CANCELLED, "Managed callback retired")) }
             val persistent = definition.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { (_, values) -> values.map { it.key }.toSet() }
-            InvocationSnapshots.capture(seed.invocation, engine.scheduler, state, seed).thenCompose { captured ->
+            InvocationSnapshots.capture(seed.invocation, engine.scheduler, state, seed, definition.snapshots, platform).thenCompose { captured ->
                 StatBindings.capture(captured, definition.stats, state, seed, platform)
             }.thenCompose { captured ->
                 val frame = state.frame(seed.view(captured)); val access = platform.variables.access(frame, persistent)

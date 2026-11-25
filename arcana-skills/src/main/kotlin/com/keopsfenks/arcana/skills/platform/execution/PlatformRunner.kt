@@ -27,7 +27,7 @@ class PlatformRunner(private val engine: DefaultSkillEngine, private val platfor
             if (!native.enabled) return CompletableFuture.completedFuture(SkillResult.of(SkillResult.Status.DISABLED, "Skill is disabled"))
             val parameters = ParameterBindings.bind(native.parameters, input.parameters())
             val supplied = input.derive().parameters(parameters).build()
-            InvocationSnapshots.capture(supplied, engine.scheduler, state, parent).thenCompose { snapshot ->
+            InvocationSnapshots.capture(supplied, engine.scheduler, state, parent, native.snapshots, platform).thenCompose { snapshot ->
                 val frame = state.frame(parent?.fork(snapshot) ?: InvocationFrame(snapshot))
                 val persistent = native.bindings.filter { it.persistent }.groupBy { it.scope }.mapValues { entry -> entry.value.map { it.key }.toSet() }
                 val variables = platform.variables.access(frame, persistent)

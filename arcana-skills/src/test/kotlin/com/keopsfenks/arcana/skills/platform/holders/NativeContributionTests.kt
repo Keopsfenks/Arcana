@@ -19,6 +19,12 @@ import org.bukkit.Keyed
 import java.lang.reflect.Proxy
 
 class NativeContributionTests {
+    private class TestBiome(private val identifier: NamespacedKey) : org.bukkit.block.Biome {
+        override fun getKey() = identifier
+        override fun name() = identifier.key.uppercase(java.util.Locale.ROOT)
+        override fun ordinal() = 0
+        override fun compareTo(other: org.bukkit.block.Biome) = identifier.toString().compareTo(other.key.toString())
+    }
     private class TestPotionType(private val identifier: NamespacedKey) : PotionEffectType() {
         override fun getKey() = identifier
         override fun createEffect(duration: Int, amplifier: Int) = PotionEffect(this, duration, amplifier)
@@ -54,16 +60,21 @@ class NativeContributionTests {
         assertEquals(2, modifiers.size); assertTrue(modifiers.any { it.key.namespace == "arcana" && it.amount == 5.0 })
         provider.close(); assertEquals(listOf(external), modifiers); provider.close(); assertEquals(listOf(external), modifiers)
     }
-    private fun potionType(): PotionEffectType {
+    private fun nativeTypes(): Pair<PotionEffectType, org.bukkit.block.Biome> {
         // Paper initializes potion constants through RegistryAccess before any Bukkit server exists.
         // Mock only that lookup during class initialization; no production fake registry is packaged.
         mockkStatic(RegistryAccess::class)
+        mockkStatic(io.papermc.paper.InternalAPIBridge::class)
+        val bridge = Proxy.newProxyInstance(io.papermc.paper.InternalAPIBridge::class.java.classLoader, arrayOf(io.papermc.paper.InternalAPIBridge::class.java)) { _, method, _ ->
+            if (method.name == "constructLegacyCustomBiome") TestBiome(NamespacedKey.minecraft("custom")) else error("Unexpected internal fixture method ${method.name}")
+        } as io.papermc.paper.InternalAPIBridge
+        every { io.papermc.paper.InternalAPIBridge.get() } returns bridge
         val registries = mutableMapOf<Any, Registry<Keyed>>()
         fun registry(key: Any): Registry<Keyed> = registries.getOrPut(key) {
             @Suppress("UNCHECKED_CAST")
             Proxy.newProxyInstance(Registry::class.java.classLoader, arrayOf(Registry::class.java)) { _, method, args ->
                 when (method.name) {
-                    "get", "getOrThrow" -> TestPotionType(args!![0] as NamespacedKey)
+                    "get", "getOrThrow" -> if (key == RegistryKey.BIOME) TestBiome(args!![0] as NamespacedKey) else TestPotionType(args!![0] as NamespacedKey)
                     "toString" -> "test registry"
                     "hashCode" -> System.identityHashCode(key)
                     "equals" -> false
@@ -75,10 +86,27 @@ class NativeContributionTests {
             if (method.name == "getRegistry") registry(args!![0]) else error("Unexpected RegistryAccess method ${method.name}")
         } as RegistryAccess
         every { RegistryAccess.registryAccess() } returns access
-        val type = TestPotionType(NamespacedKey.minecraft("speed"))
-        unmockkStatic(RegistryAccess::class)
-        return type
+        try {
+            val type = TestPotionType(NamespacedKey.minecraft("speed"))
+            val biome = TestBiome(NamespacedKey.minecraft("plains"))
+            return type to biome
+        } finally { unmockkStatic(RegistryAccess::class); unmockkStatic(io.papermc.paper.InternalAPIBridge::class) }
 
+    }
+    private fun potionType() = nativeTypes().first
+    @Test fun biomeMetadataIsCapturedOnLoadedLocationAndWorldClockOnGlobalContext() {
+        val f = fixture(); val biome = nativeTypes().second
+        mockkStatic(org.bukkit.Bukkit::class)
+        try {
+            every { org.bukkit.Bukkit.getWorld(f.worldId) } answers { f.scheduler.assertOwner("global"); f.legacy.world }
+            every { f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers { assertTrue(f.scheduler.current is org.bukkit.Location); true }
+            every { f.legacy.world.getBiome(any<Int>(), any<Int>(), any<Int>()) } answers { assertTrue(f.scheduler.current is org.bukkit.Location); biome }
+            every { f.legacy.world.time } answers { f.scheduler.assertOwner("global"); 6500L }
+            every { f.legacy.world.isThundering } answers { f.scheduler.assertOwner("global"); true }
+            for (type in listOf(com.keopsfenks.arcana.skills.components.conditions.BiomePredicate(), com.keopsfenks.arcana.skills.components.conditions.TimePredicate(), com.keopsfenks.arcana.skills.components.conditions.WeatherPredicate())) f.platform.register(f.legacy.plugin, SkillComponentType.PREDICATE, SkillKey("arcana", type.descriptor().id()), type)
+            f.write(options = "conditions: [{type: biome, biomes: [plains]}, {type: time, min: 6500, max: 6500}, {type: weather, states: [thunder]}]")
+            f.load(); assertTrue(f.cast().join().isSuccess)
+        } finally { f.engine.shutdown(); unmockkStatic(org.bukkit.Bukkit::class) }
     }
     @Test fun potionCleanupNeverRestoresAnExpiredSnapshotOrRemovesANewerExternalPotion() {
         val f = fixture(); val type = potionType()

@@ -13,6 +13,8 @@ public interface SkillCompilation {
     SkillPredicate predicates(List<?> definitions, String path);
     <T extends SkillPlatformComponent> T component(SkillComponentType<T> type, SkillKey key);
     void referenceSkill(SkillKey key, String path);
+    /** Returns a reserved immutable data alias; the engine captures only requested fields on their owners. */
+    default String snapshot(SkillSnapshotRequest request, String path) { throw new UnsupportedOperationException("Required snapshot compilation is unavailable"); }
     default List<CompiledSkillMechanic> auraComponents(List<?> definitions, String path) { throw new UnsupportedOperationException("Aura component compilation is unavailable"); }
     /** Local callback helpers are explicitly enforced by the native compiler. */
     default List<CompiledSkillInterceptor> interceptors(List<?> definitions, String path) { throw new UnsupportedOperationException("Synchronous interception compilation is unavailable"); }

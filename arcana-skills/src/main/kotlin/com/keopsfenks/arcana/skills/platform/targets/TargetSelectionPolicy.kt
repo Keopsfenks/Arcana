@@ -14,13 +14,14 @@ class TargetSelectionPolicy private constructor(
     private val types: Set<String>,
     private val predicate: SkillPredicate
 ) {
-    fun apply(invocation: SkillInvocation, candidates: List<SkillEntitySnapshot>, locations: List<SkillLocation>, random: DoubleSupplier): SkillSelection {
+    fun eligible(invocation: SkillInvocation, candidate: SkillEntitySnapshot) = (!excludeSelf || candidate.actor() != invocation.actor()) && (!players || candidate.data()["player"]?.bool() == true) && (types.isEmpty() || candidate.data()["type"]?.text() in types)
+    fun apply(invocation: SkillInvocation, candidates: List<SkillEntitySnapshot>, locations: List<SkillLocation>, random: DoubleSupplier,
+        entityInputs: Map<java.util.UUID, SkillInvocation> = emptyMap(), locationInputs: Map<SkillLocation, SkillInvocation> = emptyMap()): SkillSelection {
         val count = limit.evaluate(invocation).also { require(it.isFinite() && it in 1.0..256.0 && floor(it) == it) { "Target limit must be an integer between 1 and 256" } }.toInt()
         val entities = candidates.distinctBy { it.actor().id() }.filter { candidate ->
-            (!excludeSelf || candidate.actor() != invocation.actor()) && (!players || candidate.data()["player"]?.bool() == true) &&
-                (types.isEmpty() || candidate.data()["type"]?.text() in types) && predicate.test(selected(invocation, candidate))
+            eligible(invocation, candidate) && predicate.test(entityInputs[candidate.actor().id()] ?: selected(invocation, candidate))
         }.toMutableList()
-        val orderedLocations = locations.distinct().filter { predicate.test(selected(invocation, it)) }.toMutableList()
+        val orderedLocations = locations.distinct().filter { predicate.test(locationInputs[it] ?: selected(invocation, it)) }.toMutableList()
         val origin = if (sort == "nearest" || sort == "farthest") TargetGeometry.center(invocation) else null
         val distance: (SkillLocation) -> Double = { TargetGeometry.distanceSquared(requireNotNull(origin), it) }
         when (sort) {
@@ -52,16 +53,18 @@ class TargetSelectionPolicy private constructor(
         }
         fun selected(invocation: SkillInvocation, snapshot: SkillEntitySnapshot): SkillInvocation {
             val values = LinkedHashMap(invocation.data())
-            values.keys.removeIf { it.startsWith("target_") || it == "entity" }
-            snapshot.data().forEach { (key, value) -> values["target_$key"] = value }
+            values.keys.removeIf { it.startsWith("target_") || it == "entity" || targetSnapshot(it) }
+            snapshot.data().forEach { (key, value) -> values[if (key.startsWith("arcana_snapshot_")) key else "target_$key"] = value }
             values["target_location"] = SkillValue.of(snapshot.location())
             snapshot.data()["type"]?.let { values["entity"] = it }
             return invocation.derive().target(snapshot.actor()).location(snapshot.location()).replaceData(values).selection(SkillSelection(listOf(snapshot.actor()), emptyList())).build()
         }
         fun selected(invocation: SkillInvocation, location: SkillLocation): SkillInvocation {
             val values = LinkedHashMap(invocation.data())
-            values.keys.removeIf { it.startsWith("target_") || it == "entity" }
+            values.keys.removeIf { it.startsWith("target_") || it == "entity" || targetSnapshot(it) }
             return invocation.derive().target(null).location(location).replaceData(values).selection(SkillSelection(emptyList(), listOf(location))).build()
         }
+        private val targetSightSlot = Regex(".*_line_of_sight_target_[0-9]+$")
+        private fun targetSnapshot(key: String) = key.startsWith("arcana_snapshot_target_") || key.startsWith("arcana_snapshot_") && targetSightSlot.matches(key)
     }
 }

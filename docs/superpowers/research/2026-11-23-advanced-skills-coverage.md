@@ -51,11 +51,11 @@ Tablodaki çoklu isimler ayrı sınıf/dosyalardır; tek sınıfta tür switch'i
 | ITEM | L-E | GiveItemMechanic, RemoveItemMechanic, DurabilityMechanic, EnchantMechanic | 18 | Tamamlandı; test edildi | ItemMechanicTests |
 | WORLD | L-E | SetBlockMechanic, BreakBlockMechanic, LightningMechanic, ExplosionMechanic | 18 | Tamamlandı; test edildi | WorldMechanicTests |
 | COMMAND | L-E,M-S | ConsoleCommandMechanic, PlayerCommandMechanic | 18 | Tamamlandı; test edildi | PresentationMechanicTests |
-| COND-COMMON | L-E,M-S | AllPredicate, AnyPredicate, NotPredicate, ExpressionPredicate | 19 | Planlandı | PlatformConditionTests |
-| COND-ACTOR | L-E,M-S | ActorTypePredicate, PermissionPredicate, HealthPredicate, FoodPredicate, MovementPredicate | 19 | Planlandı | PlatformConditionTests |
-| COND-WORLD | L-E,M-S | WorldPredicate, BiomePredicate, TimePredicate, WeatherPredicate, HeightPredicate | 19 | Planlandı | PlatformConditionTests |
-| COND-TARGET | M-T,M-C | DistancePredicate, LineOfSightPredicate, EntityTypePredicate, HasTargetPredicate | 19 | Planlandı | PlatformConditionTests |
-| COND-DATA | L-E,M-V,M-A | EquipmentPredicate, VariablePredicate, ResourcePredicate, StatPredicate, HasAuraPredicate | 19 | Planlandı | PlatformConditionTests |
+| COND-COMMON | L-E,M-S | AllPredicate, AnyPredicate, NotPredicate, ExpressionPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
+| COND-ACTOR | L-E,M-S | ActorTypePredicate, PermissionPredicate, HealthPredicate, FoodPredicate, MovementPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
+| COND-WORLD | L-E,M-S | WorldPredicate, BiomePredicate, TimePredicate, WeatherPredicate, HeightPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
+| COND-TARGET | M-T,M-C | DistancePredicate, LineOfSightPredicate, EntityTypePredicate, HasTargetPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
+| COND-DATA | L-E,M-V,M-A | EquipmentPredicate, VariablePredicate, ResourcePredicate, StatPredicate, HasAuraPredicate | 19 | Tamamlandı; test edildi | PlatformConditionTests + RequiredSnapshotTests + NativeContributionTests |
 | TRIGGER-BASE | L-E,M-S | Mevcut 12 tetikleyici için invocation bridge | 20 | Planlandı | PlatformTriggerTests |
 | TRIGGER-MOVE | L-E,M-S | MoveSkillTrigger, JumpSkillTrigger, TimerSkillTrigger | 20 | Planlandı | PlatformTriggerTests |
 | TRIGGER-ITEM | L-E,M-S | EquipSkillTrigger, HeldSlotSkillTrigger, ConsumeSkillTrigger, ShootSkillTrigger | 20 | Planlandı | PlatformTriggerTests |

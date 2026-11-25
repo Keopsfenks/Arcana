@@ -286,11 +286,11 @@ Verification commands below use **FLAGS** = `--no-parallel --max-workers=2 -x cl
 
 **Interfaces:** factories implement SkillPredicateType and use only named required snapshots/bindings. Metadata declares snapshot needs so Task 6 captures them on their owner. Actor/target/trigger selection is explicit; missing required data fails the condition, never invents true.
 
-- [ ] Truth tables and nested validation; exact distance/height/health/time bounds; Bukkit enum localeROOT; permission/item capability on mobs; line-of-sight sampled on correct owner; variable/resource/stat/aura values and missing provider behavior. Parent/target/trigger conditions remain distinct.
-- [ ] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*PlatformConditionTests' FLAGS`; expect RED.
-- [ ] Implement individual predicates and snapshots, compile numeric/enum/list arguments once. All/any reject empty lists, not takes one predicate; conditions contain no live Bukkit reads.
-- [ ] Same Verify GREEN and schema 2 nested condition examples compile.
-- [ ] Commit `feat(skills): expand typed actor target world and data predicates`.
+- [x] Truth tables and nested validation; exact distance/height/health/time bounds; Bukkit enum localeROOT; permission/item capability on mobs; line-of-sight sampled on correct owner; variable/resource/stat/aura values and missing provider behavior. Parent/target/trigger conditions remain distinct.
+- [x] Verify `.\gradlew.bat :arcana-skills-components:test --tests '*PlatformConditionTests' FLAGS`; expect RED.
+- [x] Implement individual predicates and snapshots, compile numeric/enum/list arguments once. All/any reject empty lists, not takes one predicate; conditions contain no live Bukkit reads.
+- [x] Same Verify GREEN and schema 2 nested condition examples compile.
+- [x] Commit `feat(skills): expand typed actor target world and data predicates`.
 
 ### Task 20: General trigger adapters and event-time binding
 

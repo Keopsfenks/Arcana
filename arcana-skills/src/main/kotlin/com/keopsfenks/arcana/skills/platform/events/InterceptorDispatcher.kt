@@ -33,7 +33,7 @@ class InterceptorDispatcher(private val engine: DefaultSkillEngine, private val 
                     check(engine.enroll(created)) { "Skill engine stopped" }; platform.attach(created)
                 }
                 val parameters = ParameterBindings.bind(definition.parameters, input.parameters())
-                val captured = InvocationSnapshots.captureLocal(input.derive().parameters(parameters).build(), engine.scheduler)
+                val captured = InvocationSnapshots.captureLocal(input.derive().parameters(parameters).build(), engine.scheduler, definition.snapshots, platform)
                 val enriched = StatBindings.captureLocal(captured, definition.stats, platform)
                 val frame = state.frame(InvocationFrame(enriched)); val variables = platform.variables.access(frame)
                 val context = PlatformExecutionContext(engine, platform, state, frame, definition, 1, variables)

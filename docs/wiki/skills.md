@@ -366,3 +366,38 @@ Templates support `{actor}`, `{player}`, `{target}`, `{skill}`, `{param.name}` a
 `set_block` takes resolved `block` data and optional `physics` (default false). Player placement stages the proposed data without physics so the native placement event exposes the proposed block and replaced state. Cancellation or source invalidation restores the previous state only while the staged data remains unchanged. Player placement/break emit [BlockPlaceEvent](https://jd.papermc.io/paper/1.21.8/org/bukkit/event/block/BlockPlaceEvent.html)/BlockBreakEvent; nonplayer edits emit [EntityChangeBlockEvent](https://jd.papermc.io/paper/1.21.8/org/bukkit/event/entity/EntityChangeBlockEvent.html) and obey cancellation. `break_block` defaults to no drops and no physics; explicit `drops` follows the native break path. All edits check loaded chunks and world height on the location scheduler. These event hooks allow protection listeners to intervene; they do not reproduce every third-party protection system or vanilla interaction rule.
 
 `lightning` defaults to `effect-only: true`. `explosion` accepts `power` (0–8), `fire` and `break-blocks`, with both destructive flags false by default. Its affected bounds must be loaded, and cancellation from the native explosion call is respected. See the [Paper world API](https://jd.papermc.io/paper/1.21.8/org/bukkit/World.html). Arcana-generated block protection events remain visible to other plugins but do not start new Arcana block-trigger roots; synchronous native damage is guarded at application.
+
+### Snapshot conditions
+
+The native `PREDICATE` registry contains 23 separate factories. `subject: actor` is the default for role-based conditions, with explicit `target` and `trigger` available; `has_target` defaults to the target role. Missing required role/data does not match. Predicates consume immutable invocation data and do not read Bukkit entities or worlds themselves.
+
+`all`/`any` require a nonempty `conditions` list, while `not` accepts exactly one `condition`. `expression` compiles numeric input once and matches a finite nonzero result. `actor_type` accepts `kind: player|mob|living`; `entity_type` accepts a `types` list resolved using `Locale.ROOT`. `health` supports inclusive `min`/`max` and optional `percent`; `food` is player-only and uses inclusive bounds. `movement` selects `sneaking`, `sprinting`, `swimming`, `gliding` or `on_ground`, with optional boolean `value`.
+
+`world` matches `worlds` names. `biome` matches `biomes` resource keys, defaulting bare names to the `minecraft` namespace; datapack keys retain their namespace. `time` compares inclusive ticks 0–23,999 and wraps midnight when `min` exceeds `max`. `weather` accepts `states: [clear, rain, thunder]`. `height` compares a role's captured Y coordinate. `distance` compares two roles (`other: target` by default), and different worlds never match. `line_of_sight` captures both eye positions on their owners and checks a loaded block segment, bounded by `max-distance` (at most 256) and the existing query caps. World/biome/time/weather/LOS reads use the appropriate global or location context.
+
+`permission` captures only the exact requested player `permission` node, without enumerating effective permissions. `equipment` captures only a requested player `slot`, then matches a `materials` list and optional `min-amount`. Slots are `main_hand`, `off_hand`, `helmet`, `chestplate`, `leggings`, `boots`. Unsupported player capabilities on mobs fail the condition.
+
+`variable` compares a declared `binding: var_name` with typed `equals`, or numeric inclusive bounds. Bindings retain their configured scope/default/persistence rules. `resource` reads a named `resource` provider balance without reserving or spending it. `stat` requests a `key` from `provider`; an unqualified stat key belongs to the resolved provider namespace. Both support explicit subject and inclusive bounds. Missing returned stat data does not become zero. `has_aura` queries cached metadata by optional `name`, `aura-type`, `tag` and `caster: own|any`; `min-stacks` and `min-charges` must match the same instance.
+
+Targeter-internal predicates use `conditions`, while common effect-node predicates keep their existing `conditions`/`filters` semantics. Before a candidate filter runs, Arcana projects that candidate's required metadata and variable bindings; TARGET variables cannot inherit the previous victim's values. Location projections clear entity-target metadata and use missing-target binding defaults. Basic player/type/self filters run before expensive binding preparation. Examples:
+
+```yaml
+conditions:
+  - type: all
+    conditions:
+      - {type: actor_type, kind: player}
+      - {type: health, min: 25, max: 100, percent: true}
+      - type: not
+        condition: {type: expression, expression: 0}
+effects:
+  - type: damage
+    amount: 2
+    targeter:
+      type: entities_in_radius
+      radius: 8
+      exclude-self: true
+      conditions:
+        - {type: entity_type, subject: target, types: [zombie, skeleton]}
+```
+
+Extension conditions declare extra data through immutable `SkillSnapshotRequest` and `SkillCompilation.snapshot(request, path)`, receiving a reserved alias to read from invocation data. A compiled definition allows at most 256 distinct requests. Normal and synchronous interception requirements are tracked separately; async world/LOS providers are rejected in the local phase. Unused templates are preflighted without fetching their runtime snapshots. Custom targeters can use `SkillTargetQuery.project`/`projectLocation` to obtain the host's owned binding projection before pure filtering. All previous Java contracts remain available through their existing entry points.

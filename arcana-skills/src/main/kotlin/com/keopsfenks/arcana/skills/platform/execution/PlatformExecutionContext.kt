@@ -30,7 +30,8 @@ class PlatformExecutionContext(
 ) : SkillExecutionContext {
     var admission: SkillAdmission? = initialAdmission
         internal set
-    private val query: SkillTargetQuery = RegionQuery(engine.scheduler, state = state, frame = frame)
+    private val query: SkillTargetQuery = com.keopsfenks.arcana.skills.platform.targets.RequiredTargetQuery(
+        RegionQuery(engine.scheduler, state = state, frame = frame), definition.snapshots, engine.scheduler, state, frame, platform, definition.bindings)
     private val flow = ParallelScope(this)
     fun <T> track(work: ScheduledWork<T>): CompletableFuture<T> = state.track(frame.track(work))
     override fun invocation(): SkillInvocation { state.checkActive(); return frame.snapshot(definition.bindings, variables) }
@@ -50,7 +51,7 @@ class PlatformExecutionContext(
         put(com.keopsfenks.arcana.skills.platform.auras.AuraManager::class.java, platform.auras.forContext(this@PlatformExecutionContext))
         put(com.keopsfenks.arcana.skills.platform.projectiles.ProjectileManager::class.java, platform.projectiles.forContext(this@PlatformExecutionContext))
     })
-    fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame)
+    fun derived(input: SkillInvocation, isolateLocals: Boolean = false): CompletableFuture<PlatformExecutionContext> = InvocationSnapshots.capture(input, engine.scheduler, state, frame, definition.snapshots, platform)
         .thenCompose { StatBindings.capture(it, definition.stats, state, frame, platform) }.thenCompose { captured ->
         val view = state.frame(if (isolateLocals) frame.fork(captured) else frame.view(captured))
         prepare(view)
@@ -65,7 +66,7 @@ class PlatformExecutionContext(
     }
     fun branch(input: SkillInvocation): PlatformBranch {
         val scope = state.frame(frame.fork(input))
-        val ready = InvocationSnapshots.capture(input, engine.scheduler, state, scope)
+        val ready = InvocationSnapshots.capture(input, engine.scheduler, state, scope, definition.snapshots, platform)
             .thenCompose { StatBindings.capture(it, definition.stats, state, scope, platform) }
             .thenCompose { captured -> prepare(state.frame(scope.view(captured))) }
         return PlatformBranch(scope, ready)

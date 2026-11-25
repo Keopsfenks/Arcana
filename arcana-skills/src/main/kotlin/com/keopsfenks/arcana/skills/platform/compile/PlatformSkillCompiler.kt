@@ -24,6 +24,7 @@ open class PlatformSkillCompiler(
     private val dependencies = LinkedHashSet<SkillRegistration>()
     private val references = LinkedHashMap<SkillKey, String>()
     private val templates = LinkedHashMap<Pair<SkillKey, SkillKey>, SkillArguments>()
+    private val snapshots = LinkedHashMap<SkillSnapshotRequest, com.keopsfenks.arcana.skills.platform.execution.CompiledSnapshotRequest>()
     private var localBindings: ((String) -> Unit)? = null
     private var localOnly = false
     private var nodes = 0
@@ -32,7 +33,7 @@ open class PlatformSkillCompiler(
     override fun namespace() = namespace
 
     fun compile(definition: SkillDefinition): CompiledPlatformSkill {
-        dependencies.clear(); references.clear(); templates.clear(); nodes = 0; depth = 0; localOnly = false
+        dependencies.clear(); references.clear(); templates.clear(); snapshots.clear(); nodes = 0; depth = 0; localOnly = false
         val args = SkillArguments(definition.configuration(), definition.origin())
         val allowed = setOf("schema", "id", "enabled", "triggers", "permission", "chance", "cooldown", "cooldown-group", "conditions", "effects", "parameters", "bindings", "costs", "charges", "every", "interceptors", "passives", "activation", "templates")
         args.values.keys.firstOrNull { it !in allowed }?.let { throw args.error(it, "unsupported skill option") }
@@ -69,7 +70,8 @@ open class PlatformSkillCompiler(
             require(templates.size <= 256) { "${groups.path}: maximum 256 templates per definition" }
         }
         // Validate declared templates even when no effect currently references them.
-        templates.values.forEach { template -> effects(listOf(template.values), template.path) }
+        templates.values.forEach { template -> snapshots.clear(); effects(listOf(template.values), template.path) }
+        snapshots.clear() // Preflight-only templates do not request runtime I/O; actual expansions register again.
         val chance = args.number("chance", 100.0)
         require(chance in 0.0..100.0) { "${args.path}.chance: must be between 0 and 100" }
         val triggers = args.list("triggers", emptyList<Any>()).mapIndexed { i, value ->
@@ -118,7 +120,7 @@ open class PlatformSkillCompiler(
             if (args.has("permission")) args.string("permission").also { require(it.isNotBlank()) { "${args.path}.permission: must not be blank" } } else null,
             chance, SkillArgumentsReader.durationNanos(args.raw("cooldown", "0s"), "${args.path}.cooldown"),
             SkillKey.parse(args.string("cooldown-group", definition.key().value()), namespace), conditions, effects,
-            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables, costs, charges, every, stats, interceptors, java.util.List.copyOf(passives), activation == "holder")
+            Collections.unmodifiableSet(LinkedHashSet(dependencies)), Collections.unmodifiableMap(LinkedHashMap(references)), definition.origin(), parameters, variables, costs, charges, every, stats, interceptors, java.util.List.copyOf(passives), activation == "holder", java.util.List.copyOf(snapshots.values))
     }
 
     private fun costs(args: SkillArguments): List<CompiledCost> = java.util.List.copyOf(args.list("costs", emptyList<Any>()).mapIndexed { index, raw ->
@@ -175,6 +177,28 @@ open class PlatformSkillCompiler(
         finally { localOnly = previous }
     }
     override fun number(value: Any?, path: String) = numbers.number(value, path)
+    override fun snapshot(request: SkillSnapshotRequest, path: String): String {
+        val resource = if (request.kind() == SkillSnapshotRequest.Kind.RESOURCE) platform.providers.resource(request.argument(), namespace, path) else null
+        val stat = if (request.kind() == SkillSnapshotRequest.Kind.STAT) platform.providers.stat(request.argument(), namespace, path) else null
+        resource?.let(dependencies::add); stat?.let(dependencies::add)
+        val normalized = if (stat == null) request else {
+            val value = request.options()["key"] ?: throw IllegalArgumentException("$path: stat snapshot requires a key")
+            val key = when (value.kind()) {
+                SkillValue.Kind.KEY -> value.key()
+                SkillValue.Kind.TEXT -> SkillKey.parse(value.text(), stat.key.namespace())
+                else -> throw IllegalArgumentException("$path: stat snapshot key must be a key or text")
+            }
+            SkillSnapshotRequest(request.kind(), request.role(), request.argument(), request.options() + ("key" to SkillValue.of(key)))
+        }
+        val synchronous = request.kind() !in setOf(SkillSnapshotRequest.Kind.BIOME, SkillSnapshotRequest.Kind.TIME, SkillSnapshotRequest.Kind.WEATHER, SkillSnapshotRequest.Kind.LINE_OF_SIGHT) && resource?.component?.supportsLocal() != false && stat?.component?.supportsLocal() != false
+        require(!localOnly || synchronous) { "$path: required snapshot cannot run during local interception" }
+        snapshots[normalized]?.let { previous -> if (localOnly && !previous.local) snapshots[normalized] = previous.copy(local = true); return previous.alias }
+        require(snapshots.size < 256) { "$path: maximum 256 distinct required snapshots" }
+        val relation = if (request.kind() == SkillSnapshotRequest.Kind.LINE_OF_SIGHT) "_${request.argument().lowercase(java.util.Locale.ROOT)}" else ""
+        val alias = "arcana_snapshot_${request.role().prefix()}_${request.kind().name.lowercase(java.util.Locale.ROOT)}${relation}_${snapshots.size}"
+        snapshots[normalized] = com.keopsfenks.arcana.skills.platform.execution.CompiledSnapshotRequest(alias, normalized, localOnly, resource, stat)
+        return alias
+    }
 
     private fun baseBindings(): Map<String, (SkillInvocation) -> Double> = (SkillCompilerImpl.VARIABLES + arrayOf("aura_stacks", "aura_charges")).associateWith { name ->
         { invocation: SkillInvocation ->

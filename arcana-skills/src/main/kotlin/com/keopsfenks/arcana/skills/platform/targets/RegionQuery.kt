@@ -83,7 +83,7 @@ class RegionQuery(
                 val id = requireNotNull(location.world).uid
                 Optional.of(SkillEntitySnapshot(actor, SkillLocation(id, location.x, location.y, location.z, location.yaw, location.pitch),
                     SkillBounds(id, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ),
-                    SkillValue.of(mapOf("type" to entity.type.name, "player" to actor.player().isPresent, "health" to entity.health)).map()))
+                    SkillValue.of(mapOf("type" to entity.type.name, "player" to actor.player().isPresent, "health" to entity.health, "max_health" to entity.maxHealth, "world" to entity.world.name)).map()))
             }
         }).handle { value, error ->
             check()
