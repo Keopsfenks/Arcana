@@ -89,6 +89,16 @@ All material fixes are covered by the final 1653-test complete build. Live serve
 behavior remains untested. Unattributed local `.gitignore`/`.vscode` changes were
 preserved and excluded from the implementation commits.
 
+## Publication
+
+Published the completed branch `codex/advanced-skills-platform` to the user's
+`Keopsfenks/Arcana` fork and opened [PR #2](https://github.com/Keopsfenks/Arcana/pull/2)
+against `feat/arcana-skills`, stacked on the existing basic-engine PR #1.
+Material fixes are committed as `417a84b6e32c2d541a1f3df7cf231e27e33caa70`.
+The final documentation-only commit records publication and the completed plan;
+it does not change the verified compiled sources or artifact hash. No merge or
+separate repository/addon/release was created.
+
 ## Rulings I made
 
 Chronological ledger decisions, including their cost if wrong. Decision 31
