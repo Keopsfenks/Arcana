@@ -499,12 +499,7 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
         this.loadListeners().forEach(listener -> this.getEventManager().registerListener(listener));
         this.loadPacketListeners().forEach(listener -> this.getEventManager().registerPacketListener(listener));
 
-        Arcana.get().beginCommandBatch();
-        try {
-            this.loadPluginCommands().forEach(PluginCommand::register);
-        } finally {
-            Arcana.get().endCommandBatch();
-        }
+        this.registerPluginCommandsOnOwner();
 
         // Run preliminary reload to resolve load order issues
         this.getScheduler().global().runLater(() -> {
@@ -533,6 +528,24 @@ public abstract class ArcanaPlugin extends JavaPlugin implements PluginLike, Reg
         }
 
         this.handleLifecycle(this.onEnable, this::handleEnable);
+    }
+
+    private void registerPluginCommandsOnOwner() {
+        Runnable register = () -> {
+            Arcana.get().beginCommandBatch();
+            try {
+                this.loadPluginCommands().forEach(PluginCommand::register);
+            } finally {
+                Arcana.get().endCommandBatch();
+            }
+        };
+        // onEnable runs before Folia's global ticks start. Move the complete batch,
+        // rather than queueing each command separately and losing sync coalescing.
+        if (Prerequisite.HAS_FOLIA.isMet()) {
+            this.getScheduler().global().run(register);
+        } else {
+            register.run();
+        }
     }
 
     /**

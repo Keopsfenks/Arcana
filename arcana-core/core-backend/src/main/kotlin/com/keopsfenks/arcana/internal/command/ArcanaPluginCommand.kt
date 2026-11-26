@@ -2,6 +2,7 @@ package com.keopsfenks.arcana.internal.command
 
 import com.keopsfenks.arcana.core.Arcana
 import com.keopsfenks.arcana.core.ArcanaPlugin
+import com.keopsfenks.arcana.core.Prerequisite
 import com.keopsfenks.arcana.core.command.CommandBase
 import com.keopsfenks.arcana.core.command.PluginCommandBase
 import org.bukkit.Bukkit
@@ -14,7 +15,7 @@ class ArcanaPluginCommand(
     playersOnly: Boolean
 ) : HandledCommand(parentDelegate, plugin, name, permission, playersOnly),
     PluginCommandBase {
-    override fun register() {
+    override fun register() = mutateOnOwner {
         val command = Bukkit.getPluginCommand(name)
 
         val knownDescription = command?.description ?: description ?: ""
@@ -33,9 +34,18 @@ class ArcanaPluginCommand(
         Arcana.get().syncCommands()
     }
 
-    override fun unregister() {
+    override fun unregister() = mutateOnOwner {
         unregisterWithoutSync()
         Arcana.get().syncCommands()
+    }
+
+    /** Cleanup, insertion and sync must share one owner callback, including during startup. */
+    private inline fun mutateOnOwner(crossinline action: () -> Unit) {
+        if (Prerequisite.HAS_FOLIA.isMet && !Bukkit.isGlobalTickThread()) {
+            plugin.scheduler.global().run { action() }
+        } else {
+            action()
+        }
     }
 
     private fun unregisterWithoutSync() {
