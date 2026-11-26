@@ -44,7 +44,7 @@ with zipfile.ZipFile(artifact) as jar:
     for name in ("LICENSE.md", "NOTICE.md"):
         assert jar.read(name).decode().replace("\r\n", "\n") == (ROOT / name).read_text()
     examples = sorted(name for name in names if name.startswith("arcana-skills/examples/") and name.endswith(".yml"))
-    assert len(examples) == 9, examples
+    assert len(examples) == 10, examples
     assert all("enabled: false" in jar.read(name).decode() for name in examples)
 
 linkage = list(ROOT.glob("arcana-core/core-nms/*/build/reports/nms-linkage.txt"))

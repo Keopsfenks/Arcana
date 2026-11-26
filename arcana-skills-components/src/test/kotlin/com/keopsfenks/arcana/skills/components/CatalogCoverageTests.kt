@@ -20,7 +20,9 @@ class CatalogCoverageTests {
         Files.writeString(path, "user-owned: true\n"); StandardSkillExamples.copyTo(dir); assertEquals("user-owned: true\n", Files.readString(path))
         Files.writeString(path, initial)
         // Startup copies are deliberately ignored until the operator removes the leading underscore.
-        StandardSkillExamples.NAMES.forEach { Files.copy(dir.resolve(it), dir.resolve(it.removePrefix("_"))) }
+        // The registry-heavy lab has its own full-file compiler test with native lookup substitutes.
+        assertTrue(Files.exists(dir.resolve("_v2_all-components-test.yml")))
+        StandardSkillExamples.NAMES.filterNot { it == "_v2_all-components-test.yml" }.forEach { Files.copy(dir.resolve(it), dir.resolve(it.removePrefix("_"))) }
         f.load()
         assertEquals(6, f.platform.definitions().size)
         assertTrue(f.platform.definitions().filter { it.key().value() != "one" }.all { !it.enabled() })

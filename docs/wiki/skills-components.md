@@ -43,6 +43,29 @@ For example, `binding: data.hand` plus `equals: OFF_HAND` selects off-hand consu
 or shoot snapshots. Rich-text placeholders are inserted as literal components;
 expanded values cannot inject new formatting tags.
 
+## Tek dosyayla oyun içi test
+
+Sunucuya kopyalanan `_v2_all-components-test.yml` dosyasının başındaki `_`
+işaretini kaldır, `enabled: true` yap ve `/arcana skills reload` çalıştır.
+`/arcana skills cast all_components_test` ile 57 mekanik sırayla denenir;
+her adım numaralı DENENİYOR / UYGULANDI / ATLANDI mesajı verir, ardından
+23 koşul EŞLEŞTİ / EŞLEŞMEDİ olarak gösterilir. Başarısız adım sonrakileri
+durdurmaz. Çağrının başarılı olması, örneğin bir merminin gerçekten hedefe
+isabet ettiği anlamına gelmez; oyun içindeki sonucu ayrıca gözlemle.
+
+Test için tahta kılıç tut ve doğu (+X) yönünde üç blok öteye bir zırh askısı yerleştir.
+Blok değiştirme ve teleport adımları dosyadaki açık seçeneklerle etkinleştirilir;
+teleport koordinatlarını önce kendine göre düzenle. Aralık `pace.default`
+ile ayarlanır. `/arcana skills reload` çalışan testi durdurur.
+
+Aynı dosyanın başında 23 tetikleyicinin yönergesi ve ayrı olay modu bulunur.
+`event_mode.default: true`, `triggers: [right_click]` ve aynı `event_label`
+ile seçtiğin gerçek olayı test et; her seferinde tek tetikleyici kullan.
+Bu mod efekt dizisini başlatmadan yakındaki yetkili oyuncuya olay mesajı verir.
+Giriş/ölüm gibi gerçek olaylar otomatik üretilemez; `custom` ve `timer` için
+API çağrısı gerekir. Normal teste dönmek için `event_mode.default: false` ve
+`triggers: []` kullan. Herhangi bir başka beceri dosyası gerekmez.
+
 ## Runtime limits
 
 Defaults/hard caps: 64 managed instances per actor and 4096 engine-wide,

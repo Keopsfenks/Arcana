@@ -31,7 +31,7 @@ Unchanged tasks were cached; changed engine tests and isolated native fixtures r
 - Root JAR includes API, engine, catalog, schema, examples, metadata and LICENSE/NOTICE;
   no copied third-party namespaces or test fixtures. bStats35538/resource-id0 retained.
 
-Artifact: `build/libs/arcana-2026.47-all.jar` (16057692 bytes).
+Reviewed-baseline artifact: `build/libs/arcana-2026.47-all.jar` (16057692 bytes).
 
 SHA256: `5a148d81ffef5f604df2b7f1a34a1a831248c0c5a17118284891545ed532fa0d`.
 
@@ -98,6 +98,25 @@ Material fixes are committed as `417a84b6e32c2d541a1f3df7cf231e27e33caa70`.
 The final documentation-only commit records publication and the completed plan;
 it does not change the verified compiled sources or artifact hash. No merge or
 separate repository/addon/release was created.
+
+## 2026-11-27: Single-file in-game test example
+
+Added `all-components-test.yml`, copied on startup as `_v2_all-components-test.yml`.
+It contains 57 numbered sequential mechanic attempts, truthful success/skip markers,
+23 condition results, and a separate real-event observer mode with instructions for
+all 23 triggers. A parameterized same-file child cast avoids requiring another YAML.
+World edits/teleport are opt-in; the sample remains disabled until enabled explicitly.
+
+The complete component-module suite and root JAR packaging passed in 42 seconds.
+Three new checks cover catalog coverage, whole-file compilation (native registry
+lookups substituted in the unit fixture), and a rejected action continuing to the
+next numbered action without a false success message. This is preparation for the
+user's live in-game testing; no server gameplay result is claimed.
+
+Current release audit: 1656 tests in 202 accumulated report suites,
+zero failures/errors/skips; 7 previously verified unchanged NMS linkage reports;
+96 v1 descriptors, 125 native entries, 10 disabled samples, 1593 source paths.
+Current JAR: 16065141 bytes, SHA256 `f959ae36cffe161f295c1cf088d5e0eeaf73625dc959d68047e9b8c801e3b970`.
 
 ## Rulings I made
 
