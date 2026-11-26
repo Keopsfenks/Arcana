@@ -18,7 +18,8 @@ class TriggerSubscriptions(private val engine: DefaultSkillEngine, private val p
     private val timers = ConcurrentHashMap.newKeySet<Timer>()
     private val closed = AtomicBoolean()
     val pendingCount get() = pending.size
-    fun generated(input: SkillInvocation): Boolean = input.data()["damage_source_id"]?.let { try { platform.generatedSources.contains(UUID.fromString(it.text())) } catch (_: IllegalArgumentException) { false } } ?: false
+    fun generatedId(text: String?): Boolean = text?.let { try { platform.generatedSources.contains(UUID.fromString(it)) } catch (_: IllegalArgumentException) { false } } ?: false
+    fun generated(input: SkillInvocation): Boolean = generatedId(input.data()["damage_source_id"]?.takeIf { it.kind() == SkillValue.Kind.TEXT }?.text())
     fun install(handle: SkillRegistration, key: SkillKey, trigger: SkillPlatformTrigger) {
         val listener = trigger.listen(object : PlatformTriggerDispatch {
             override fun prepare(input: SkillInvocation): Runnable? {

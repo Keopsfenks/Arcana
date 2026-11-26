@@ -19,8 +19,53 @@ class ProjectileSimulationTests {
         r.launch(ProjectileOptions(speed = 4.0, direction = SkillVector(1.0, 0.0, 0.0), lifetimeTicks = 1, pierce = 10, maxHits = 1, hitCaster = true))
         r.f.scheduler.advance(1); assertEquals(1, r.hits.size); assertFalse(r.handle.active()); assertEquals(0, r.f.platform.managed.size)
     }
+    @Test fun actualSweptQueryRetiresFlightWhenMiddlePartitionDisappearsButDestinationStaysLoaded() {
+        val r = Rig(realQuery = true); val calls = mutableMapOf<Int, Int>()
+        every { r.f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers {
+            val at = r.f.scheduler.current as Location; val x = firstArg<Int>(); assertEquals(x, at.blockX shr 4)
+            val n = (calls[x] ?: 0)+1; calls[x]=n; x != 1 || n == 1
+        }
+        every { r.f.legacy.world.minHeight } returns 0; every { r.f.legacy.world.maxHeight } returns 256
+        val air = io.mockk.mockk<org.bukkit.block.Block>(); val shape = io.mockk.mockk<org.bukkit.util.VoxelShape>()
+        every { shape.boundingBoxes } returns emptyList(); every { air.collisionShape } returns shape
+        every { r.f.legacy.world.getBlockAt(any<Int>(), any<Int>(), any<Int>()) } answers {
+            val at = r.f.scheduler.current as Location; assertEquals(firstArg<Int>() shr 4, at.blockX shr 4); air
+        }
+        val emptyChunk = io.mockk.mockk<org.bukkit.Chunk>(); every { emptyChunk.entities } returns emptyArray()
+        every { r.f.legacy.world.getChunkAt(any<Int>(), any<Int>()) } returns emptyChunk
+        every { r.f.legacy.world.getNearbyEntities(any<org.bukkit.util.BoundingBox>()) } returns emptyList()
+        r.launch(ProjectileOptions(speed = 32.0, direction = SkillVector(1.0, 0.0, 0.0), lifetimeTicks = 1, radius = 0.0))
+        r.f.scheduler.advance(1); assertFalse(r.handle.active()); assertEquals(r.point(0.0), r.handle.position)
+        assertEquals(2, calls[1], "Middle chunk must become unavailable only on the collision pass after successful preflight")
+        assertEquals(1, calls[2], "Loaded destination was reached by the complete preflight")
+        assertEquals(SkillRemovalReason.CANCELLED, r.handle.reason().orElseThrow())
+        assertTrue(r.hits.isEmpty()); assertEquals(0, r.f.platform.managed.size); assertEquals(1, r.cleanups)
+    }
+    @Test fun queuedOwnerHandoffsFinishAOneStepFlightBeforeSimulationExpiry() {
+        val r = Rig(); r.launch(ProjectileOptions(speed = 4.0, direction = SkillVector(1.0, 0.0, 0.0), lifetimeTicks = 1))
+        r.f.scheduler.foreignDelayTicks = 1
+        repeat(12) { r.f.scheduler.advance(1) }
+        assertEquals(r.point(4.0), r.handle.position); assertEquals(1, r.marks.count { it == "tick" }); assertFalse(r.handle.active())
+        assertEquals(0, r.f.platform.managed.size)
+    }
+    @Test fun stalledQueriesRetireWithinAFiniteWallDeadlineAndDiscardLateHits() {
+        val r = Rig(); val pending = CompletableFuture<List<SkillCollision>>(); r.barrier = pending
+        r.launch(ProjectileOptions(lifetimeTicks = 1)); repeat(110) { r.f.scheduler.advance(1) }
+        assertFalse(r.handle.active()); assertEquals(0, r.f.platform.managed.size); assertEquals(1, r.cleanups)
+        pending.complete(listOf(r.hit(1.0, .25))); assertTrue(r.hits.isEmpty())
+    }
+    @Test fun twoBouncesUseOnlyTheRemainingFractionOfTheOriginalStep() {
+        val r = Rig(); var walls = 0
+        r.contacts = { from, to ->
+            if (walls++ < 2) listOf(SkillCollision(r.point((from.x()+to.x())/2), SkillVector(if (to.x()>from.x()) -1.0 else 1.0, 0.0, 0.0), Optional.empty(), .5)) else emptyList()
+        }
+        r.launch(ProjectileOptions(speed = 8.0, direction = SkillVector(1.0, 0.0, 0.0), bounces = 2, bounceEnergy = 1.0, lifetimeTicks = 1))
+        r.f.scheduler.advance(1)
+        assertEquals(4.0, r.handle.position.x(), 3e-5, "8 units: +4, -2, +2 plus separation epsilon")
+        assertEquals(3, r.points.size)
+    }
     @TempDir lateinit var directory: Path
-    private inner class Rig {
+    private inner class Rig(realQuery: Boolean = false) {
         val f = PlatformFixture(directory)
         var loaded = true; var retired = false; var calls = 0; var cleanups = 0
         var barrier: CompletableFuture<List<SkillCollision>>? = null
@@ -36,7 +81,7 @@ class ProjectileSimulationTests {
             override fun snapshot(actor: SkillActor) = CompletableFuture.completedFuture(if (retired) Optional.empty() else Optional.of(SkillEntitySnapshot(actor, point(4.0, 64.0, 4.0), SkillBounds(f.worldId, 3.9, 64.0, 3.9, 4.1, 65.0, 4.1), emptyMap())))
             override fun collisions(from: SkillLocation, to: SkillLocation, radius: Double): CompletableFuture<List<SkillCollision>> { calls++; points.add(to); return barrier ?: CompletableFuture.completedFuture(contacts(from, to)) }
         }
-        val manager = ProjectileManager(f.engine, f.platform, queryFactory = { query }, worlds = { f.legacy.world })
+        val manager = ProjectileManager(f.engine, f.platform, queryFactory = { if (realQuery) com.keopsfenks.arcana.skills.platform.targets.RegionQuery(f.scheduler, { f.legacy.world }, state = it.state) else query }, worlds = { f.legacy.world })
         init {
             every { f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers {
                 val owner = f.scheduler.current as? Location ?: error("Projectile commit requires location ownership")

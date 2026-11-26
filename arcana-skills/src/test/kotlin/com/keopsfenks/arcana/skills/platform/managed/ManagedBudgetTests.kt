@@ -8,6 +8,23 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
 class ManagedBudgetTests {
+    @Test fun adoptedChildCannotResetSixteenStillRunningParallelBranches() {
+        val f = PlatformFixture(directory); lateinit var parent: ManagedExecutionState; lateinit var child: ManagedExecutionState
+        f.register("native_mark") { _, _ -> CompiledSkillMechanic { execution ->
+            parent = ManagedExecutionState.adopt(execution as PlatformExecutionContext, execution.invocation().actor())
+            parent.execute(listOf(CompiledSkillMechanic { current ->
+                current.services().require(ParallelScope::class.java).execute((0 until 16).map { index -> listOf(CompiledSkillMechanic { branch ->
+                    if (index == 0) child = ManagedExecutionState.adopt(branch as PlatformExecutionContext, branch.invocation().actor())
+                    branch.delay(10)
+                }) }).thenApply { SkillResult.success() }
+            }))
+            f.success()
+        } }
+        f.write(); f.load(); f.cast().join()
+        assertThrows(PlatformBudgetException::class.java) { child.state.reserveBranches(1) }
+        f.scheduler.advance(10); child.state.reserveBranches(16).close()
+        child.close(); parent.close(); assertEquals(0, f.platform.managed.size); f.engine.shutdown()
+    }
     @TempDir lateinit var directory: Path
     @Test fun callback4097AndStep65537FailWithoutResettingTheInstanceBudget() {
         val f = PlatformFixture(directory); lateinit var managed: ManagedExecutionState

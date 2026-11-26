@@ -34,9 +34,8 @@ class PotionContributions(private val scheduler: SkillScheduler) : Listener, Aut
         val group = groups.computeIfAbsent(key) { Group(actor, type) }
         val claim = Claim(identity, PotionEffect(type, 40, amplifier, ambient, particles, icon), dispellable, onDispel)
         check(group.claims.putIfAbsent(identity, claim) == null) { "Duplicate potion contribution identity" }
-        reconcile(key, group); schedule(key, group)
         val ended = AtomicBoolean()
-        return object : SkillContributionLease {
+        val lease = object : SkillContributionLease {
             override fun close() { if (ended.compareAndSet(false, true)) scheduler.on(actor.entity()) {
                 if (groups[key] === group && group.claims.remove(identity, claim)) {
                     reconcile(key, group)
@@ -45,6 +44,8 @@ class PotionContributions(private val scheduler: SkillScheduler) : Listener, Aut
                 Unit
             } }
         }
+        try { reconcile(key, group); schedule(key, group); return lease }
+        catch (error: Throwable) { lease.close(); throw error }
     }
     private fun matches(current: PotionEffect?, owned: PotionEffect) = current != null && current.type == owned.type && current.amplifier == owned.amplifier && current.isAmbient == owned.isAmbient && current.hasParticles() == owned.hasParticles() && current.hasIcon() == owned.hasIcon() && current.duration in 1..40
     fun removeOwned(actor: SkillActor, type: PotionEffectType) {

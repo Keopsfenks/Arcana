@@ -117,6 +117,7 @@ class PlatformConditionTests {
         val f = fixture(); var blocked = false; val chunk = mockk<Chunk>()
         every { chunk.entities } answers { assertTrue(f.scheduler.current is Location); emptyArray() }
         every { f.root.world.getChunkAt(any<Int>(), any<Int>()) } answers { assertTrue(f.scheduler.current is Location); chunk }
+        every { f.root.world.getNearbyEntities(any<BoundingBox>()) } answers { assertTrue(f.scheduler.current is Location); listOf(f.root.caster, f.root.victim) }
         every { f.root.world.minHeight } returns 0; every { f.root.world.maxHeight } returns 256
         every { f.root.caster.eyeLocation } answers { f.scheduler.assertOwner(f.root.caster); Location(f.root.world, 0.0, 61.62, 0.0) }
         every { f.root.victim.eyeLocation } answers { f.scheduler.assertOwner(f.root.victim); Location(f.root.world, 3.0, 61.62, 0.0) }
@@ -140,6 +141,7 @@ class PlatformConditionTests {
         val f = fixture(); f.platform.register(f.root.plugin, SkillComponentType.TARGETER, SkillKey("arcana", "entities_in_radius"), com.keopsfenks.arcana.skills.components.targeters.EntitiesInRadiusTargeter())
         val chunk = mockk<Chunk>(); every { chunk.entities } answers { assertTrue(f.scheduler.current is Location); arrayOf(f.root.caster, f.root.victim) }
         every { f.root.world.getChunkAt(any<Int>(), any<Int>()) } answers { assertTrue(f.scheduler.current is Location); chunk }
+        every { f.root.world.getNearbyEntities(any<BoundingBox>()) } answers { assertTrue(f.scheduler.current is Location); listOf(f.root.caster, f.root.victim) }
         val selected = mutableListOf<SkillActor>()
         f.register("record") { _, _ -> CompiledSkillMechanic { current -> selected.add(current.invocation().target().orElseThrow()); f.success() } }
         f.write(effects = "  - {type: record, targeter: {type: entities_in_radius, radius: 8, conditions: [{type: permission, subject: target, permission: arcana.use}]}}")
@@ -174,6 +176,7 @@ class PlatformConditionTests {
         f.platform.register(f.root.plugin, SkillComponentType.TARGETER, SkillKey("arcana", "origin"), com.keopsfenks.arcana.skills.components.targeters.OriginTargeter())
         val chunk = mockk<Chunk>(); every { chunk.entities } answers { assertTrue(f.scheduler.current is Location); arrayOf(f.root.caster, f.root.victim) }
         every { f.root.world.getChunkAt(any<Int>(), any<Int>()) } answers { assertTrue(f.scheduler.current is Location); chunk }
+        every { f.root.world.getNearbyEntities(any<BoundingBox>()) } answers { assertTrue(f.scheduler.current is Location); listOf(f.root.caster, f.root.victim) }
         val selected = mutableListOf<SkillActor>()
         f.register("record") { _, _ -> CompiledSkillMechanic { current -> selected.add(current.invocation().target().orElseThrow()); f.success() } }
         f.write("set", effects = "  - {type: set_variable, scope: target, key: flag, value: true}")

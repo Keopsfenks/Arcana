@@ -30,27 +30,21 @@ class InterceptorListener(private val engine: DefaultSkillEngine, private val pl
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onHighest(event: EntityDamageEvent) {
         if (closed.get() || event.isCancelled || SkillDamageScope.isActive() || generated(event)) return
+        val snapshot = platform.repository.snapshot()
         platform.auraEvents.onHighest(event)
         if (event.isCancelled) return
-        val victim = event.entity as? LivingEntity ?: return
-        val damage = event.damage
-        if (!damage.isFinite() || damage < 0) return
-        val damaged = SkillInvocation.builder(SkillActor.of(victim)).data(mapOf("damage" to damage)).build()
-        intercept(SkillKey("arcana", if (victim is Player) "damage_taken" else "entity_damaged"), damaged, event)
-        if (event is EntityDamageByEntityEvent && event.cause in setOf(EntityDamageEvent.DamageCause.ENTITY_ATTACK, EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK)) {
-            val attacker = event.damager as? LivingEntity ?: return
-            val attack = SkillInvocation.builder(SkillActor.of(attacker)).target(SkillActor.of(victim)).data(mapOf("damage" to event.damage)).build()
-            intercept(SkillKey("arcana", if (attacker is Player) "melee_attack" else "entity_attack"), attack, event, append = true)
-        }
+        val damaged = DamageEventInputs.capture(event) ?: return
+        intercept(SkillKey("arcana", if (damaged.actor().entity() is Player) "damage_taken" else "entity_damaged"), damaged, event, snapshot = snapshot, localize = true)
+        val attack = DamageEventInputs.capture(event, attack = true) ?: return
+        intercept(SkillKey("arcana", if (attack.actor().entity() is Player) "melee_attack" else "entity_attack"), attack, event, append = true, snapshot = snapshot, localize = true)
     }
-    fun intercept(trigger: SkillKey, invocation: SkillInvocation, event: Event, append: Boolean = false) {
+    fun intercept(trigger: SkillKey, invocation: SkillInvocation, event: Event, append: Boolean = false, snapshot: com.keopsfenks.arcana.skills.platform.sources.DefinitionSnapshot = platform.repository.snapshot(), localize: Boolean = false) {
         if (closed.get()) return
-        val snapshot = platform.repository.snapshot()
-        val global = snapshot.entries.values.filter { it.enabled && it.native?.let { skill -> !skill.holderOnly && trigger in skill.triggers && skill.interceptors.isNotEmpty() } == true }.map { it to invocation }
+        val global = snapshot.entries.values.filter { it.enabled && it.native?.let { skill -> !skill.holderOnly && trigger in skill.triggers && skill.interceptors.isNotEmpty() } == true }.map { Triple(it, invocation, emptySet<com.keopsfenks.arcana.core.skills.SkillRegistration>()) }
         val held = platform.holderManager.active(invocation.actor()).flatMap { binding -> binding.revisions.mapNotNull { revision ->
             val skill = revision.native
             if (skill != null && skill.enabled && skill.holderOnly && trigger in skill.triggers && skill.interceptors.isNotEmpty() && snapshot.entries[revision.key] === revision)
-                revision to invocation.derive().parameters(binding.holder.parameters()).build() else null
+                platform.holderManager.authorization(invocation.actor(), binding)?.let { Triple(revision, invocation.derive().parameters(binding.holder.parameters()).build(), it) } else null
         } }
         val revisions = (global + held).distinctBy { it.first.key to it.second.parameters() }
         if (revisions.isEmpty()) return
@@ -60,7 +54,14 @@ class InterceptorListener(private val engine: DefaultSkillEngine, private val pl
             if (pending.size >= 1024) return
             if (!append && pending.containsKey(identity)) { pending.remove(identity)?.let(::discard); return }
             val batch = pending[identity] ?: Batch(mutableListOf()).also { pending[identity] = it }
-            for ((revision, supplied) in revisions) platform.interceptors.intercept(revision.key, supplied, event).continuation?.let(batch.continuations::add)
+            for ((revision, supplied, authorization) in revisions) {
+                // Foreign identities may travel to the continuation, but local predicates may only read owned entities.
+                val local = if (!localize) supplied else supplied.derive()
+                    .target(supplied.target().orElse(null)?.takeIf { engine.scheduler.owns(it.entity()) })
+                    .trigger(supplied.trigger().orElse(null)?.takeIf { engine.scheduler.owns(it.entity()) })
+                    .selection(SkillSelection.empty()).build()
+                platform.interceptors.interceptSelected(revision, snapshot, local, event, authorization, supplied).continuation?.let(batch.continuations::add)
+            }
             if (batch.continuations.isEmpty()) { pending.remove(identity, batch); return }
             if (batch.expiry == null) {
                 batch.expiry = engine.scheduler.on(invocation.actor().entity(), 1) {

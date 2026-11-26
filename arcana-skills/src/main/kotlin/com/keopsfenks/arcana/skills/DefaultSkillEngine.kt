@@ -65,9 +65,8 @@ class DefaultSkillEngine(
                 override fun prepare(context: SkillContext): Runnable? {
                     val snapshot = current.get()
                     if (!handle.isActive || closed.get()) return null
-                    val input = LegacyInvocationAdapter.fromLegacy(context)
-                    if (generalPlatform.triggerSubscriptions.generated(input)) return null
-                    val native = generalPlatform.prepareTrigger(SkillKey("arcana", trigger.id), input, snapshot.definitions ?: generalPlatform.repository.snapshot())
+                    if (generalPlatform.triggerSubscriptions.generatedId(context.values["damage_source_id"] as? String)) return null
+                    val native = prepareNativeTrigger(trigger.id, context, snapshot)
                     if (snapshot.byTrigger[trigger.id].isNullOrEmpty() && native == null) return null
                     return Runnable {
                         if (handle.isActive && !closed.get()) { triggerInSnapshot(trigger.id, context, snapshot); native?.invoke() }
@@ -137,11 +136,26 @@ class DefaultSkillEngine(
     }
 
     override fun trigger(triggerId: String, context: SkillContext): CompletionStage<List<SkillResult>> {
-        val snapshot = current.get(); val input = LegacyInvocationAdapter.fromLegacy(context); val key = SkillKey.parse(triggerId, "arcana")
-        if (generalPlatform.triggerSubscriptions.generated(input)) return CompletableFuture.completedFuture(emptyList())
-        generalPlatform.auraEvents.emit(key, input.actor(), input)
-        val native = generalPlatform.prepareTrigger(key, input, snapshot.definitions ?: generalPlatform.repository.snapshot())?.invoke().orEmpty()
-        return triggerInSnapshot(triggerId, context, snapshot).toCompletableFuture().thenCombine(CompletableFuture.allOf(*native.toTypedArray())) { legacy, _ -> java.util.List.copyOf(legacy + native.map { it.join() }) }
+        val snapshot = current.get()
+        if (generalPlatform.triggerSubscriptions.generatedId(context.values["damage_source_id"] as? String)) return CompletableFuture.completedFuture(emptyList())
+        val prepared = prepareNativeTrigger(triggerId, context, snapshot, includeAura = true)
+        val legacy = triggerInSnapshot(triggerId, context, snapshot).toCompletableFuture()
+        val native = prepared?.invoke().orEmpty()
+        return legacy.thenCombine(CompletableFuture.allOf(*native.toTypedArray())) { results, _ -> java.util.List.copyOf(results + native.map { it.join() }) }
+    }
+
+    private fun prepareNativeTrigger(triggerId: String, context: SkillContext, snapshot: SkillSnapshot, includeAura: Boolean = false): (() -> List<CompletableFuture<SkillResult>>)? {
+        val key = try { SkillKey.parse(triggerId, "arcana") } catch (_: IllegalArgumentException) { return null }
+        val definitions = snapshot.definitions ?: generalPlatform.repository.snapshot()
+        val actor = com.keopsfenks.arcana.core.skills.platform.SkillActor.of(context.caster)
+        val aura = includeAura && generalPlatform.auraEvents.observes(key, actor)
+        if (!aura && !generalPlatform.hasNativeTrigger(key, actor, definitions)) return null
+        val input = try { LegacyInvocationAdapter.fromLegacy(context).let { it.derive().trigger(it.target().orElse(null)).build() } } catch (error: IllegalArgumentException) {
+            val result = SkillResult.of(SkillResult.Status.UNSUPPORTED_CONTEXT, "Legacy payload cannot be represented by schema 2: ${error.message}")
+            return { diagnostics.report(triggerId, result); listOf(CompletableFuture.completedFuture(result)) }
+        }
+        val native = generalPlatform.prepareTrigger(key, input, definitions)
+        return { if (aura) generalPlatform.auraEvents.emit(key, actor, input); native?.invoke().orEmpty() }
     }
 
     private fun triggerInSnapshot(triggerId: String, context: SkillContext, snapshot: SkillSnapshot): CompletionStage<List<SkillResult>> {

@@ -20,28 +20,27 @@ class StunMechanic(private val resolver: (String) -> Attribute? = StatusSupport:
         val contribution = CompiledSkillContribution { context, identity ->
             val actor = context.invocation().actor(); val added = mutableListOf<Pair<Attribute, AttributeModifier>>()
             val cleanup = context.services().require(SkillCleanup::class.java)
-            context.on(actor) { entity ->
+            val handoff = com.keopsfenks.arcana.skills.components.passives.NativeLeaseHandoff()
+            val ended = AtomicBoolean()
+            val lease = object : SkillContributionLease {
+                override fun close() { if (ended.compareAndSet(false, true)) cleanup.on(actor) { entity ->
+                    added.forEach { (attribute, modifier) -> entity.getAttribute(attribute)?.let { instance -> if (instance.modifiers.any { it == modifier && it.key == modifier.key }) instance.removeModifier(modifier) } }
+                    SkillResult.success()
+                } }
+            }
+            handoff.finish(context.on(actor) { entity ->
                 if (entity.isDead) throw SkillProviderException(SkillResult.of(SkillResult.Status.NO_TARGET, "Stun target is dead"))
                 val walking = entity.getAttribute(movement) ?: throw SkillProviderException(SkillResult.of(SkillResult.Status.UNSUPPORTED_ACTOR, "Actor has no movement attribute"))
                 try {
                     val modifier = AttributeModifier(NamespacedKey(identity.namespace(), identity.value()+"_move"), -1.0, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
-                    walking.addTransientModifier(modifier); added.add(movement to modifier)
+                    added.add(movement to modifier); walking.addTransientModifier(modifier)
                     jump?.let { attribute -> entity.getAttribute(attribute)?.let { instance ->
                         val jumping = AttributeModifier(NamespacedKey(identity.namespace(), identity.value()+"_jump"), -1.0, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
-                        instance.addTransientModifier(jumping); added.add(attribute to jumping)
+                        added.add(attribute to jumping); instance.addTransientModifier(jumping)
                     } }
-                } catch (error: Throwable) { added.forEach { (attribute, modifier) -> entity.getAttribute(attribute)?.removeModifier(modifier) }; throw error }
+                } finally { handoff.install(lease) }
                 SkillResult.success()
-            }.thenApply { outcome ->
-                if (!outcome.isSuccess) throw SkillProviderException(outcome)
-                val ended = AtomicBoolean()
-                object : SkillContributionLease {
-                    override fun close() { if (ended.compareAndSet(false, true)) cleanup.on(actor) { entity ->
-                        added.forEach { (attribute, modifier) -> entity.getAttribute(attribute)?.let { instance -> if (instance.modifiers.any { it == modifier && it.key == modifier.key }) instance.removeModifier(modifier) } }
-                        SkillResult.success()
-                    } }
-                }
-            }
+            })
         }
         return CompiledSkillMechanic { context ->
             val input = context.invocation(); val actor = recipient(input)

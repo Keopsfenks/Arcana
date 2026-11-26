@@ -17,6 +17,12 @@ import java.nio.file.Path
 import java.util.UUID
 
 class PlatformTriggerTests {
+    @Test fun unsupportedSynchronousTriggerCombinationRejectsAtItsExactPath(@TempDir dir: Path) {
+        val f = NativeComponentFixture(dir); f.install(MoveSkillTrigger(f.root.plugin))
+        f.platform.register(f.root.plugin, SkillComponentType.INTERCEPTOR, SkillKey("arcana", "cancel_event"), com.keopsfenks.arcana.skills.components.interceptors.CancelEventInterceptor())
+        f.write(options = "triggers: [move]\ninterceptors: [{type: cancel_event}]", effects = "  - type: mark")
+        val report = f.engine.reload(); assertFalse(report.success()); assertTrue(report.errors().any { it.contains("triggers[0]") && it.contains("move") }); f.engine.shutdown()
+    }
     private fun NativeComponentFixture.install(trigger: SkillPlatformTrigger) = platform.register(root.plugin, SkillComponentType.TRIGGER, SkillKey("arcana", trigger.descriptor().id()), trigger)
     @Test fun `legacy registered player trigger reaches native definitions exactly once`(@TempDir dir: Path) {
         val f = NativeComponentFixture(dir)
@@ -44,7 +50,7 @@ class PlatformTriggerTests {
         val a = damaged.listen { got.add(it) }; val b = kill.listen { got.add(it) }
         val projectile = mockk<Projectile>(); val id = UUID.randomUUID(); every { projectile.uniqueId } returns id; every { projectile.shooter } returns f.root.caster
         val e = mockk<EntityDamageByEntityEvent>(); every { e.isCancelled } returns false; every { e.entity } returns f.root.victim; every { e.damager } returns projectile; every { e.finalDamage } returns 3.0; every { e.cause } returns EntityDamageEvent.DamageCause.PROJECTILE
-        damaged.onEvent(e); assertEquals(f.root.caster.uniqueId, got.last().target().get().id()); assertEquals(id.toString(), got.last().data()["damage_source_id"]!!.text())
+        damaged.onEvent(e); assertEquals(f.root.caster.uniqueId, got.last().target().get().id()); assertEquals(f.root.caster.uniqueId, got.last().trigger().orElse(null)?.id()); assertEquals(id.toString(), got.last().data()["damage_source_id"]!!.text())
         val death = mockk<EntityDeathEvent>(); val source = mockk<org.bukkit.damage.DamageSource>(); every { death.damageSource } returns source; every { source.causingEntity } returns f.root.caster; every { source.directEntity } returns projectile; every { death.entity } returns f.root.victim
         f.scheduler.on(f.root.victim) { kill.onEvent(death) }.future.join(); assertEquals(2, got.size); assertEquals(f.root.caster.uniqueId, got.last().actor().id())
         a.close(); b.close(); f.engine.shutdown()

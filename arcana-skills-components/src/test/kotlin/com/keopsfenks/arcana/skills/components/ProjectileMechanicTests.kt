@@ -26,6 +26,7 @@ class ProjectileMechanicTests {
         val chunk = mockk<Chunk>(); every { chunk.entities } answers { assertTrue(f.scheduler.current is Location); arrayOf(f.root.caster, f.root.victim) }
         every { f.root.world.isChunkLoaded(any<Int>(), any<Int>()) } answers { chunkOwner(firstArg(), secondArg()); true }
         every { f.root.world.getChunkAt(any<Int>(), any<Int>()) } answers { chunkOwner(firstArg(), secondArg()); chunk }
+        every { f.root.world.getNearbyEntities(any<BoundingBox>()) } answers { assertTrue(f.scheduler.current is Location); listOf(f.root.caster, f.root.victim) }
         every { f.root.world.minHeight } returns 0; every { f.root.world.maxHeight } returns 256
         val air = mockk<org.bukkit.block.Block>(); val shape = mockk<org.bukkit.util.VoxelShape>()
         every { shape.boundingBoxes } returns emptyList(); every { air.collisionShape } returns shape

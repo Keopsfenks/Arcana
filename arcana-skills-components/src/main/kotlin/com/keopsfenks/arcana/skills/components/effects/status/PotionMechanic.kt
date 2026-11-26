@@ -18,12 +18,12 @@ class PotionMechanic(private val potions: PotionContributions, private val resol
         val amplifier = NativeActions.number(arguments, compilation, "amplifier", 0, 0.0, 255.0, true); val duration = AuraSupport.duration(arguments, compilation, "duration", "5s")
         val ambient = arguments.bool("ambient", false); val particles = arguments.bool("particles", true); val icon = arguments.bool("icon", true)
         val contribution = CompiledSkillContribution { context, identity ->
-            val actor = context.invocation().actor(); var native: SkillContributionLease? = null
+            val actor = context.invocation().actor(); val handoff = com.keopsfenks.arcana.skills.components.passives.NativeLeaseHandoff()
             val managed = context.services().require(ManagedExecutionState::class.java)
-            context.on(actor) { entity ->
+            handoff.finish(context.on(actor) { entity ->
                 if (entity.isDead) throw SkillProviderException(SkillResult.of(SkillResult.Status.NO_TARGET, "Potion target is dead"))
-                native = potions.add(actor, identity, type, amplifier.evaluate(context.invocation()).toInt(), ambient, particles, icon, true) { managed.remove(SkillRemovalReason.DISPELLED) }; SkillResult.success()
-            }.thenApply { outcome -> if (!outcome.isSuccess) throw SkillProviderException(outcome); requireNotNull(native) }
+                handoff.install(potions.add(actor, identity, type, amplifier.evaluate(context.invocation()).toInt(), ambient, particles, icon, true) { managed.remove(SkillRemovalReason.DISPELLED) }); SkillResult.success()
+            })
         }
         return CompiledSkillMechanic { context ->
             val input = context.invocation(); val actor = recipient(input)

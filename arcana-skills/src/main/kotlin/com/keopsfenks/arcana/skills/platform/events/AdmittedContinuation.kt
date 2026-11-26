@@ -6,7 +6,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Contains snapshots and an exact committed admission, never an Event or its facade. */
-class AdmittedContinuation internal constructor(private val context: PlatformExecutionContext, private val revision: DefinitionRevision) : AutoCloseable {
+class AdmittedContinuation internal constructor(private val context: PlatformExecutionContext, private val revision: DefinitionRevision,
+    private val supplied: com.keopsfenks.arcana.core.skills.platform.SkillInvocation) : AutoCloseable {
     private val claimed = AtomicBoolean()
     val actor get() = context.frame.invocation.actor()
     fun resume(values: Map<String, com.keopsfenks.arcana.core.skills.platform.SkillValue> = emptyMap()): CompletableFuture<SkillResult> {
@@ -18,11 +19,11 @@ class AdmittedContinuation internal constructor(private val context: PlatformExe
             if (!accepted.result.isSuccess) state.root.result.complete(accepted.result)
             else {
                 require(values.keys.all { it == "damage" }) { "Unsupported event snapshot field" }
-                val execution = if (values.isEmpty()) context else {
-                    val frame = state.frame(context.frame.view(context.invocation().derive().data(values).build()))
-                    PlatformExecutionContext(context.engine, context.platform, state, frame, context.definition, context.depth, context.platform.variables.access(frame), context.admission)
+                val restored = context.invocation().derive().target(supplied.target().orElse(null)).trigger(supplied.trigger().orElse(null))
+                    .selection(supplied.selection()).data(values).build()
+                context.derived(restored).thenCompose { it.execute(context.definition.effects) }.whenComplete { value, error ->
+                    state.root.result.complete(if (error == null) value else PlatformExecutionState.failure(error))
                 }
-                execution.execute(context.definition.effects).whenComplete { value, error -> state.root.result.complete(if (error == null) value else PlatformExecutionState.failure(error)) }
             }
         } catch (error: Throwable) { state.root.result.complete(PlatformExecutionState.failure(error)) }
         return state.root.result

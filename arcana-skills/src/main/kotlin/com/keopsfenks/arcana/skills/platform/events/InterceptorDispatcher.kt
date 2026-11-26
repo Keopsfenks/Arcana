@@ -14,11 +14,17 @@ import org.bukkit.event.Event
 data class InterceptionOutcome(val result: SkillResult, val continuation: AdmittedContinuation? = null)
 class InterceptorDispatcher(private val engine: DefaultSkillEngine, private val platform: DefaultSkillPlatform, private val lifecycle: SkillLifecycleGate) {
     fun intercept(key: SkillKey, input: SkillInvocation, event: Event): InterceptionOutcome {
-        // Ownership probes precede *all* event/entity reads and all provider callbacks.
-        if (!InvocationSnapshots.references(input).all { engine.scheduler.owns(it.entity()) }) return failed(SkillResult.Status.UNSUPPORTED_CONTEXT, "All required entities must be locally owned")
-        if (SkillDamageScope.isActive()) return failed(SkillResult.Status.CANCELLED, "Generated skill damage")
         val snapshot = platform.repository.snapshot()
         val revision = snapshot.entries[key] ?: return failed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill $key")
+        return interceptSelected(revision, snapshot, input, event)
+    }
+    internal fun interceptSelected(revision: com.keopsfenks.arcana.skills.platform.sources.DefinitionRevision,
+        snapshot: com.keopsfenks.arcana.skills.platform.sources.DefinitionSnapshot, input: SkillInvocation, event: Event,
+        authorizations: Set<SkillRegistration> = emptySet(), continuationInput: SkillInvocation = input): InterceptionOutcome {
+        val key = revision.key
+        // Ownership probes precede all event/entity state reads and provider callbacks.
+        if (!InvocationSnapshots.references(input).all { engine.scheduler.owns(it.entity()) }) return failed(SkillResult.Status.UNSUPPORTED_CONTEXT, "All required entities must be locally owned")
+        if (SkillDamageScope.isActive()) return failed(SkillResult.Status.CANCELLED, "Generated skill damage")
         val definition = revision.native ?: return failed(SkillResult.Status.UNSUPPORTED_CONTEXT, "Legacy definition has no interceptor phase")
         if (!definition.enabled) return failed(SkillResult.Status.DISABLED, "Skill is disabled")
         if (definition.interceptors.isEmpty()) return failed(SkillResult.Status.UNSUPPORTED_CONTEXT, "Definition has no interceptors")
@@ -27,9 +33,9 @@ class InterceptorDispatcher(private val engine: DefaultSkillEngine, private val 
             try {
                 if (access.cancelled()) return failed(SkillResult.Status.CANCELLED, "Event was already cancelled")
                 val state = lifecycle.locked {
-                    check(platform.repository.snapshot().entries[key] === revision && revision.available()) { "Definition changed" }
+                    check(snapshot.entries[key] === revision && platform.repository.snapshot().entries[key] === revision && revision.available() && platform.componentActive(revision) && authorizations.all(platform::componentActive)) { "Definition or holder changed" }
                     val created = ExecutionState(input.actor().id(), snapshot.legacy)
-                    root = created; created.dependencies.add(revision); created.dependencies.addAll(revision.dependencies)
+                    root = created; created.dependencies.add(revision); created.dependencies.addAll(revision.dependencies); created.dependencies.addAll(authorizations)
                     check(engine.enroll(created)) { "Skill engine stopped" }; platform.attach(created)
                 }
                 val parameters = ParameterBindings.bind(definition.parameters, input.parameters())
@@ -55,7 +61,7 @@ class InterceptorDispatcher(private val engine: DefaultSkillEngine, private val 
                     val result = interceptor.apply(access, invocation, requireNotNull(admitted.admission))
                     if (!result.isSuccess) { root!!.result.complete(result); return InterceptionOutcome(result) }
                 }
-                return InterceptionOutcome(SkillResult.success(), AdmittedContinuation(context, revision))
+                return InterceptionOutcome(SkillResult.success(), AdmittedContinuation(context, revision, continuationInput))
             } catch (error: Throwable) {
                 val result = PlatformExecutionState.failure(error); root?.result?.complete(result); return InterceptionOutcome(result)
             }

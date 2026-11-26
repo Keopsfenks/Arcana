@@ -53,7 +53,11 @@ block samples; no automatic chunk loads or global entity scan. Normal roots
 have 1024 applied steps and child-call depth 16. Timer interval is at least 1 tick.
 Projectile speed is at most 64 blocks/tick, bounce count 100 and hit count 256.
 A projectile's `duration` counts its movement ticks; stalled work has a bounded
-one-tick expiry grace within the original managed lifetime deadline.
+100-actor-tick timeout per pending simulation step/initialization, within the
+original managed lifetime deadline. Healthy queued global/region/entity handoffs
+finish before simulation age expires. A required collision partition becoming
+unavailable aborts the sweep; an overlapping neighboring entity hitbox is
+discovered spatially and its state is read on its own owner.
 
 The host's `config.yml` supports these positive settings, requiring restart;
 values larger than their hard cap are rejected:

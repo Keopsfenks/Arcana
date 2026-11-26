@@ -11,6 +11,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause
 
 class MeleeAttackTrigger(plugin: ArcanaPlugin) : BukkitSkillTrigger("melee_attack", plugin) {
+    override fun supportsInterception() = true
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onEvent(event: EntityDamageByEntityEvent) {
         if (SkillDamageScope.isActive() || event.isCancelled) return
@@ -19,6 +21,6 @@ class MeleeAttackTrigger(plugin: ArcanaPlugin) : BukkitSkillTrigger("melee_attac
         val player = event.damager as? Player ?: return
         val victim = event.entity as? LivingEntity ?: return
         val damage = event.finalDamage
-        if (damage.isFinite()) emit(SkillContext.builder(player).victim(victim).value("damage", damage).value("entity", victim.type.name).build())
+        if (damage.isFinite()) emit(SkillContext.builder(player).victim(victim).value("damage", damage).value("cause", event.cause.name).value("entity", victim.type.name).build())
     }
 }

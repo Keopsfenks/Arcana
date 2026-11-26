@@ -17,14 +17,13 @@ class AttributeContribution(private val scheduler: SkillScheduler, private val r
         val operation = try { AttributeModifier.Operation.valueOf(arguments.string("operation", "ADD_NUMBER").uppercase(Locale.ROOT)) } catch (_: IllegalArgumentException) { throw arguments.error("operation", "unknown modifier operation") }
         val stat = if (arguments.has("stat")) SkillKey.parse(arguments.string("stat"), compilation.namespace()) else null
         return CompiledSkillContribution { context, identity ->
-            val actor = context.invocation().actor(); var lease: SkillContributionLease? = null
-            context.on(actor) { entity ->
+            val actor = context.invocation().actor(); val handoff = NativeLeaseHandoff()
+            handoff.finish(context.on(actor) { entity ->
                 val value = amount.evaluate(context.invocation()); require(value.isFinite() && kotlin.math.abs(value) <= 1_000_000) { "${arguments.path}.amount: expected finite value within +/-1000000" }
                 val instance = entity.getAttribute(attribute) ?: throw SkillProviderException(SkillResult.of(SkillResult.Status.UNSUPPORTED_ACTOR, "Actor does not have this attribute"))
                 val modifier = AttributeModifier(NamespacedKey(identity.namespace(), identity.value()), value, operation)
-                instance.addTransientModifier(modifier)
                 val closed = AtomicBoolean()
-                lease = object : SkillContributionLease {
+                val lease = object : SkillContributionLease {
                     override fun stats() = if (stat == null) emptyMap() else mapOf(stat to value)
                     override fun close() {
                         if (closed.compareAndSet(false, true)) scheduler.on(actor.entity()) {
@@ -33,8 +32,9 @@ class AttributeContribution(private val scheduler: SkillScheduler, private val r
                         }
                     }
                 }
+                try { instance.addTransientModifier(modifier) } finally { handoff.install(lease) }
                 SkillResult.success()
-            }.thenApply { outcome -> if (!outcome.isSuccess) throw SkillProviderException(outcome); requireNotNull(lease) }.toCompletableFuture()
+            })
         }
     }
 }

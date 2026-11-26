@@ -15,7 +15,7 @@ import java.util.concurrent.*
 import kotlin.math.*
 import com.keopsfenks.arcana.skills.platform.values.InvocationFrame
 
-/** Resolve references globally, enumerate each loaded chunk locally, snapshot each entity on its owner. */
+/** Resolve worlds globally, collect spatial references in owned loaded cells, snapshot each entity on its owner. */
 class RegionQuery(
     private val scheduler: SkillScheduler,
     private val worlds: (UUID) -> World? = { Bukkit.getWorld(it) },
@@ -31,11 +31,17 @@ class RegionQuery(
         if ((x2.toLong() - x1 + 1) * (z2.toLong() - z1 + 1) > 256) throw PlatformBudgetException("Query exceeds 256 chunks")
         return (x1..x2).flatMap { x -> (z1..z2).map { z -> x to z } }
     }
-    private fun <T> onChunks(world: World, bounds: SkillBounds, action: (Int, Int) -> List<T>): CompletableFuture<List<T>> {
+    private fun <T> onChunks(world: World, bounds: SkillBounds, required: Boolean = false, action: (Int, Int) -> List<T>): CompletableFuture<List<T>> {
         var result = CompletableFuture.completedFuture(emptyList<T>())
         for ((x, z) in chunks(bounds)) result = result.thenCompose { previous ->
             val location = Location(world, x * 16.0, 0.0, z * 16.0)
-            track(scheduler.at(location) { check(); if (!world.isChunkLoaded(x, z)) emptyList() else action(x, z) })
+            track(scheduler.at(location) {
+                check()
+                if (!world.isChunkLoaded(x, z)) {
+                    if (required) throw CancellationException("Required collision partition is unavailable")
+                    emptyList()
+                } else action(x, z)
+            })
                 .thenApply { next ->
                     if (previous.size + next.size > 4096) throw PlatformBudgetException("Query exceeds 4096 candidates")
                     previous + next
@@ -43,11 +49,23 @@ class RegionQuery(
         }
         return result
     }
-    override fun entities(bounds: SkillBounds): CompletionStage<List<SkillActor>> {
+    override fun entities(bounds: SkillBounds): CompletionStage<List<SkillActor>> = entities(bounds, false)
+    private fun entities(bounds: SkillBounds, required: Boolean): CompletionStage<List<SkillActor>> {
         chunks(bounds) // Validate before scheduling any world work.
         return world(bounds.world()).thenCompose { world ->
-            if (world == null) CompletableFuture.completedFuture(emptyList()) else onChunks(world, bounds) { x, z ->
-                world.getChunkAt(x, z).entities.filterIsInstance<LivingEntity>().map(SkillActor::of)
+            if (world == null) {
+                if (required) CompletableFuture.failedFuture(CancellationException("Collision world is unavailable")) else CompletableFuture.completedFuture(emptyList())
+            } else onChunks(world, bounds, required) { x, z ->
+                // Native spatial broadphase includes boxes overlapping a cell even when their centers belong to a neighboring chunk.
+                // Only references are used here. Entity state is captured below on each entity's owner.
+                fun interval(low: Double, high: Double, cellLow: Double, cellHigh: Double): Pair<Double, Double> {
+                    val first = max(low, cellLow); val last = min(high, cellHigh)
+                    return if (first < last) first to last else max(cellLow, first - 1e-7) to min(cellHigh, last + 1e-7)
+                }
+                val (x1, x2) = interval(bounds.minX(), bounds.maxX(), x * 16.0, x * 16.0 + 16)
+                val (z1, z2) = interval(bounds.minZ(), bounds.maxZ(), z * 16.0, z * 16.0 + 16)
+                val y1 = bounds.minY(); val y2 = bounds.maxY().let { if (it == y1) it + 1e-7 else it }
+                world.getNearbyEntities(BoundingBox(x1, y1, z1, x2, y2, z2)).filterIsInstance<LivingEntity>().map(SkillActor::of)
             }.thenCompose { candidates ->
                 // Sequential bounded snapshots avoid scheduling thousands of foreign callbacks together.
                 var selected = CompletableFuture.completedFuture(emptyList<SkillActor>())
@@ -102,7 +120,7 @@ class RegionQuery(
             (floor(bounds.maxY()).toLong() - floor(bounds.minY()).toLong() + 1) * (floor(bounds.maxZ()).toLong() - floor(bounds.minZ()).toLong() + 1)
         if (volume > 65_536) throw PlatformBudgetException("Collision query exceeds 65536 blocks")
         return world(from.world()).thenCompose { world ->
-            if (world == null) CompletableFuture.completedFuture(emptyList()) else onChunks(world, bounds) { chunkX, chunkZ ->
+            if (world == null) CompletableFuture.failedFuture(CancellationException("Collision world is unavailable")) else onChunks(world, bounds, required = true) { chunkX, chunkZ ->
                 val found = mutableListOf<SkillCollision>()
                 for (x in max(floor(bounds.minX()).toInt(), chunkX * 16)..min(floor(bounds.maxX()).toInt(), chunkX * 16 + 15))
                     for (z in max(floor(bounds.minZ()).toInt(), chunkZ * 16)..min(floor(bounds.maxZ()).toInt(), chunkZ * 16 + 15))
@@ -112,7 +130,7 @@ class RegionQuery(
                         }
                 found
             }.thenCompose { blocks ->
-                entities(bounds).thenCompose { candidates ->
+                entities(bounds, required = true).thenCompose { candidates ->
                     var hits = CompletableFuture.completedFuture(blocks)
                     for (candidate in candidates) hits = hits.thenCompose { previous -> snapshot(candidate).thenApply { value ->
                         if (value.isEmpty) previous else value.get().bounds().let { box ->

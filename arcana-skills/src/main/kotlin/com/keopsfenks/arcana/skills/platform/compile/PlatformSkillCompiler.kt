@@ -113,6 +113,7 @@ open class PlatformSkillCompiler(
         val interceptors = com.keopsfenks.arcana.skills.platform.events.InterceptorCompiler(this, platform, dependencies).compile(args)
         localOnly = false
         if (interceptors.isNotEmpty()) {
+            triggers.forEachIndexed { index, key -> require(platform.supportsInterception(key)) { "${args.path}.triggers[$index]: $key does not support synchronous interception" } }
             require(costs.all { it.local }) { "${args.path}.costs: interceptors require local resource providers" }
             require(stats.all { it.local }) { "${args.path}.bindings: interceptors require local stat providers" }
             require(variables.none { it.persistent }) { "${args.path}.bindings: persistent prefetch is unavailable during interception" }

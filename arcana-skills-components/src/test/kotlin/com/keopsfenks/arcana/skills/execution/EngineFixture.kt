@@ -67,6 +67,7 @@ class EngineFixture(val directory: Path, immediate: Boolean = true, expressionEn
         } }
         register("wait") { _, _ -> CompiledSkillEffect { it.delay(1) } }
         engine.registerTrigger(plugin, object : SkillTrigger("attack") {
+            override fun supportsInterception() = true
             override fun listen(fire: java.util.function.Consumer<SkillContext>) = AutoCloseable {}
         })
     }

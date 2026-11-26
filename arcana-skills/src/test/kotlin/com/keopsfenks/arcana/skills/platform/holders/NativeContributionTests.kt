@@ -46,6 +46,54 @@ class NativeContributionTests {
         override fun descriptor() = SkillDescriptor.of("slots", "test")
         override fun holders(actor: SkillActor) = CompletableFuture.completedFuture(listOf(SkillHolder(SkillKey("arcana", "ring"), "main", skills.map { SkillKey("arcana", it) }, emptyMap())))
     })
+    @Test fun attributeApplicationCompensatesIfHolderRetiresInsideTheNativeWrite() {
+        val f = fixture(); val attribute = mockk<Attribute>(); val instance = mockk<AttributeInstance>(); val modifiers = mutableListOf<AttributeModifier>()
+        lateinit var provider: com.keopsfenks.arcana.core.skills.SkillRegistration
+        every { attribute.key } returns NamespacedKey.minecraft("max_health")
+        every { f.legacy.caster.getAttribute(attribute) } returns instance
+        every { instance.modifiers } answers { f.scheduler.assertOwner(f.legacy.caster); modifiers.toList() }
+        every { instance.addTransientModifier(any()) } answers { modifiers.add(firstArg()); provider.close(); Unit }
+        every { instance.removeModifier(any<AttributeModifier>()) } answers { f.scheduler.assertOwner(f.legacy.caster); modifiers.remove(firstArg<AttributeModifier>()); Unit }
+        f.platform.register(f.legacy.plugin, SkillComponentType.CONTRIBUTION, SkillKey("arcana", "attribute"), AttributeContribution(f.scheduler) { attribute })
+        f.write(options = "activation: holder\npassives: [{type: attribute, attribute: max_health, amount: 5}]"); f.load(); provider = holder(f, listOf("native"))
+        f.platform.refreshHolders(f.invocation().actor()).handle { _, _ -> Unit }.toCompletableFuture().join()
+        assertTrue(modifiers.isEmpty(), "Retired native modifier leaked"); assertEquals(0, f.platform.managed.size)
+        verify(exactly = 1) { instance.removeModifier(any<AttributeModifier>()) }; f.engine.shutdown()
+    }
+    @Test fun timedStunApplicationCompensatesIfSourceRetiresInsideTheNativeWrite() {
+        val f = fixture(); val attribute = mockk<Attribute>(); val instance = mockk<AttributeInstance>(); val modifiers = mutableListOf<AttributeModifier>()
+        every { f.legacy.caster.getAttribute(attribute) } returns instance
+        every { instance.modifiers } answers { f.scheduler.assertOwner(f.legacy.caster); modifiers.toList() }
+        every { instance.addTransientModifier(any()) } answers { modifiers.add(firstArg()); f.engine.closeOwner(f.legacy.plugin); Unit }
+        every { instance.removeModifier(any<AttributeModifier>()) } answers { f.scheduler.assertOwner(f.legacy.caster); modifiers.remove(firstArg<AttributeModifier>()); Unit }
+        val type = com.keopsfenks.arcana.skills.components.effects.status.StunMechanic { if (it == "movement_speed") attribute else null }
+        f.platform.register(f.legacy.plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "stun"), type)
+        f.write(effects = "  - type: stun"); f.load(); f.cast().handle { _, _ -> Unit }.join()
+        assertTrue(modifiers.isEmpty(), "Retired timed stun leaked"); assertEquals(0, f.platform.managed.size); f.engine.shutdown()
+    }
+    @Test fun timedPotionApplicationCompensatesIfSourceRetiresInsideTheNativeWrite() {
+        val f = fixture(); val type = potionType(); var current: PotionEffect? = null
+        every { f.legacy.caster.getPotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current }
+        every { f.legacy.caster.addPotionEffect(any()) } answers { current = firstArg(); f.engine.closeOwner(f.legacy.plugin); true }
+        every { f.legacy.caster.removePotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current = null }
+        val potions = PotionContributions(f.scheduler)
+        f.platform.register(f.legacy.plugin, SkillComponentType.MECHANIC, SkillKey("arcana", "potion"), com.keopsfenks.arcana.skills.components.effects.status.PotionMechanic(potions) { type })
+        f.write(effects = "  - type: potion\n    potion: speed"); f.load(); f.cast().handle { _, _ -> Unit }.join()
+        assertNull(current, "Retired timed potion leaked"); assertEquals(0, f.platform.managed.size); potions.close(); f.engine.shutdown()
+    }
+    @Test fun potionApplicationCompensatesIfHolderRetiresInsideTheNativeWrite() {
+        val f = fixture(); val type = potionType(); var current: PotionEffect? = null; var writes = 0
+        lateinit var provider: com.keopsfenks.arcana.core.skills.SkillRegistration
+        every { f.legacy.caster.getPotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current }
+        every { f.legacy.caster.addPotionEffect(any()) } answers { current = firstArg(); writes++; provider.close(); true }
+        every { f.legacy.caster.removePotionEffect(type) } answers { f.scheduler.assertOwner(f.legacy.caster); current = null }
+        val potions = PotionContributions(f.scheduler)
+        f.platform.register(f.legacy.plugin, SkillComponentType.CONTRIBUTION, SkillKey("arcana", "potion"), PotionContribution(potions) { type })
+        f.write(options = "activation: holder\npassives: [{type: potion, potion: speed}]"); f.load(); provider = holder(f, listOf("native"))
+        f.platform.refreshHolders(f.invocation().actor()).handle { _, _ -> Unit }.toCompletableFuture().join()
+        assertNull(current, "Retired native potion leaked"); assertEquals(0, f.platform.managed.size)
+        val before = writes; f.scheduler.advance(40); assertEquals(before, writes); potions.close(); f.engine.shutdown()
+    }
     @Test fun removingOneAttributeContributionRetainsEveryOtherModifier() {
         val f = fixture(); val attribute = mockk<Attribute>(); val instance = mockk<AttributeInstance>(); val modifiers = mutableListOf<AttributeModifier>()
         every { attribute.key } returns NamespacedKey.minecraft("max_health")

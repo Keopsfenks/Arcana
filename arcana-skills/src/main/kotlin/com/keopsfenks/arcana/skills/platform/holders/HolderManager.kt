@@ -22,22 +22,31 @@ class HolderManager(private val engine: DefaultSkillEngine, private val platform
         var fallback: ScheduledWork<Unit>? = null
         val bindings = LinkedHashMap<HolderBinding, Runtime>()
     }
-    private class Runtime(val binding: HolderBinding) : AutoCloseable {
+    private inner class Runtime(val binding: HolderBinding) : SkillRegistration {
         val alive = AtomicBoolean(true)
+        private val tokenId = "${binding.provider.key.namespace()}:holder_${UUID.randomUUID().toString().replace('-', '_')}"
+        override fun getId() = tokenId
+        override fun getOwner() = binding.provider.owner
+        override fun isActive() = alive.get()
         val roots = ConcurrentHashMap.newKeySet<ExecutionState>()
         val leases = ConcurrentHashMap.newKeySet<AutoCloseable>()
         override fun close() {
-            if (!alive.compareAndSet(true, false)) return
+            if (!lifecycle.locked { alive.compareAndSet(true, false) }) return
+            engine.invalidateRegistration(this)
             roots.toList().forEach { it.cancel("Holder removed") }; roots.clear()
             leases.toList().forEach { it.close() }; leases.clear()
         }
-        fun root(root: ExecutionState) { roots.add(root); if (!alive.get()) { roots.remove(root); root.cancel("Holder removed") } }
+        fun root(root: ExecutionState) { roots.add(root); root.result.whenComplete { _, _ -> roots.remove(root) }; if (!alive.get()) { roots.remove(root); root.cancel("Holder removed") } }
         fun lease(lease: AutoCloseable) { leases.add(lease); if (!alive.get() && leases.remove(lease)) lease.close() }
     }
     private val sessions = HashMap<UUID, Session>()
     private var stopped = false
     fun holders(actor: SkillActor): List<SkillHolder> = lifecycle.locked { java.util.List.copyOf(sessions[actor.id()]?.bindings?.keys?.filter { it.provider.isActive }?.map { it.holder } ?: emptyList()) }
     fun active(actor: SkillActor): List<HolderBinding> = lifecycle.locked { sessions[actor.id()]?.bindings?.keys?.filter { it.provider.isActive && it.revisions.all { revision -> revision.available() } }?.toList() ?: emptyList() }
+    internal fun authorization(actor: SkillActor, binding: HolderBinding): Set<SkillRegistration>? = lifecycle.locked {
+        sessions[actor.id()]?.bindings?.get(binding)?.takeIf { it.binding === binding && it.alive.get() && platform.componentActive(binding.provider) }
+            ?.let { setOf(binding.provider, it) }
+    }
     fun refresh(actor: SkillActor): CompletableFuture<List<SkillHolder>> {
         val providers = platform.registry(SkillComponentType.HOLDER).snapshot().filter { it.isActive }
         if (providers.isEmpty()) { removeActor(actor.id()); return CompletableFuture.completedFuture(emptyList()) }
@@ -114,7 +123,7 @@ class HolderManager(private val engine: DefaultSkillEngine, private val platform
             try {
                 val definition = requireNotNull(revision.native)
                 val root = ExecutionState(session.actor.id(), platform.repository.snapshot().legacy)
-                root.dependencies.add(binding.provider); root.dependencies.add(revision); root.dependencies.addAll(revision.dependencies)
+                root.dependencies.add(binding.provider); root.dependencies.add(runtime); root.dependencies.add(revision); root.dependencies.addAll(revision.dependencies)
                 val state = lifecycle.locked {
                     check(current(session) && runtime.alive.get() && revision.available()) { "Holder retired before passive initialization" }
                     check(engine.enroll(root)); platform.attach(root)

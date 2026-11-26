@@ -88,12 +88,14 @@ class DefaultSkillPlatform(
         return SkillLoadResult(candidate.snapshot?.legacy, candidate.report, candidate)
     }
     internal fun legacyTrigger(key: SkillKey): SkillRegistration? = if (key.namespace() == "arcana") engine.triggers.get(key.value()) else null
+    internal fun supportsInterception(key: SkillKey): Boolean = registry(SkillComponentType.TRIGGER).get(key)?.component?.supportsInterception()
+        ?: (key.namespace() == "arcana" && engine.triggers.get(key.value())?.component?.supportsInterception() == true)
 
     override fun cast(key: SkillKey, invocation: SkillInvocation): CompletionStage<SkillResult> {
         return castInSnapshot(key, invocation, repository.snapshot())
     }
 
-    internal fun castInSnapshot(key: SkillKey, invocation: SkillInvocation, snapshot: DefinitionSnapshot): CompletableFuture<SkillResult> {
+    internal fun castInSnapshot(key: SkillKey, invocation: SkillInvocation, snapshot: DefinitionSnapshot, authorizations: Set<SkillRegistration> = emptySet()): CompletableFuture<SkillResult> {
         if (engine.stopped) return completed(SkillResult.Status.CANCELLED, "Skill engine is stopped")
         val revision = snapshot.entries[key] ?: return completed(SkillResult.Status.UNKNOWN_SKILL, "Unknown skill: $key")
         if (revision.legacy != null) {
@@ -103,8 +105,9 @@ class DefaultSkillPlatform(
         val admission = lifecycle.locked {
             if (repository.snapshot().entries[key] !== revision || !revision.isActive) return@locked SkillResult.of(SkillResult.Status.CANCELLED, "Definition changed before dispatch")
             if (!revision.available() || !lifecycle.available(revision.owner)) return@locked SkillResult.of(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "Definition $key is unavailable")
+            if (authorizations.any { !componentActive(it) }) return@locked SkillResult.of(SkillResult.Status.DEPENDENCY_UNAVAILABLE, "Selected holder is unavailable")
             val root = ExecutionState(invocation.actor().id(), snapshot.legacy)
-            root.dependencies.add(revision); root.dependencies.addAll(revision.dependencies)
+            root.dependencies.add(revision); root.dependencies.addAll(revision.dependencies); root.dependencies.addAll(authorizations)
             if (!engine.enroll(root)) return@locked SkillResult.of(SkillResult.Status.CANCELLED, "Skill engine is stopped")
             attach(root)
         }
@@ -140,15 +143,19 @@ class DefaultSkillPlatform(
         return CompletableFuture.allOf(*work.toTypedArray()).thenApply { java.util.List.copyOf(work.map { it.join() }) }
     }
     /** Captures revisions and holder identities at emission; never reselects after a handoff. */
+    internal fun hasNativeTrigger(key: SkillKey, actor: SkillActor, snapshot: DefinitionSnapshot): Boolean =
+        !snapshot.normalTriggers[key].isNullOrEmpty() || holderManager.active(actor).any { binding -> binding.revisions.any { revision ->
+            revision.native?.let { it.enabled && it.holderOnly && it.interceptors.isEmpty() && key in it.triggers } == true && snapshot.entries[revision.key] === revision
+        } }
     internal fun prepareTrigger(key: SkillKey, invocation: SkillInvocation, snapshot: DefinitionSnapshot = repository.snapshot()): (() -> List<CompletableFuture<SkillResult>>)? {
-        val global = snapshot.normalTriggers[key].orEmpty().map { Triple(it.key, invocation, { true }) }
+        val global = snapshot.normalTriggers[key].orEmpty().map { Triple(it.key, invocation, emptySet<SkillRegistration>()) }
         val held = holderManager.active(invocation.actor()).flatMap { binding -> binding.revisions.mapNotNull { revision ->
             val skill = revision.native
             if (skill != null && skill.enabled && skill.holderOnly && skill.interceptors.isEmpty() && key in skill.triggers && snapshot.entries[revision.key] === revision)
-                Triple(revision.key, invocation.derive().parameters(binding.holder.parameters()).build(), { holderManager.active(invocation.actor()).any { it === binding } }) else null
+                holderManager.authorization(invocation.actor(), binding)?.let { authorization -> Triple(revision.key, invocation.derive().parameters(binding.holder.parameters()).build(), authorization) } else null
         } }
         val work = (global + held).distinctBy { it.first to it.second.parameters() }
         if (work.isEmpty()) return null
-        return { work.filter { it.third() }.map { (skill, supplied) -> castInSnapshot(skill, supplied, snapshot) } }
+        return { work.map { (skill, supplied, authorization) -> castInSnapshot(skill, supplied, snapshot, authorization) } }
     }
 }

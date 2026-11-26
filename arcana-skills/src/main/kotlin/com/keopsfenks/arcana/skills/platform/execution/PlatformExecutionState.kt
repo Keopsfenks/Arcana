@@ -15,7 +15,11 @@ class PlatformExecutionState @JvmOverloads constructor(val root: ExecutionState,
     @Volatile var traceId: java.util.UUID? = null
     @Volatile var managedState: com.keopsfenks.arcana.skills.platform.managed.ManagedExecutionState? = null
     private val frames = ConcurrentHashMap.newKeySet<InvocationFrame>()
-    private val branches = AtomicInteger()
+    private var branches = AtomicInteger()
+    internal fun inheritBranchBudget(source: PlatformExecutionState) {
+        check(branches.get() == 0) { "Branch budget must be inherited before use" }
+        branches = source.branches
+    }
     init { root.result.whenComplete { result, error ->
         val cancelled = error != null || result?.status() == com.keopsfenks.arcana.core.skills.SkillResult.Status.CANCELLED
         frames.toList().forEach { if (cancelled) it.close() else it.complete() }; frames.clear()
@@ -43,9 +47,10 @@ class PlatformExecutionState @JvmOverloads constructor(val root: ExecutionState,
         require(count > 0) { "Parallel fan-out must be positive" }
         if (count > 16) throw PlatformBudgetException("Parallel fan-out exceeds 16")
         checkActive()
-        if (branches.addAndGet(count) > 16) { branches.addAndGet(-count); throw PlatformBudgetException("Parallel fan-out exceeds 16") }
+        val tracker = branches
+        if (tracker.addAndGet(count) > 16) { tracker.addAndGet(-count); throw PlatformBudgetException("Parallel fan-out exceeds 16") }
         val closed = java.util.concurrent.atomic.AtomicBoolean()
-        return AutoCloseable { if (closed.compareAndSet(false, true)) branches.addAndGet(-count) }
+        return AutoCloseable { if (closed.compareAndSet(false, true)) tracker.addAndGet(-count) }
     }
     fun <T> track(work: ScheduledWork<T>) = root.track(work)
     companion object {

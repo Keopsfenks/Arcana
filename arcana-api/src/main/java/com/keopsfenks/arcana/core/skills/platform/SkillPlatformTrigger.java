@@ -14,5 +14,7 @@ public abstract class SkillPlatformTrigger implements SkillPlatformComponent {
     @Override public final SkillDescriptor descriptor() { return descriptor; }
     public final Set<String> dataKeys() { return dataKeys; }
     public boolean supportsTimerSubscriptions() { return false; }
+    /** Advertised only by adapters that also implement the host's synchronous event phase. */
+    public boolean supportsInterception() { return false; }
     public abstract AutoCloseable listen(Consumer<SkillInvocation> consumer);
 }

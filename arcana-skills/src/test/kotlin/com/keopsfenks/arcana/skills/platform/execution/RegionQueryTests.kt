@@ -19,6 +19,7 @@ class RegionQueryTests {
         every { chunk.entities } returns emptyArray()
         every { f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers { assertChunk(f, firstArg(), secondArg()); true }
         every { f.legacy.world.getChunkAt(any<Int>(), any<Int>()) } returns chunk
+        every { f.legacy.world.getNearbyEntities(any<BoundingBox>()) } answers { assertTrue(f.scheduler.current is Location); emptyList() }
         every { f.legacy.world.minHeight } returns 0
         every { f.legacy.world.maxHeight } returns 256
         val wall = mockk<org.bukkit.block.Block>()
@@ -46,6 +47,7 @@ class RegionQueryTests {
         every { loaded.entities } answers { assertChunk(f, 0, 0); arrayOf(f.legacy.caster, f.legacy.victim) }
         every { f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers { assertChunk(f, firstArg(), secondArg()); firstArg<Int>() == 0 }
         every { f.legacy.world.getChunkAt(0, 0) } answers { assertChunk(f, 0, 0); loaded }
+        every { f.legacy.world.getNearbyEntities(any<BoundingBox>()) } answers { assertChunk(f, 0, 0); listOf(f.legacy.caster, f.legacy.victim) }
         every { f.legacy.caster.boundingBox } answers { f.scheduler.assertOwner(f.legacy.caster); BoundingBox(-.3, 60.0, -.3, .3, 61.8, .3) }
         every { f.legacy.victim.boundingBox } answers { f.scheduler.assertOwner(f.legacy.victim); BoundingBox(2.7, 60.0, -.3, 3.3, 61.8, .3) }
         val query = RegionQuery(f.scheduler, { f.scheduler.assertOwner("global"); f.legacy.world })
@@ -83,6 +85,7 @@ class RegionQueryTests {
         every { chunk.entities } answers { assertTrue(f.scheduler.current is Location); arrayOf(f.legacy.victim) }
         every { f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers { assertChunk(f, firstArg(), secondArg()); true }
         every { f.legacy.world.getChunkAt(any<Int>(), any<Int>()) } answers { assertChunk(f, firstArg(), secondArg()); chunk }
+        every { f.legacy.world.getNearbyEntities(any<BoundingBox>()) } answers { assertTrue(f.scheduler.current is Location); listOf(f.legacy.victim) }
         every { f.legacy.victim.boundingBox } answers { f.scheduler.assertOwner(f.legacy.victim); BoundingBox(15.99, 60.0, 0.0, 16.01, 61.0, 1.0) }
         every { f.legacy.world.minHeight } returns 0; every { f.legacy.world.maxHeight } returns 256
         val air = mockk<org.bukkit.block.Block>(); val wall = mockk<org.bukkit.block.Block>()
@@ -95,6 +98,47 @@ class RegionQueryTests {
         assertEquals(2, hits.size); assertEquals(SkillActor.of(f.legacy.victim), hits[0].actor().orElseThrow())
         assertEquals(15.99/32, hits[0].fraction(), 1e-9); assertTrue(hits[1].actor().isEmpty)
         verify(exactly = 0) { f.legacy.world.entities }
+    }
+    @Test fun requiredSweepDoesNotTreatAMiddleChunkUnloadedAfterPreflightAsEmpty() {
+        val f = PlatformFixture(directory); val calls = mutableMapOf<Int, Int>()
+        every { f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers {
+            val x = firstArg<Int>(); assertChunk(f, x, secondArg()); val n = (calls[x] ?: 0)+1; calls[x]=n; x != 1 || n == 1
+        }
+        every { f.legacy.world.minHeight } returns 0; every { f.legacy.world.maxHeight } returns 256
+        val air = mockk<org.bukkit.block.Block>(); val shape = mockk<org.bukkit.util.VoxelShape>()
+        every { shape.boundingBoxes } returns emptyList(); every { air.collisionShape } returns shape
+        every { f.legacy.world.getBlockAt(any<Int>(), any<Int>(), any<Int>()) } answers { assertChunk(f, firstArg<Int>() shr 4, thirdArg<Int>() shr 4); air }
+        val chunk = mockk<Chunk>(); every { chunk.entities } returns emptyArray(); every { f.legacy.world.getChunkAt(any<Int>(), any<Int>()) } returns chunk
+        every { f.legacy.world.getNearbyEntities(any<BoundingBox>()) } answers { assertTrue(f.scheduler.current is Location); emptyList() }
+        every { f.legacy.world.getNearbyEntities(any<BoundingBox>()) } returns emptyList()
+        val query = RegionQuery(f.scheduler, { f.legacy.world })
+        val from = SkillLocation(f.worldId, 0.0, 60.5, .5); val to = SkillLocation(f.worldId, 32.0, 60.5, .5)
+        assertTrue(query.loaded(SkillBounds(f.worldId, 0.0, 60.5, .5, 32.0, 60.5, .5)).toCompletableFuture().join())
+        val error = assertThrows(java.util.concurrent.CompletionException::class.java) { query.collisions(from, to, 0.0).toCompletableFuture().join() }
+        assertTrue(error.cause is java.util.concurrent.CancellationException)
+        verify(exactly = 0) { f.legacy.world.getChunkAt(1, 0) }; f.engine.shutdown()
+    }
+    @Test fun neighboringChunkEntityWithAnOverlappingHitboxIsFoundWithoutReadingItOnTheQueryOwner() {
+        val f = PlatformFixture(directory)
+        every { f.legacy.world.isChunkLoaded(any<Int>(), any<Int>()) } answers { assertChunk(f, firstArg(), secondArg()); true }
+        val empty = mockk<Chunk>(); every { empty.entities } returns emptyArray()
+        every { f.legacy.world.getChunkAt(0, 0) } answers { assertChunk(f, 0, 0); empty }
+        every { f.legacy.world.getNearbyEntities(any<BoundingBox>()) } answers {
+            assertChunk(f, 0, 0); val bounds = firstArg<BoundingBox>(); assertTrue(bounds.maxX <= 16.0)
+            listOf(f.legacy.victim)
+        }
+        every { f.legacy.victim.location } answers { f.scheduler.assertOwner(f.legacy.victim); Location(f.legacy.world, 16.1, 60.0, .5) }
+        every { f.legacy.victim.boundingBox } answers { f.scheduler.assertOwner(f.legacy.victim); BoundingBox(15.8, 60.0, .2, 16.4, 61.8, .8) }
+        val query = RegionQuery(f.scheduler, { f.legacy.world })
+        val actors = query.entities(SkillBounds(f.worldId, 15.9, 60.5, .5, 15.9, 61.0, .5)).toCompletableFuture().join()
+        assertEquals(listOf(SkillActor.of(f.legacy.victim)), actors)
+        every { f.legacy.world.minHeight } returns 0; every { f.legacy.world.maxHeight } returns 256
+        val air = mockk<org.bukkit.block.Block>(); val shape = mockk<org.bukkit.util.VoxelShape>()
+        every { shape.boundingBoxes } returns emptyList(); every { air.collisionShape } returns shape
+        every { f.legacy.world.getBlockAt(any<Int>(), any<Int>(), any<Int>()) } answers { assertChunk(f, firstArg<Int>() shr 4, thirdArg<Int>() shr 4); air }
+        val hits = query.collisions(SkillLocation(f.worldId, 15.9, 60.5, .1), SkillLocation(f.worldId, 15.9, 60.5, .9), 0.0).toCompletableFuture().join()
+        assertEquals(SkillActor.of(f.legacy.victim), hits.single().actor().orElseThrow()); assertEquals(.125, hits.single().fraction(), 1e-9)
+        verify(exactly = 0) { f.legacy.world.getChunkAt(1, 0) }; verify(exactly = 0) { f.legacy.world.entities }; f.engine.shutdown()
     }
     private fun assertChunk(f: PlatformFixture, x: Int, z: Int) {
         val location = f.scheduler.current as? Location ?: fail("Chunk read outside location context")

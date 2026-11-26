@@ -55,6 +55,7 @@ class AuraEventDispatcher(private val engine: DefaultSkillEngine, private val pl
             .selection(if (local) SkillSelection.empty() else supplied.selection())
             .parameters(base.parameters()).data(supplied.data()).location(null).build()
     }
+    internal fun observes(kind: SkillKey, actor: SkillActor) = selected(kind, actor).any { it.effects.isNotEmpty() }
     fun emit(kind: SkillKey, actor: SkillActor, invocation: SkillInvocation) {
         if (SkillDamageScope.isActive()) return
         for (sub in selected(kind, actor).filter { it.effects.isNotEmpty() }) {

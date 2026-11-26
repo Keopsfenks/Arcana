@@ -23,7 +23,7 @@ class ManagedExecutionState private constructor(
         val callbacks = AtomicInteger()
     }
     private val lineage: Lineage = source.state.managedState?.lineage ?: Lineage(platform.monotonicClock(), platform.managed.limits)
-    val state = PlatformExecutionState(ExecutionState(input.actor().id(), source.state.snapshot.legacy, lineage.limits.steps, lineage.steps), source.state.snapshot, platform::componentActive).also { it.traceId = source.state.traceId }
+    val state = PlatformExecutionState(ExecutionState(input.actor().id(), source.state.snapshot.legacy, lineage.limits.steps, lineage.steps), source.state.snapshot, platform::componentActive).also { it.traceId = source.state.traceId; it.inheritBranchBudget(source.state) }
     val originId = source.state.root.id
     internal val definition = source.definition
     @Volatile var aura: com.keopsfenks.arcana.skills.platform.auras.AuraInstance? = null

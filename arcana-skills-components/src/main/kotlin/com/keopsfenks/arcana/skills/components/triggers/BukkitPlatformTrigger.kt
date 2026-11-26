@@ -13,8 +13,9 @@ abstract class BukkitPlatformTrigger(id: String, private val plugin: ArcanaPlugi
         try { plugin.server.pluginManager.registerEvents(this, plugin) } catch (error: Throwable) { listener.set(null); throw error }
         return AutoCloseable { if (listener.compareAndSet(consumer, null)) HandlerList.unregisterAll(this) }
     }
+    protected fun emit(input: SkillInvocation) { listener.get()?.accept(input) }
     protected fun emit(actor: LivingEntity, target: LivingEntity? = null, values: Map<String, Any> = emptyMap()) {
         val fire = listener.get() ?: return
-        fire.accept(SkillInvocation.builder(SkillActor.of(actor)).target(target?.let(SkillActor::of)).data(values).build())
+        fire.accept(SkillInvocation.builder(SkillActor.of(actor)).target(target?.let(SkillActor::of)).trigger(target?.let(SkillActor::of)).data(values).build())
     }
 }

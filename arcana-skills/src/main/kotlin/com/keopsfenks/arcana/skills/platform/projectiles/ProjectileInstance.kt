@@ -18,6 +18,8 @@ class ProjectileInstance internal constructor(
 ) : SkillManagedHandle {
     private val phase = AtomicInteger(); private val terminal = AtomicReference<SkillRemovalReason?>()
     private val timers = ConcurrentHashMap.newKeySet<ScheduledWork<*>>()
+    private val stallEpoch = AtomicLong()
+    private val stallTimer = AtomicReference<ScheduledWork<*>?>()
     private val ledger = ProjectileHitLedger(options.maxHits, options.immuneTicks)
     private var age = 0L; private var bounceLeft = options.bounces; private var pierceLeft = options.pierce
     @Volatile var position: SkillLocation = initial; private set
@@ -47,27 +49,34 @@ class ProjectileInstance internal constructor(
     private fun values() = mapOf<String, Any>("projectile_age" to age, "projectile_hits" to ledger.total, "projectile_bounces" to options.bounces-bounceLeft)
     internal fun start() {
         if (!active()) return
-        // Simulation includes its last movement tick; one bounded tick also retires stalled I/O.
-        timer(options.lifetimeTicks + 1) { remove(SkillRemovalReason.EXPIRED) }
+        // Simulation age counts completed steps; queued owner handoffs consume only the bounded stall/lineage deadlines.
+        armStallDeadline()
         managed.execute(hooks.onStart, values(), view()).whenComplete { result, error ->
             if (!active()) return@whenComplete
             if (accept(result, error)) { started.complete(this); schedule() }
         }
     }
-    private fun timer(delay: Long, action: () -> Unit) {
-        if (!active()) return
+    private fun timer(delay: Long, guard: () -> Boolean = { true }, action: () -> Unit): ScheduledWork<Unit>? {
+        if (!active()) return null
         val work = managed.engine.scheduler.on(actor().entity(), delay) {
-            if (active()) {
+            if (active() && guard()) {
                 if (!InvocationSnapshots.valid(actor().entity())) remove(SkillRemovalReason.ACTOR_RETIRED) else action()
             }; Unit
         }
         timers.add(work)
-        work.future.whenComplete { _, error -> timers.remove(work); if (error != null && active()) remove(SkillRemovalReason.ACTOR_RETIRED) }
+        work.future.whenComplete { _, error -> timers.remove(work); if (error != null && active() && guard()) remove(SkillRemovalReason.ACTOR_RETIRED) }
         if (!active()) work.cancel()
+        return work
     }
-    private fun schedule() = timer(1) { step() }
+    private fun armStallDeadline() {
+        val epoch = stallEpoch.incrementAndGet()
+        stallTimer.getAndSet(null)?.cancel()
+        stallTimer.set(timer(100, { stallEpoch.get() == epoch }) { remove(SkillRemovalReason.EXPIRED) })
+    }
+    private fun schedule() { armStallDeadline(); timer(1) { step() } }
     private fun step() {
         if (!active()) return
+        armStallDeadline()
         try { managed.callback() } catch (error: Throwable) { fail(error); return }
         val target = if (options.homing > 0) input.target().orElse(null) else null
         val captured = if (target == null) CompletableFuture.completedFuture(Optional.empty<SkillEntitySnapshot>()) else query.snapshot(target).toCompletableFuture()
@@ -86,7 +95,7 @@ class ProjectileInstance internal constructor(
             }
         }
     }
-    private fun segment(from: SkillLocation, to: SkillLocation, depth: Int): CompletableFuture<Unit> {
+    private fun segment(from: SkillLocation, to: SkillLocation, depth: Int, remainingFraction: Double = 1.0): CompletableFuture<Unit> {
         if (!active()) return CompletableFuture.completedFuture(Unit)
         if (depth > 100) return CompletableFuture.failedFuture(PlatformBudgetException("Projectile exceeded 100 segment bounces"))
         return query.loaded(CollisionResolver.bounds(from, to, options.radius)).thenCompose { loaded ->
@@ -95,10 +104,10 @@ class ProjectileInstance internal constructor(
             else query.collisions(from, to, options.radius)
         }.thenCompose { contacts ->
             if (!active()) CompletableFuture.completedFuture(Unit)
-            else process(CollisionResolver.ordered(contacts, actor(), options.hitCaster), 0, from, to, depth)
+            else process(CollisionResolver.ordered(contacts, actor(), options.hitCaster), 0, from, to, depth, remainingFraction)
         }.toCompletableFuture()
     }
-    private fun process(contacts: List<SkillCollision>, index: Int, from: SkillLocation, to: SkillLocation, depth: Int): CompletableFuture<Unit> {
+    private fun process(contacts: List<SkillCollision>, index: Int, from: SkillLocation, to: SkillLocation, depth: Int, remainingFraction: Double): CompletableFuture<Unit> {
         if (!active()) return CompletableFuture.completedFuture(Unit)
         if (index >= contacts.size) return commit(to)
         val contact = contacts[index]
@@ -121,11 +130,12 @@ class ProjectileInstance internal constructor(
                 else {
                     synchronized(phase) { if (active()) { bounceLeft--; velocity = ProjectileMotion.reflect(velocity, contact.normal(), options.bounceEnergy) } }
                     val start = ProjectileMotion.move(contact.location(), ProjectileMotion.scale(ProjectileMotion.unit(velocity), 1e-5))
-                    val remaining = ProjectileMotion.scale(velocity, 1-contact.fraction())
-                    segment(start, ProjectileMotion.move(start, remaining), depth+1)
+                    val fraction = remainingFraction * (1-contact.fraction())
+                    val remaining = ProjectileMotion.scale(velocity, fraction)
+                    segment(start, ProjectileMotion.move(start, remaining), depth+1, fraction)
                 }
             } else if (accepted && pierceLeft-- <= 0) { remove(SkillRemovalReason.EXPIRED); CompletableFuture.completedFuture(Unit) }
-            else process(contacts, index+1, from, to, depth)
+            else process(contacts, index+1, from, to, depth, remainingFraction)
         }.toCompletableFuture()
     }
     /** Commit on the destination region only after the complete swept query has returned. */
