@@ -8,6 +8,22 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 
 class CooldownStoreTests {
+    @Test fun `pending permits block shared legacy groups until committed or released`() {
+        val now = java.util.concurrent.atomic.AtomicLong()
+        val store = CooldownStore(now::get)
+        val actor = UUID.randomUUID()
+        val pending = store.reserve(actor, "arcana:shared", 1_000_000_000)!!
+        assertFalse(store.tryAcquire(actor, "shared", 0))
+        pending.release(); pending.release()
+        val accepted = store.reserve(actor, "shared", 1_000_000_000)!!
+        now.set(5_000_000_000)
+        assertTrue(accepted.commit()); assertTrue(accepted.commit())
+        assertEquals(1_000_000_000, store.remaining(actor, "arcana:shared"))
+        now.set(6_000_000_000)
+        val stale = store.reserve(actor, "shared", 0)!!
+        store.remove(actor)
+        assertFalse(stale.commit())
+    }
     @Test fun `zero duration still respects an active shared cooldown`() {
         val now = AtomicLong(0)
         val store = CooldownStore(now::get)

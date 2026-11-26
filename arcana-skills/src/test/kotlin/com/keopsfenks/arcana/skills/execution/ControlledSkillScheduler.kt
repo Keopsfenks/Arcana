@@ -13,10 +13,14 @@ class ControlledSkillScheduler(var immediate: Boolean = true) : SkillScheduler {
     var current: Any? = null
         private set
 
-    fun assertOwner(owner: Any) = check(current === owner) { "Foreign context access: expected $owner, current $current" }
-    override fun <T> on(entity: LivingEntity, delayTicks: Long, action: () -> T) = submit(entity, delayTicks, action)
-    override fun <T> at(location: Location, action: () -> T) = submit(location, 0, action)
-    override fun <T> global(action: () -> T) = submit("global", 0, action)
+    var foreignDelayTicks = 0L
+    val regionPeers = mutableSetOf<LivingEntity>()
+    private fun sameOwner(owner: Any) = current === owner || owner is LivingEntity && current is LivingEntity && owner in regionPeers && current in regionPeers
+    fun assertOwner(owner: Any) = check(sameOwner(owner)) { "Foreign context access: expected $owner, current $current" }
+    override fun owns(entity: LivingEntity) = sameOwner(entity)
+    override fun <T> on(entity: LivingEntity, delayTicks: Long, action: () -> T) = submit(entity, if (delayTicks == 0L && !sameOwner(entity)) foreignDelayTicks else delayTicks, action)
+    override fun <T> at(location: Location, action: () -> T) = submit(location, foreignDelayTicks, action)
+    override fun <T> global(action: () -> T) = submit("global", foreignDelayTicks, action)
 
     private fun <T> submit(owner: Any, delay: Long, action: () -> T): ScheduledWork<T> {
         val future = CompletableFuture<T>()

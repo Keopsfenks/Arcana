@@ -1,6 +1,6 @@
 # Arcana Skills
 
-Arcana Skills, YAML ile beceri tanımlamak için Arcana'nın kendi efekt motorudur. Ayrı `arcana-skills` modülünde geliştirilir ve normal Arcana JAR'ına dahil edilir; ikinci bir eklenti kurman gerekmez. XP, seviye ve yetenek ağacı bu motorun parçası değildir.
+Arcana Skills, YAML ile beceri tanımlamak için Arcana'nın kendi efekt motorudur. Yürütme motoru `arcana-skills`, standart bileşenler `arcana-skills-components` modülünde geliştirilir. İkisi normal Arcana JAR'ına dahildir; ikinci bir eklenti kurman gerekmez. XP, seviye ve yetenek ağacı bu motorun parçası değildir.
 
 ## Dosya ve sınıf düzeni
 
@@ -11,6 +11,9 @@ arcana-api/.../core/skills/
   SkillTrigger.java         # Ortak tetikleyici sözleşmesi
   SkillEngine.java          # Dış eklentilerin kullandığı API
 arcana-skills/.../skills/
+  compile/                  # YAML'den çalışma tanımı üretir
+  execution/                # Sıra, zamanlama, iptal ve cooldown
+arcana-skills-components/.../skills/
   effects/ParticleEffect.kt
   effects/HealEffect.kt
   effects/DamageEffect.kt
@@ -19,11 +22,9 @@ arcana-skills/.../skills/
   triggers/MeleeAttackTrigger.kt
   triggers/BlockBreakTrigger.kt
   BuiltinComponents.kt      # Yalnızca kayıt listeleri
-  compile/                  # YAML'den çalışma tanımı üretir
-  execution/                # Sıra, zamanlama, iptal ve cooldown
 ```
 
-Her efekt, koşul ve tetikleyici ayrı sınıftır. YAML'deki `type: particle`, kayıt sistemi üzerinden [ParticleEffect](../../arcana-skills/src/main/kotlin/com/keopsfenks/arcana/skills/effects/ParticleEffect.kt) sınıfına gider. Yeni tür eklemek için merkezi bir `switch/when` büyütülmez. Ortak Java ana sınıfları [SkillEffect](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillEffect.java), [SkillCondition](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillCondition.java) ve [SkillTrigger](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillTrigger.java) dosyalarıdır.
+Her efekt, koşul ve tetikleyici ayrı sınıftır. YAML'deki `type: particle`, kayıt sistemi üzerinden [ParticleEffect](../../arcana-skills-components/src/main/kotlin/com/keopsfenks/arcana/skills/effects/ParticleEffect.kt) sınıfına gider. Yeni tür eklemek için merkezi bir `switch/when` büyütülmez. Ortak Java ana sınıfları [SkillEffect](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillEffect.java), [SkillCondition](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillCondition.java) ve [SkillTrigger](../../arcana-api/src/main/java/com/keopsfenks/arcana/core/skills/SkillTrigger.java) dosyalarıdır.
 
 ## İlk becerini etkinleştir
 
@@ -266,3 +267,172 @@ Arcana.get().getSkillEngine().cast("my_skill", context);
 ```
 
 Bağlam haritaları değiştirilemez ve Bukkit Event nesnesi gibi keyfi nesneleri kabul etmez. Entity referansları yalnızca kendi zamanlayıcı bağlamlarında kullanılmalıdır. Gelecek tamamlanması başka bir bağlamda olabilir; sonrasında başka oyuncuya işlem yaparken yine uygun scheduler kullan.
+
+
+### Schema 2 event interception
+
+`interceptors` is a separate synchronous phase registered at Bukkit `HIGHEST` with already-cancelled events ignored. Each entry uses an interceptor factory, for example `{type: add_damage, amount: 2}`, `{type: multiply_damage, factor: 1.5}` or `{type: cancel_event}`. The maximum is 64 local steps. Only `melee_attack`, `damage_taken`, `entity_attack` and `entity_damaged` support this phase; other trigger combinations reject at their exact YAML trigger path. Extension triggers must declare `supportsInterception()` and supply an owned synchronous event adapter. Normal `effects` run from the immutable `MONITOR` snapshot and reuse the exact committed admission once; they do not reserve costs, charges or cooldown again. A separate explicit cast still makes its own admission attempt.
+
+Interception permits only local snapshot predicates, local resource/stat providers and nonpersistent variable bindings. Delay, targeting, mutators, asynchronous providers and ordinary effect/projectile nodes are rejected in the interceptor list. Direct API interception requires every entity reference to be locally owned; otherwise it returns `UNSUPPORTED_CONTEXT` without querying providers. The native damage adapter supplies only locally owned counterpart roles to synchronous predicates; missing foreign roles fail those predicates. It retains immutable counterpart identities for the normal continuation, which refreshes their snapshots on their owners and receives final damage. Both phases expose `cause`; target/trigger identify the counterpart when available. Holder removal/provider unload cancels work admitted under that exact holder binding. An event facade is invalidated before returning and cannot be used from another thread or retained for later work.
+
+Admission commits before event mutation. Another plugin can cancel the event later, including at the same priority; committed costs are retained and the normal continuation is discarded when cancellation is observed at `MONITOR`. Event changes already applied before an interceptor fails are not rolled back. Native skill-generated damage is guarded at the actual damage application so delayed descendants cannot recursively intercept themselves. No compatibility with arbitrary third-party event ordering is promised.
+
+
+### Holder activation and passive contributions
+
+Schema 2 defaults to `activation: global`. Use `activation: holder` for skills that should respond to triggers only while a registered holder provider includes their key. Explicit API casts remain available. A `SkillHolder` contains a provider-qualified key, a slot, distinct native skill keys and immutable typed parameters. Holder parameters replace the definition's supplied parameters and are validated against its declarations. Identical skill/parameter trigger bindings are deduplicated. Interception follows the same holder activation rule.
+
+`passives` contains separately registered contribution factories, for example `{type: attribute, attribute: max_health, amount: 4, stat: bonus_health}` and `{type: potion, potion: speed, amplifier: 0}`. A definition may contain only passives. These contributions activate through holders, without spending a normal skill admission. Conditions and permission are checked when the holder contribution is initialized. A slot, parameter or definition revision change removes the previous leases and applies the new set; an equal reevaluation preserves the leases. The optional attribute `stat` exports that contribution amount, summed by the built-in `contributions` stat provider.
+
+The generic holder API is `platform.register(owner, SkillComponentType.HOLDER, key, provider)` and `platform.refreshHolders(actor)`. Providers capture live equipment on its owner scheduler. Call refresh when the provider's state changes; Arcana coalesces in-flight reads and reevaluates explicitly tracked actors every 20 ticks. It does not scan the complete skill catalog or every server entity each tick. A refresh that takes more than 100 ticks retires that actor's holder leases and ignores late results. Logout, provider disappearance, definition retirement and shutdown also retire leases.
+
+Limits are 64 holders, 256 bound native definitions and 64 passive instances per actor, 4,096 tracked actors and 4,096 shared managed instances per engine. Owner and revision checks apply before publication and to late completions. Exceeding a limit rejects the refresh rather than partially keeping its new contributions.
+
+Attribute contributions use Paper transient modifiers so they are not saved with entity NBT. Cleanup removes only the unique modifier it added and never resets the base value. Potion contributions use finite 40-tick effects refreshed every 20 ticks; Arcana reconciles its own strongest contribution when one owner is removed. Existing external potion effects take priority until they expire or are removed. Arcana does not save and restore an old potion snapshot over a newer effect. External potion changes are observed at `MONITOR`; native cancellation is respected.
+
+
+### Managed aura lifetimes
+
+Compiled aura definitions hold immutable start/tick/end and activation-component lists, source revision and dependencies. Runtime mechanics obtain the invocation-bound `AuraManager` from execution services and call `apply(definition, invocation, options)`. The returned `SkillManagedHandle` exposes the instance UUID, aura key, source revision UUID, recipient, active state and first terminal removal reason. Its `remove(reason)` is idempotent.
+
+The default stack key contains the aura key, source revision, recipient and caster. `shareCaster` explicitly merges casters. A shared instance retains the first caster, parameters and source admission until overwritten; later applications refresh duration/charges and add stacks up to the configured limit. Overwrite waits for the previous end hook before starting the replacement. Reaching zero charges removes the instance. Timed hooks are sequential: the next interval starts after the preceding hook completes, while expiry runs independently.
+
+Ordinary skill completion leaves explicitly adopted auras active. Explicit cancellation, a cancelled outcome, cancellation of a still-running parallel branch, actor retirement, owner removal, definition reload and shutdown retire the affected work. Already-completed scopes are distinguished from cancelled scopes. Native contributions and event subscriptions are released immediately on removal, before an optional asynchronous end hook. An unavailable source never reenters its old end hook.
+
+An adopted lineage shares 4,096 hook callbacks and 65,536 applied steps, including its branches, nested casts and explicitly adopted descendants. Creating another managed instance cannot reset those counters or the first lineage's 24-hour deadline. Normal skills keep their existing 1,024-step limit. Actor/caster/recipient references are indexed for cancellation; a lineage may retain at most 256 related actor identities. Instance caps remain 64 per actor and 4,096 per engine.
+
+Duration and interval are positive and at most 1,728,000 ticks. Refresh never moves the hard deadline. At the deadline even a delayed end hook is stopped. Normal expiry, dispel, overwrite and charge exhaustion complete the creating managed scope normally, so previously adopted descendants can finish within their shared remaining budget and deadline. Explicit cancellation, unload, invalidation, shutdown and budget failure cancel descendants. All invocation payloads are immutable snapshots and detached local-variable copies, with no retained event facade.
+
+### Modular aura mechanics and components
+
+Schema 2 uses `apply_aura`, `remove_aura` and `add_aura_charge` as independent mechanic factories. An application declares `name`, positive `duration`, optional `aura-type`, `tags`, `stack-limit`, `charges`, `refresh`, `overwrite` and `share-caster`. Its `period` controls the aura's own `on-tick` hook; common node `interval` retains its repeat meaning. Hooks accept inline effects or a named skill with optional typed parameters. Invalid references and unknown components reject the candidate before publication.
+
+Definition-local `templates.auras.<name>` can hold a mechanic configuration whose `type` is `apply_aura`; an application references it with `aura: <name>`. Templates use the generic compilation API, are preflighted even when unused and cannot recurse indefinitely. Common node targeting and repeat options belong to the application site. Removal matches `name`, `aura-type` or `tag`; caster policy defaults to `own`, with explicit `any` available. Inside an aura hook, `current: true` selects that exact instance, including an aura gifted by another caster.
+
+The `components` list uses the separate `AURA_COMPONENT` registry. Built-ins are `tick` (`interval`, `effects`), `attack` and `damaged` (`effects`, optional local `interceptors` and `conditions`), and `stat` (`stat`, `amount`, `per-stack`). Stats reconcile when stacks or charges change, preserve their contribution identity and discard stale asynchronous snapshots. Expressions expose `aura_stacks` and `aura_charges`. Timers, event subscriptions and stat leases count against the shared managed instance limits and borrow the existing lineage budget.
+
+Event components execute as the aura recipient, retaining original caster parameters and admission. Ordinary hooks receive immutable event roles/selection and run after the synchronous event callback. Local interception uses only recipient-owned snapshots and nonpersistent, synchronous bindings. `consume-charge` applies once after successful local interception; normal hooks explicitly use `add_aura_charge` with `current: true`. Cancelled normal damage observations and skill-generated damage are ignored. API callers can publish custom kinds through `SkillPlatform.trigger`.
+
+Extension factories subclass public `SkillAuraComponent` and obtain `SkillAuraContext` from execution services. This API owns cleanup, timed/event subscriptions, hook execution and charge changes without importing engine classes. `SkillCleanup` schedules host-owned entity cleanup after an invocation has ended; retain only the exact modifier or lease identity your component created. Cleanup is idempotent and must not restore an old entity snapshot.
+
+The packaged `arcana-skills/examples/v2/aura-shield.yml` and `aura-periodic-buff.yml` demonstrate a two-charge synchronous shield and a finite stat buff with periodic variable updates. Both have `enabled: false`; enable them deliberately after reviewing their settings.
+
+### Projectile simulation service
+
+Runtime mechanics obtain the invocation-bound `ProjectileManager` and call `launch(invocation, options, hooks)`. The immutable invocation supplies the current location, original origin, caster, optional target and typed parameters. `ProjectileHooks` contains copied start/tick/hit/end lists, a hit predicate and dependency handles. The returned managed handle survives ordinary parent completion and shares the same cancellation, owner, revision, callback and step budgets as other managed work.
+
+Simulation advances once per tick in blocks per tick. Each complete swept segment checks its loaded chunk bounds, collects block and entity contacts through `SkillTargetQuery`, sorts by nearest contact and commits movement on the destination location's scheduler. Query completion precedes movement and hit callbacks. Entity snapshots are captured on their own entity schedulers; no world entity scan, implicit chunk loading or native projectile entity is used. A block or narrow entity between endpoints is still detected. An unloaded path, including a partition disappearing after preflight, ends the flight; a retired homing target retires it.
+
+Options include normalized direction, speed, gravity, finite lifetime, radius, homing interpolation, deterministic seeded angular spread, bounce count/energy, piercing, total hits and per-target immunity ticks. Defaults ignore the caster. Hit predicates and hooks receive fresh snapshots of the actual contact target and preserve origin/parameters. Rejected or retired entity contacts do not spend a hit or piercing allowance. Blocks still stop or reflect physical motion. Remaining movement after a bounce is queried again, and particle interpolation cannot add damage hits.
+
+Hard geometry limits are speed 64 blocks per tick (also the gravity-adjusted velocity cap), radius 16 blocks, 100 bounces, 255 pierced contacts and 256 total hits. Existing query limits of 256 chunks, 4,096 candidates and 65,536 sampled blocks apply. Bounds include the radius and must all be loaded, so a wide projectile near an unloaded neighbor terminates conservatively. Duration counts simulation steps, with a separate 100-actor-tick stall timeout for initialization or a pending step. Queued ownership handoffs may extend wall duration; the original managed lineage deadline is never renewed. Lifetime is at most 1,728,000 ticks, with inherited managed budgets able to terminate it sooner. Normal impact/lifetime completion uses `EXPIRED`; explicit cancellation, target retirement, owner removal, reload and shutdown retain their distinct reasons. End hooks and cleanup run at most once; invalidated definitions cannot run an end hook.
+
+### Projectile, ray, beam and chain YAML
+
+Each mechanic has its own factory class and registry entry. `projectile` accepts `speed`, optional `direction: {x: 1, y: 0, z: 0}`, `duration`, `gravity`, `radius`, `homing`, `bounces`, `bounce-energy`, `pierce`, `max-hits`, `immune-delay`, `hit-caster`, `spread` and integer `seed`. Missing direction uses captured yaw/pitch. `missile` accepts the same fields and requires an actual target; its homing default is 1 instead of 0. Numeric durations are seconds, explicit tick strings use `t`.
+
+All five mechanics accept `on-start`, `on-tick`, `on-hit`, `on-end` and `hit-conditions`. Hooks can be inline effects or named skills with optional typed parameters. Contact hooks keep the original origin/parameters, use the actual entity as target (empty for a block) and put the contact position in `location`. Skill-generated descendants inherit the original call depth and shared budgets. An unavailable entity is skipped rather than spending a hit. A rejected block predicate still leaves the physical wall in place.
+
+`ray` runs once using `length` (at most 256), `radius`, `direction`, `pierce`, `max-hits` and `hit-caster`. `beam` anchors the same bounded segment at the captured start, runs immediately and then every `period` until `duration`. Its total hit ledger persists across pulses; optional `immune-delay` prevents repeated target hits. Both wait for ownership-safe query results. Beam uses a finite managed pulse, without creating a Bukkit entity or entering aura stacking/matching. Source retirement cancels pending pulses and cannot invoke the old end hook.
+
+`chain` accepts `radius` (at most 64), `jumps` (1–100) and `hit-caster`. It starts from the supplied target or the nearest eligible actor, then searches from each accepted contact. UUIDs are visited once, including rejected candidates, with stable distance/UUID ordering. Each hop uses owned snapshots and the original invocation budget. No global entity enumeration is used.
+
+Disabled examples are packaged as `projectile-bolt.yml`, `projectile-beam.yml` and `projectile-chain.yml` alongside the aura examples. Each compiles independently when enabled and uses the existing variable mechanics to record contacts.
+
+### Combat, status and movement mechanics
+
+These native mechanics accept `target: selected` by default: use the invocation target when present, otherwise its actor. Explicit `actor`/`caster`, `target` and `trigger` select those roles; a missing explicit role returns `NO_TARGET`. Live properties and mutations run on the selected entity's scheduler. `feed` requires a player and returns `UNSUPPORTED_ACTOR` for a mob.
+
+`damage` uses normal server damage with its generated-damage guard at the actual application. `heal` clamps to native maximum health. Both use finite nonnegative `amount`. `feed` adds integer food and optional saturation within native food bounds. `ignite` extends native fire ticks for `duration`; `extinguish` clears them. `absorption` adds `amount` up to configured `maximum` (default 40), with native server constraints still applying.
+
+`potion` declares `potion`, `amplifier`, positive `duration` and optional `ambient`, `particles`, `icon`. Its owned contribution uses the same conservative coexistence rules as passive potions. `remove_potion` dispels timed Arcana contributions and closes their managed leases immediately, preserving holder contributions and external effects. Explicit `external: true` also requests native removal of the current effect and obeys the native event result.
+
+`stun` suppresses walking and supported jumping with uniquely named transient attribute modifiers for `duration`. Removal deletes only those modifiers, preserving other contributions and base values. `freeze` refreshes finite native freeze ticks for its duration, without changing another plugin's freeze lock or lowering an existing freeze value. On removal it stops refreshing; vanilla freeze decay determines the remaining visual duration. These effects use finite managed leases and indexed recipient cancellation.
+
+`velocity` accepts `x`, `y`, `z` and optional `normalize: true` with `speed`. `knockback` and `pull` use `strength` relative to the captured caster position; zero separation produces a finite zero impulse. `launch` replaces vertical velocity using `strength`. Vectors are capped at length 16. `dash` applies a captured `direction` and `speed` immediately and each `period` until `duration`. Cleanup clears its last impulse only if current velocity still matches, so a later changed impulse survives.
+
+`teleport` requires `destination: {x: 20, y: 70, z: 4}`, optionally with world UUID, yaw and pitch. It resolves the destination and calls `teleportAsync` on the actor scheduler, awaiting its boolean result before continuing. False returns `NO_TARGET`; cancellation prevents subsequent skill effects. A teleport already submitted to the server follows the server's asynchronous teleport lifecycle. See the [Paper entity API](https://jd.papermc.io/paper/1.21.8/org/bukkit/entity/Entity.html) for teleport and freeze tick behavior.
+
+### Visual, presentation, item and world mechanics
+
+`particle`, `particle_line` and `particle_ring` resolve an Arcana `particle` lookup once during compilation. Plain vanilla particle names requiring data are rejected; use an Arcana lookup such as `dust:ff00ff`. `amount` is per point. A line uses `points` (2–256), `length` (at most 256) and optional direction. A horizontal ring uses `points` (3–256), `radius` (at most 64) and degree `rotation`. Each geometry is capped at 10,000 particles total and consumes the existing step budget. Locations are immutable and scheduled separately. `sound` uses a resource key plus bounded `volume`/`pitch`; `stop_sound` stops that key for a selected player. Visual/world mechanics use the invocation location unless `target` explicitly selects an entity role.
+
+`message` and `action_bar` take `text`. `title` takes `title`, optional `subtitle`, `fade-in`, `stay` and `fade-out`; its total native client timing is finite and at most 24 hours. No delayed title clear can erase a later external title. `boss_bar` takes `text`, positive `duration`, `progress` (0–1), `color` and `overlay`; its unique bar is hidden on expiry, cancellation, reload, recipient retirement or owner shutdown. These presentation actions require players.
+
+Templates support `{actor}`, `{player}`, `{target}`, `{skill}`, `{param.name}` and `{data.name}`. Rich template formatting is parsed first; replacements are literal components and are never reparsed as formatting. Static text is limited to 8,192 characters and expanded text to 32,768. `console_command` dispatches on the global scheduler and `player_command` on the selected player scheduler. Commands use a single literal replacement pass and reject blank or multiline expansion.
+
+`give_item` and `remove_item` use Arcana's existing `item` lookup with integer `amount` (1–4,096). Giving clones the lookup prototype into at most 64 native stacks; inventory overflow returns `NO_TARGET` and retains items already inserted. Removal preflights matching storage slots and changes nothing when the full amount is unavailable. `durability` adds signed integer damage to the main-hand item, clamped to its native maximum. `enchant` changes a resolved `enchantment` at bounded `level` (0 removes it); native level and item compatibility apply unless `unsafe: true`. Inventory actions require players and run on their entity scheduler.
+
+`set_block` takes resolved `block` data and optional `physics` (default false). Player placement stages the proposed data without physics so the native placement event exposes the proposed block and replaced state. Cancellation or source invalidation restores the previous state only while the staged data remains unchanged. Player placement/break emit [BlockPlaceEvent](https://jd.papermc.io/paper/1.21.8/org/bukkit/event/block/BlockPlaceEvent.html)/BlockBreakEvent; nonplayer edits emit [EntityChangeBlockEvent](https://jd.papermc.io/paper/1.21.8/org/bukkit/event/entity/EntityChangeBlockEvent.html) and obey cancellation. `break_block` defaults to no drops and no physics; explicit `drops` follows the native break path. All edits check loaded chunks and world height on the location scheduler. These event hooks allow protection listeners to intervene; they do not reproduce every third-party protection system or vanilla interaction rule.
+
+`lightning` defaults to `effect-only: true`. `explosion` accepts `power` (0–8), `fire` and `break-blocks`, with both destructive flags false by default. Its affected bounds must be loaded, and cancellation from the native explosion call is respected. See the [Paper world API](https://jd.papermc.io/paper/1.21.8/org/bukkit/World.html). Arcana-generated block protection events remain visible to other plugins but do not start new Arcana block-trigger roots; synchronous native damage is guarded at application.
+
+### Snapshot conditions
+
+The native `PREDICATE` registry contains 23 separate factories. `subject: actor` is the default for role-based conditions, with explicit `target` and `trigger` available; `has_target` defaults to the target role. Missing required role/data does not match. Predicates consume immutable invocation data and do not read Bukkit entities or worlds themselves.
+
+`all`/`any` require a nonempty `conditions` list, while `not` accepts exactly one `condition`. `expression` compiles numeric input once and matches a finite nonzero result. `actor_type` accepts `kind: player|mob|living`; `entity_type` accepts a `types` list resolved using `Locale.ROOT`. `health` supports inclusive `min`/`max` and optional `percent`; `food` is player-only and uses inclusive bounds. `movement` selects `sneaking`, `sprinting`, `swimming`, `gliding` or `on_ground`, with optional boolean `value`.
+
+`world` matches `worlds` names. `biome` matches `biomes` resource keys, defaulting bare names to the `minecraft` namespace; datapack keys retain their namespace. `time` compares inclusive ticks 0–23,999 and wraps midnight when `min` exceeds `max`. `weather` accepts `states: [clear, rain, thunder]`. `height` compares a role's captured Y coordinate. `distance` compares two roles (`other: target` by default), and different worlds never match. `line_of_sight` captures both eye positions on their owners and checks a loaded block segment, bounded by `max-distance` (at most 256) and the existing query caps. World/biome/time/weather/LOS reads use the appropriate global or location context.
+
+`permission` captures only the exact requested player `permission` node, without enumerating effective permissions. `equipment` captures only a requested player `slot`, then matches a `materials` list and optional `min-amount`. Slots are `main_hand`, `off_hand`, `helmet`, `chestplate`, `leggings`, `boots`. Unsupported player capabilities on mobs fail the condition.
+
+`variable` compares a declared `binding: var_name` with typed `equals`, or numeric inclusive bounds. Bindings retain their configured scope/default/persistence rules. `resource` reads a named `resource` provider balance without reserving or spending it. `stat` requests a `key` from `provider`; an unqualified stat key belongs to the resolved provider namespace. Both support explicit subject and inclusive bounds. Missing returned stat data does not become zero. `has_aura` queries cached metadata by optional `name`, `aura-type`, `tag` and `caster: own|any`; `min-stacks` and `min-charges` must match the same instance.
+
+Targeter-internal predicates use `conditions`, while common effect-node predicates keep their existing `conditions`/`filters` semantics. Before a candidate filter runs, Arcana projects that candidate's required metadata and variable bindings; TARGET variables cannot inherit the previous victim's values. Location projections clear entity-target metadata and use missing-target binding defaults. Basic player/type/self filters run before expensive binding preparation. Examples:
+
+```yaml
+conditions:
+  - type: all
+    conditions:
+      - {type: actor_type, kind: player}
+      - {type: health, min: 25, max: 100, percent: true}
+      - type: not
+        condition: {type: expression, expression: 0}
+effects:
+  - type: damage
+    amount: 2
+    targeter:
+      type: entities_in_radius
+      radius: 8
+      exclude-self: true
+      conditions:
+        - {type: entity_type, subject: target, types: [zombie, skeleton]}
+```
+
+Extension conditions declare extra data through immutable `SkillSnapshotRequest` and `SkillCompilation.snapshot(request, path)`, receiving a reserved alias to read from invocation data. A compiled definition allows at most 256 distinct requests. Normal and synchronous interception requirements are tracked separately; async world/LOS providers are rejected in the local phase. Unused templates are preflighted without fetching their runtime snapshots. Custom targeters can use `SkillTargetQuery.project`/`projectLocation` to obtain the host's owned binding projection before pure filtering. All previous Java contracts remain available through their existing entry points.
+
+
+### General event adapters
+
+Schema2 accepts the existing12 player keys (`join`, `respawn`, `death`, `block_break`,
+`block_place`, `melee_attack`, `projectile_hit`, `damage_taken`, `right_click`,
+`left_click`, `sneak`, `sprint`) and native `move`, `jump`, `equip`, `held_slot`,
+`consume`, `shoot`, `kill`, `entity_attack`, `entity_damaged`, `custom`, `timer`.
+The entity attack/damaged keys cover non-player actors; player damage uses the
+existing keys, so one event does not produce duplicate player casts. Attack means
+direct or sweep attacks, excluding thorns. Equipment changes emit once with a
+copied slot map; movement ignores rotations and teleports. Consume/shoot include
+`hand` so off-hand behavior can be selected explicitly. All retained event data
+is immutable; no Bukkit Event or item stack crosses a handoff.
+
+Adapters select definition revisions and holder identities when the event is
+emitted. Reloading before the entity handoff never selects replacement code.
+Empty trigger indexes schedule no cast jobs. Pending native emissions are capped
+at1024, and close/actor retirement removes pending jobs. Synchronous generated
+damage and later lightning damage are guarded against fresh trigger roots;
+lightning identity tracking is capped4096, expires60seconds after creation, and
+keeps a1second retirement grace. Native protection events still reach other
+plugins. These guarantees have unit/ownership-spy coverage, not a live Folia run.
+
+Timers require explicit API recipients: `platform.subscribeTimer(owner,
+new SkillKey("arcana", "timer"), actor, intervalTicks)`. Intervals are1..1728000
+ticks; each recipient consumes the shared64-per-actor/4096-per-engine managed
+limit. Closing the returned handle, owner, trigger, actor or engine stops future
+emissions and queued callbacks. Declaring a YAML timer never scans players or
+loads entities. Namespaced custom events can use `platform.trigger(key, input)`;
+a registered `CustomSkillTrigger.fire(input)` also provides event-time deferred
+root dispatch.
+
+
+Advanced extension contracts: [API](skills-api.md); generated option inventory and limits: [native catalog](skills-components.md).

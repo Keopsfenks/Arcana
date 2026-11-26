@@ -1,0 +1,7 @@
+schema: 2
+id: example_forward
+effects:
+  - type: select_fixture
+    selector:
+      type: forward
+      distance: 3

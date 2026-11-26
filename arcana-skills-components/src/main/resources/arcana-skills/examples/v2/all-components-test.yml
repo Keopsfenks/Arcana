@@ -1,0 +1,2833 @@
+# ARCANA — TEK DOSYALIK BİLEŞEN TESTİ
+# Kopya: plugins/Arcana/skills/all-components-test.yml (başındaki _ kaldırılmalı)
+# enabled: true yap; /arcana skills reload
+# Başlat: /arcana skills cast all_components_test
+# Durdur: /arcana skills reload
+# pace.default saniyedir; varsayılan toplam süre yaklaşık 65 saniyedir.
+# Oyuncu yetkisi: arcana.command.skills. Tahta kılıç tut, doğu (+X) yönünde 3 blok öteye zırh askısı koy.
+# Doğrudan hasar 1 ve kısa ateş; patlama gücü 0; yıldırım yalnızca görseldir. Test dünyasında çalıştır.
+# Dünya değiştiren iki adım ve teleport varsayılan kapalıdır; ATLANDI yazar.
+# Bunları denemek için ilgili allow_*.default değerini true yapıp reload et.
+# Teleport öncesi teleport_x/y/z.default alanlarına güvenli test koordinatlarını yaz.
+# Dünya düzenleme testi testi başlattığın konuma +3x,+1y ofsetinde CAM KOYAR/KIRAR.
+# Bu noktayı önceden boşalt ve iki blok adımı boyunca hareket etme; mevcut değerler otomatik geri yüklenmez.
+# EŞLEŞMEDİ koşulun şu an yanlış olmasıdır, koşul motorunun bozuk olması değildir.
+# UYGULANDI mekanik çağrısının sonucudur; mermi isabeti gibi gecikmeli sonuçları da gözle.
+# ESKİ YAML adaptörleri aynı işlevlerin eski biçimleridir; bu dosya 57 yeni mekaniği kapsar.
+#
+# OLAY MODU — aynı dosyayla 23 gerçek trigger'ı TEK TEK kontrol et:
+# 1) parameters.event_mode.default: true
+# 2) triggers: [right_click] (her denemede yalnızca seçtiğin trigger)
+# 3) parameters.event_label.default: right_click (seçtiğin trigger ile aynı etiket)
+# 4) /arcana skills reload; aşağıdaki gerçek olayı oluştur.
+# 16 blok içindeki arcana.command.skills yetkili en yakın oyuncu [GERÇEK OLAY] görür.
+# Bu mod 57 efektlik testi yeniden başlatmaz. event_label otomatik olay adı değildir;
+# yalnızca tek seçili trigger bulunduğu için hangi kaydı gözlediğin açıktır.
+# Join/death vb. gerçek olaylar YAML içinden otomatik üretilemez.
+# custom/timer için API çağrısı gerekir; olmayan olay için BAŞARILI mesajı basılmaz.
+# join: Sunucuya yeniden gir.
+# respawn: Öldükten sonra yeniden doğ.
+# death: Test dünyasında öl; envanter kaybı sunucu kurallarına bağlıdır.
+# block_break: Bir deneme bloğunu kır.
+# block_place: Bir deneme bloğu yerleştir.
+# melee_attack: Bir test canlısına yakın dövüş saldırısı yap.
+# projectile_hit: Oyuncunun attığı ok bir canlıya veya bloğa çarpsın.
+# damage_taken: Oyuncu normal oyun hasarı alsın.
+# right_click: Ana elle kullanılabilir bir eşyaya/bloka sağ tıkla; iptal edilmiş etkileşim sayılmaz.
+# left_click: Ana elle sol tıkla; iptal edilmiş etkileşim sayılmaz.
+# sneak: Eğilmeye başla.
+# sprint: Koşmaya başla.
+# move: Konumunu değiştir; yalnızca bakış dönüşü ve teleport sayılmaz.
+# jump: Zıpla.
+# held_slot: Seçili hızlı erişim yuvasını değiştir.
+# equip: Zırhını veya elindeki ekipmanı değiştir.
+# consume: Yemek veya içecek tüket.
+# shoot: Yay ile atış yap.
+# kill: Bir canlıyı öldür.
+# entity_attack: Oyuncu olmayan bir canlı yakın dövüş saldırısı yapsın; yakınında yetkili test oyuncusu bulunsun.
+# entity_damaged: Oyuncu olmayan bir canlı normal oyun hasarı alsın; yakınında yetkili test oyuncusu bulunsun.
+# custom: API gerekir: platform.trigger(SkillKey("arcana", "custom"), invocation). YAML tek başına olay üretmez.
+# timer: API gerekir: platform.subscribeTimer(owner, SkillKey("arcana", "timer"), actor, 20); dönen kaydı test sonunda kapat.
+# Normal teste dönüş: event_mode.default: false ve triggers: [] yapıp reload et.
+# cast testinin phase parametresini 0 bırak; phase=1 yalnızca döngüsüz alt çağrı içindir.
+
+schema: 2
+id: "all_components_test"
+enabled: false
+triggers: []
+parameters:
+  phase:
+    type: "number"
+    default: 0
+  pace:
+    type: "number"
+    default: 0.75
+  event_mode:
+    type: "boolean"
+    default: false
+  event_label:
+    type: "text"
+    default: "right_click"
+  allow_world_edits:
+    type: "boolean"
+    default: false
+  allow_teleport:
+    type: "boolean"
+    default: false
+  teleport_x:
+    type: "number"
+    default: 0
+  teleport_y:
+    type: "number"
+    default: 80
+  teleport_z:
+    type: "number"
+    default: 0
+bindings:
+  var_lab_ok:
+    scope: "invocation"
+    key: "lab_ok"
+    type: "boolean"
+    default: false
+  var_lab_passed:
+    scope: "invocation"
+    key: "lab_passed"
+    type: "number"
+    default: 0
+  var_lab_value:
+    scope: "invocation"
+    key: "lab_value"
+    type: "number"
+    default: 0
+effects:
+  - type: "branch"
+    condition:
+      type: "variable"
+      binding: "param.phase"
+      equals: 1
+    then:
+      - type: "message"
+        target: "actor"
+        text: "<green>cast: aynı dosyanın phase=1 alt çağrısı tamamlandı; döngü kurulmadı.</green>"
+    else:
+      - type: "branch"
+        condition:
+          type: "variable"
+          binding: "param.event_mode"
+          equals: true
+        then:
+          - type: "message"
+            target: "target"
+            targeter:
+              type: "players_in_radius"
+              radius: 16
+              limit: 1
+              sort: "nearest"
+              exclude-self: false
+              conditions:
+                - type: "permission"
+                  subject: "target"
+                  permission: "arcana.command.skills"
+            text: "<aqua>[GERÇEK OLAY] {param.event_label} | kaynak={actor} | gözlemci={target} | hasar={data.damage}</aqua>"
+            on-failure: "skip"
+        else:
+          - type: "sequence"
+            conditions:
+              - type: "actor_type"
+                kind: "player"
+              - type: "permission"
+                permission: "arcana.command.skills"
+            effects:
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_passed"
+                value: 0
+              - type: "message"
+                target: "actor"
+                text: "<gold>Arcana: 57 efekt + 23 koşul sıralı testi başladı.</gold>"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>Eline yalnızca deneme için tahta kılıç al. doğu (+X) yönünde 3 blok öteye zırh askısı koy. Test bitene kadar yeniden başlatma.</yellow>"
+              - type: "message"
+                target: "actor"
+                text: "<gray>UYGULANDI = çağrı başarılı. Kalıcı oyun etkisi/isabet ayrıca gözlenmeli. ATLANDI = koşul, hedef veya çalışma hatası; zincir devam eder.</gray>"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 01/57 message</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "message"
+                    text: "<aqua>message: sohbet mesajı.</aqua>"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 01/57 message</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 01/57 message — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 02/57 action_bar</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "action_bar"
+                    text: "<yellow>action_bar denemesi</yellow>"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 02/57 action_bar</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 02/57 action_bar — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 03/57 title</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "title"
+                    title: "<gold>Arcana Test</gold>"
+                    subtitle: "title mekanigi"
+                    stay: "10t"
+                    fade-in: "2t"
+                    fade-out: "2t"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 03/57 title</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 03/57 title — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 04/57 boss_bar</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "boss_bar"
+                    text: "boss_bar denemesi"
+                    duration: "10t"
+                    color: "PURPLE"
+                    progress: 0.5
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 04/57 boss_bar</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 04/57 boss_bar — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 05/57 sound</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "sound"
+                    sound: "minecraft:music_disc.cat"
+                    volume: 0.2
+                    pitch: 1
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 05/57 sound</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 05/57 sound — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 06/57 stop_sound</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "stop_sound"
+                    sound: "minecraft:music_disc.cat"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 06/57 stop_sound</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 06/57 stop_sound — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 07/57 particle</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "particle"
+                    particle: "FLAME"
+                    amount: 5
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 07/57 particle</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 07/57 particle — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 08/57 particle_line</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "particle_line"
+                    particle: "FLAME"
+                    amount: 1
+                    points: 6
+                    length: 3
+                    direction:
+                      x: 1
+                      y: 0
+                      z: 0
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 08/57 particle_line</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 08/57 particle_line — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 09/57 particle_ring</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "particle_ring"
+                    particle: "FLAME"
+                    amount: 1
+                    points: 12
+                    radius: 1
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 09/57 particle_ring</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 09/57 particle_ring — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 10/57 heal</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "heal"
+                    amount: 20
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 10/57 heal</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 10/57 heal — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 11/57 damage</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "damage"
+                    amount: 1
+                    target: "actor"
+                    conditions:
+                      - type: "health"
+                        min: 4
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 11/57 damage</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 11/57 damage — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 12/57 feed</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "feed"
+                    amount: 1
+                    saturation: 0
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 12/57 feed</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 12/57 feed — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 13/57 absorption</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "absorption"
+                    amount: 2
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 13/57 absorption</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 13/57 absorption — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 14/57 ignite</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "ignite"
+                    duration: "2s"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 14/57 ignite</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 14/57 ignite — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 15/57 extinguish</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "extinguish"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 15/57 extinguish</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 15/57 extinguish — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 16/57 potion</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "potion"
+                    potion: "speed"
+                    duration: "5s"
+                    amplifier: 0
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 16/57 potion</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 16/57 potion — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 17/57 remove_potion</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "remove_potion"
+                    potion: "speed"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 17/57 remove_potion</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 17/57 remove_potion — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 18/57 freeze</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "freeze"
+                    duration: "2t"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 18/57 freeze</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 18/57 freeze — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 19/57 stun</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "stun"
+                    duration: "2t"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 19/57 stun</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 19/57 stun — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 20/57 set_variable</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_value"
+                    value: 1
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 20/57 set_variable</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 20/57 set_variable — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 21/57 add_variable</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_value"
+                    amount: 1
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 21/57 add_variable</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 21/57 add_variable — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 22/57 remove_variable</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "remove_variable"
+                    scope: "invocation"
+                    key: "lab_value"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 22/57 remove_variable</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 22/57 remove_variable — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 23/57 sequence</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "sequence"
+                    effects:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>sequence: ilk alt adım.</gray>"
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>sequence: ikinci alt adım.</gray>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 23/57 sequence</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 23/57 sequence — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 24/57 delay</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "delay"
+                    duration: "2t"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 24/57 delay</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 24/57 delay — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 25/57 repeat</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "repeat"
+                    times: 2
+                    interval: "2t"
+                    effects:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>repeat: bu mesaj iki kez gelir.</gray>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 25/57 repeat</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 25/57 repeat — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 26/57 branch</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "branch"
+                    condition:
+                      type: "actor_type"
+                      kind: "player"
+                    then:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>branch: oyuncu yolu seçildi.</gray>"
+                    else:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>branch: diğer yol.</gray>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 26/57 branch</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 26/57 branch — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 27/57 cast</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "cast"
+                    skill: "arcana:all_components_test"
+                    parameters:
+                      phase: 1
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 27/57 cast</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 27/57 cast — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 28/57 cycle</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "cycle"
+                    choices:
+                      - effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>cycle A</gray>"
+                      - effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>cycle B</gray>"
+                    repeat: 2
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 28/57 cycle</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 28/57 cycle — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 29/57 shuffle</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "shuffle"
+                    choices:
+                      - effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>shuffle A</gray>"
+                      - effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>shuffle B</gray>"
+                    repeat: 2
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 29/57 shuffle</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 29/57 shuffle — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 30/57 weighted_random</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "weighted_random"
+                    choices:
+                      - weight: 1
+                        effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>weighted_random A</gray>"
+                      - weight: 1
+                        effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>weighted_random B</gray>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 30/57 weighted_random</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 30/57 weighted_random — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 31/57 wait_until</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "wait_until"
+                    condition:
+                      type: "actor_type"
+                      kind: "player"
+                    timeout: "10t"
+                    poll: "1t"
+                    effects:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>wait_until: oyuncu koşulu sağlandı.</gray>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 31/57 wait_until</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 31/57 wait_until — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 32/57 parallel</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "parallel"
+                    branches:
+                      - effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>parallel A</gray>"
+                      - effects:
+                          - type: "message"
+                            target: "actor"
+                            text: "<gray>parallel B</gray>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 32/57 parallel</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 32/57 parallel — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 33/57 for_each</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "for_each"
+                    select:
+                      type: "self"
+                    effects:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>for_each: self üzerinde bir kez.</gray>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 33/57 for_each</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 33/57 for_each — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 34/57 apply_aura</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "apply_aura"
+                    name: "lab_aura"
+                    duration: "30s"
+                    charges: 2
+                    on-start:
+                      - type: "message"
+                        target: "actor"
+                        text: "<light_purple>aura on-start</light_purple>"
+                    on-end:
+                      - type: "message"
+                        target: "actor"
+                        text: "<light_purple>aura on-end</light_purple>"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 34/57 apply_aura</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 34/57 apply_aura — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 35/57 add_aura_charge</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "add_aura_charge"
+                    name: "lab_aura"
+                    amount: 1
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 35/57 add_aura_charge</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 35/57 add_aura_charge — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 36/57 remove_aura</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "remove_aura"
+                    name: "lab_aura"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 36/57 remove_aura</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 36/57 remove_aura — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 37/57 velocity</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "velocity"
+                    x: 0
+                    y: 0.1
+                    z: 0
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 37/57 velocity</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 37/57 velocity — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 38/57 launch</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "launch"
+                    strength: 0.15
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 38/57 launch</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 38/57 launch — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 39/57 dash</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "dash"
+                    direction:
+                      x: 1
+                      y: 0
+                      z: 0
+                    speed: 0.1
+                    duration: "2t"
+                    period: "1t"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 39/57 dash</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 39/57 dash — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 40/57 knockback</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "knockback"
+                    strength: 0.1
+                    target: "target"
+                    targeter:
+                      type: "entities_in_radius"
+                      radius: 5
+                      limit: 1
+                      exclude-self: true
+                      types:
+                        - "ARMOR_STAND"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 40/57 knockback</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 40/57 knockback — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 41/57 pull</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "pull"
+                    strength: 0.1
+                    target: "target"
+                    targeter:
+                      type: "entities_in_radius"
+                      radius: 5
+                      limit: 1
+                      exclude-self: true
+                      types:
+                        - "ARMOR_STAND"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 41/57 pull</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 41/57 pull — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 42/57 teleport</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "teleport"
+                    destination:
+                      x: "param_teleport_x"
+                      y: "param_teleport_y"
+                      z: "param_teleport_z"
+                    conditions:
+                      - type: "variable"
+                        binding: "param.allow_teleport"
+                        equals: true
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 42/57 teleport</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 42/57 teleport — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 43/57 give_item</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "give_item"
+                    item: "apple"
+                    amount: 1
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 43/57 give_item</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 43/57 give_item — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 44/57 remove_item</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "remove_item"
+                    item: "apple"
+                    amount: 1
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 44/57 remove_item</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 44/57 remove_item — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 45/57 durability</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "durability"
+                    amount: 1
+                    target: "actor"
+                    conditions:
+                      - type: "equipment"
+                        materials:
+                          - "WOODEN_SWORD"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 45/57 durability</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 45/57 durability — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 46/57 enchant</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "enchant"
+                    enchantment: "sharpness"
+                    level: 1
+                    target: "actor"
+                    conditions:
+                      - type: "equipment"
+                        materials:
+                          - "WOODEN_SWORD"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 46/57 enchant</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 46/57 enchant — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 47/57 player_command</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "player_command"
+                    command: "arcana skills list"
+                    target: "actor"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 47/57 player_command</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 47/57 player_command — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 48/57 console_command</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "console_command"
+                    command: "arcana skills list"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 48/57 console_command</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 48/57 console_command — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 49/57 explosion</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "explosion"
+                    power: 0
+                    fire: false
+                    break-blocks: false
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 49/57 explosion</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 49/57 explosion — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 50/57 lightning</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "lightning"
+                    effect-only: true
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 50/57 lightning</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 50/57 lightning — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 51/57 set_block</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "set_block"
+                    block: "minecraft:glass"
+                    physics: false
+                    conditions:
+                      - type: "variable"
+                        binding: "param.allow_world_edits"
+                        equals: true
+                    mutators:
+                      - type: "offset_location"
+                        x: 3
+                        y: 1
+                        z: 0
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 51/57 set_block</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 51/57 set_block — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 52/57 break_block</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "break_block"
+                    drops: false
+                    physics: false
+                    conditions:
+                      - type: "variable"
+                        binding: "param.allow_world_edits"
+                        equals: true
+                    mutators:
+                      - type: "offset_location"
+                        x: 3
+                        y: 1
+                        z: 0
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 52/57 break_block</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 52/57 break_block — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 53/57 projectile</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "projectile"
+                    on-start:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>projectile: başlangıç.</gray>"
+                    on-hit:
+                      - type: "particle"
+                        particle: "FLAME"
+                        amount: 2
+                    on-end:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>projectile: sonlandı.</gray>"
+                    speed: 0.5
+                    duration: "10t"
+                    direction:
+                      x: 1
+                      y: 0
+                      z: 0
+                    hit-conditions:
+                      - type: "entity_type"
+                        subject: "target"
+                        types:
+                          - "ARMOR_STAND"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 53/57 projectile</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 53/57 projectile — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 54/57 missile</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "missile"
+                    on-start:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>missile: başlangıç.</gray>"
+                    on-hit:
+                      - type: "particle"
+                        particle: "FLAME"
+                        amount: 2
+                    on-end:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>missile: sonlandı.</gray>"
+                    speed: 0.5
+                    duration: "10t"
+                    direction:
+                      x: 1
+                      y: 0
+                      z: 0
+                    targeter:
+                      type: "entities_in_radius"
+                      radius: 5
+                      limit: 1
+                      exclude-self: true
+                      types:
+                        - "ARMOR_STAND"
+                    hit-conditions:
+                      - type: "entity_type"
+                        subject: "target"
+                        types:
+                          - "ARMOR_STAND"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 54/57 missile</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 54/57 missile — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 55/57 ray</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "ray"
+                    on-start:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>ray: başlangıç.</gray>"
+                    on-hit:
+                      - type: "particle"
+                        particle: "FLAME"
+                        amount: 2
+                    on-end:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>ray: sonlandı.</gray>"
+                    length: 5
+                    direction:
+                      x: 1
+                      y: 0
+                      z: 0
+                    hit-conditions:
+                      - type: "entity_type"
+                        subject: "target"
+                        types:
+                          - "ARMOR_STAND"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 55/57 ray</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 55/57 ray — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 56/57 beam</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "beam"
+                    on-start:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>beam: başlangıç.</gray>"
+                    on-hit:
+                      - type: "particle"
+                        particle: "FLAME"
+                        amount: 2
+                    on-end:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>beam: sonlandı.</gray>"
+                    length: 5
+                    direction:
+                      x: 1
+                      y: 0
+                      z: 0
+                    duration: "4t"
+                    period: "2t"
+                    hit-conditions:
+                      - type: "entity_type"
+                        subject: "target"
+                        types:
+                          - "ARMOR_STAND"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 56/57 beam</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 56/57 beam — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<yellow>[DENENİYOR] 57/57 chain</yellow>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_ok"
+                value: false
+              - type: "sequence"
+                on-failure: "skip"
+                effects:
+                  - type: "chain"
+                    on-start:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>chain: başlangıç.</gray>"
+                    on-hit:
+                      - type: "particle"
+                        particle: "FLAME"
+                        amount: 2
+                    on-end:
+                      - type: "message"
+                        target: "actor"
+                        text: "<gray>chain: sonlandı.</gray>"
+                    radius: 5
+                    jumps: 2
+                    hit-conditions:
+                      - type: "entity_type"
+                        subject: "target"
+                        types:
+                          - "ARMOR_STAND"
+                  - type: "set_variable"
+                    scope: "invocation"
+                    key: "lab_ok"
+                    value: true
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_ok"
+                  equals: true
+                then:
+                  - type: "add_variable"
+                    scope: "invocation"
+                    key: "lab_passed"
+                    amount: 1
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[UYGULANDI] 57/57 chain</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<red>[ATLANDI / BAŞARISIZ] 57/57 chain — hedefi, önkoşulu ve konsolu kontrol et.</red>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "message"
+                target: "actor"
+                text: "<gold>Efekt bölümü bitti: {data.var_lab_passed}/57 başarılı çağrı.</gold>"
+              - type: "message"
+                target: "actor"
+                text: "<gold>Şimdi 23 koşul, mevcut durumuna göre tek tek değerlendiriliyor.</gold>"
+              - type: "set_variable"
+                scope: "invocation"
+                key: "lab_value"
+                value: 2
+              - type: "apply_aura"
+                name: "lab_aura"
+                duration: "30s"
+                charges: 2
+              - type: "branch"
+                condition:
+                  type: "actor_type"
+                  kind: "player"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 01/23 actor_type</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 01/23 actor_type — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "all"
+                  conditions:
+                    - type: "actor_type"
+                      kind: "player"
+                    - type: "health"
+                      min: 1
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 02/23 all</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 02/23 all — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "any"
+                  conditions:
+                    - type: "actor_type"
+                      kind: "player"
+                    - type: "actor_type"
+                      kind: "mob"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 03/23 any</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 03/23 any — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "biome"
+                  biomes:
+                    - "minecraft:plains"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 04/23 biome</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 04/23 biome — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "distance"
+                  other: "actor"
+                  min: 0
+                  max: 1
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 05/23 distance</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 05/23 distance — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "entity_type"
+                  subject: "actor"
+                  types:
+                    - "PLAYER"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 06/23 entity_type</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 06/23 entity_type — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "equipment"
+                  slot: "main_hand"
+                  materials:
+                    - "WOODEN_SWORD"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 07/23 equipment</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 07/23 equipment — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "expression"
+                  expression: "1"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 08/23 expression</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 08/23 expression — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "food"
+                  min: 0
+                  max: 20
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 09/23 food</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 09/23 food — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "has_aura"
+                  name: "lab_aura"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 10/23 has_aura</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 10/23 has_aura — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "has_target"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 11/23 has_target</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 11/23 has_target — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "health"
+                  min: 1
+                  max: 1000000
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 12/23 health</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 12/23 health — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "height"
+                  min: -2048
+                  max: 2048
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 13/23 height</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 13/23 height — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "line_of_sight"
+                  other: "actor"
+                  max-distance: 1
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 14/23 line_of_sight</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 14/23 line_of_sight — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "movement"
+                  state: "on_ground"
+                  value: true
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 15/23 movement</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 15/23 movement — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "not"
+                  condition:
+                    type: "actor_type"
+                    kind: "mob"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 16/23 not</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 16/23 not — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "permission"
+                  permission: "arcana.command.skills"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 17/23 permission</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 17/23 permission — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "resource"
+                  resource: "health"
+                  min: 0
+                  max: 1000000
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 18/23 resource</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 18/23 resource — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "stat"
+                  provider: "contributions"
+                  key: "lab_power"
+                  min: 0
+                  max: 1000000
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 19/23 stat</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 19/23 stat — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "time"
+                  min: 0
+                  max: 23999
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 20/23 time</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 20/23 time — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "variable"
+                  binding: "var_lab_value"
+                  equals: 2
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 21/23 variable</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 21/23 variable — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "weather"
+                  states:
+                    - "clear"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 22/23 weather</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 22/23 weather — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "branch"
+                condition:
+                  type: "world"
+                  worlds:
+                    - "world"
+                then:
+                  - type: "message"
+                    target: "actor"
+                    text: "<green>[EŞLEŞTİ] 23/23 world</green>"
+                else:
+                  - type: "message"
+                    target: "actor"
+                    text: "<yellow>[EŞLEŞMEDİ] 23/23 world — bu bir derleme/çalışma hatası değildir.</yellow>"
+              - type: "delay"
+                duration: "param_pace"
+              - type: "remove_aura"
+                name: "lab_aura"
+              - type: "message"
+                target: "actor"
+                text: "<gold>Test tamamlandı. Gerçek tetikleyiciler için dosyanın başındaki OLAY MODU yönergesini kullan.</gold>"
+              - type: "message"
+                target: "actor"
+                text: "<gray>İptal etmek için /arcana skills reload. Yeniden başlatmak için /arcana skills cast all_components_test.</gray>"

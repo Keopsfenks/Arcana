@@ -1,0 +1,6 @@
+schema: 2
+id: example_victim
+effects:
+  - type: select_fixture
+    selector:
+      type: victim

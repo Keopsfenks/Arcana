@@ -1,0 +1,16 @@
+# Enable explicitly after reviewing the example for your server.
+schema: 2
+id: example_aura_shield
+enabled: false
+effects:
+  - type: apply_aura
+    name: example_shield
+    aura-type: shield
+    tags: [example]
+    duration: 10s
+    charges: 2
+    components:
+      - type: damaged
+        consume-charge: 1
+        interceptors:
+          - type: cancel_event

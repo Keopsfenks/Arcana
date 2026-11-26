@@ -1,0 +1,8 @@
+schema: 2
+id: example_cone
+effects:
+  - type: select_fixture
+    selector:
+      type: cone
+      radius: 8
+      angle: 90

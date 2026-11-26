@@ -1,0 +1,11 @@
+schema: 2
+id: example_projectile_beam
+enabled: false
+effects:
+  - type: beam
+    length: 12
+    duration: 1s
+    period: 4t
+    max-hits: 5
+    on-hit:
+      - {type: add_variable, scope: actor, key: example_beam_hits, amount: 1}

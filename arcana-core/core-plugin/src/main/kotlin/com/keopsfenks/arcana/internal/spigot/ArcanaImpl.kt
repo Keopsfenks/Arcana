@@ -6,6 +6,7 @@ import com.keopsfenks.arcana.core.skills.SkillEngine
 import com.keopsfenks.arcana.core.command.impl.PluginCommand
 import com.keopsfenks.arcana.internal.spigot.command.ArcanaCommand
 import com.keopsfenks.arcana.skills.DefaultSkillEngine
+import com.keopsfenks.arcana.skills.BuiltinComponents
 import com.keopsfenks.arcana.skills.SkillsRuntime
 import com.keopsfenks.arcana.skills.compile.SkillCompilerImpl
 import com.keopsfenks.arcana.core.FoliaSupport
@@ -146,7 +147,21 @@ class ArcanaImpl : ArcanaSpigotPlugin(), Arcana {
     private val skillsRuntimeDelegate = lazy {
         val directory = dataFolder.toPath().resolve("skills")
         val environment = createExpressionEnvironmentBuilder().variables(*SkillCompilerImpl.VARIABLES).build()
-        SkillsRuntime(this, DefaultSkillEngine(this, directory, environment), directory)
+        SkillsRuntime(this, DefaultSkillEngine(this, directory, environment, expressionEnvironmentFactory = { names ->
+            createExpressionEnvironmentBuilder().variables(*names).build()
+        }), directory) { engine, owner ->
+            engine.platform().managed.configure(com.keopsfenks.arcana.skills.platform.managed.ManagedLimits(
+                actorInstances = owner.configYml.getInt("skills.limits.managed-per-actor"),
+                engineInstances = owner.configYml.getInt("skills.limits.managed-per-engine"),
+                callbacks = owner.configYml.getInt("skills.limits.managed-callbacks"),
+                steps = owner.configYml.getInt("skills.limits.managed-steps"),
+                lifetimeTicks = owner.configYml.getInt("skills.limits.managed-lifetime-ticks").toLong()
+            ))
+            BuiltinComponents.install(engine, owner)
+            BuiltinComponents.installTriggers(engine, owner)
+            com.keopsfenks.arcana.skills.components.StandardSkillCatalog(engine, owner).install()
+            com.keopsfenks.arcana.skills.components.StandardSkillExamples.copyTo(directory)
+        }
     }
     private val skillsRuntime by skillsRuntimeDelegate
 

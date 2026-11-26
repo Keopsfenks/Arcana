@@ -12,22 +12,38 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 
 class ScheduledWork<T>(val future: CompletableFuture<T>, private val cancelAction: () -> Unit) {
+    private val cancelled = java.util.concurrent.atomic.AtomicBoolean()
     fun cancel() {
-        future.cancel(false)
-        cancelAction()
+        if (cancelled.compareAndSet(false, true)) {
+            future.cancel(false)
+            try { cancelAction() } catch (_: Exception) { /* The cancelled future still prevents the callback. */ }
+        }
     }
 }
 
 interface SkillScheduler {
+    fun owns(entity: LivingEntity): Boolean = false
     fun <T> on(entity: LivingEntity, delayTicks: Long = 0, action: () -> T): ScheduledWork<T>
     fun <T> at(location: Location, action: () -> T): ScheduledWork<T>
     fun <T> global(action: () -> T): ScheduledWork<T>
 }
 
+/** A cancelled native timer may stay in the server queue; its user closure must not. */
+internal class ScheduledPayload<T>(private val future: CompletableFuture<T>, action: () -> T) : Runnable {
+    private val payload = AtomicReference<(() -> T)?>(action)
+    val pending get() = payload.get() != null
+    init { future.whenComplete { _, _ -> payload.set(null) } }
+    override fun run() {
+        val action = payload.getAndSet(null) ?: return
+        if (!future.isDone) try { future.complete(action()) } catch (error: Throwable) { future.completeExceptionally(error) }
+    }
+}
+
 class ArcanaSkillScheduler(private val plugin: ArcanaPlugin) : SkillScheduler {
+    override fun owns(entity: LivingEntity) = if (Prerequisite.HAS_FOLIA.isMet) Arcana.get().isOwnedByCurrentRegion(entity) else Bukkit.isPrimaryThread()
     override fun <T> on(entity: LivingEntity, delayTicks: Long, action: () -> T): ScheduledWork<T> {
         val future = CompletableFuture<T>()
-        val owned = if (Prerequisite.HAS_FOLIA.isMet) Arcana.get().isOwnedByCurrentRegion(entity) else Bukkit.isPrimaryThread()
+        val owned = owns(entity)
         val context = plugin.scheduler.on(entity).onRetired { future.cancel(false) }
         return submit(context, owned, delayTicks, future, action)
     }
@@ -44,11 +60,7 @@ class ArcanaSkillScheduler(private val plugin: ArcanaPlugin) : SkillScheduler {
 
     private fun <T> submit(context: TaskContext, owned: Boolean, delay: Long, future: CompletableFuture<T>, action: () -> T): ScheduledWork<T> {
         val handle = AtomicReference<ArcanaTask?>()
-        val runnable = Runnable {
-            if (!future.isDone) {
-                try { future.complete(action()) } catch (error: Throwable) { future.completeExceptionally(error) }
-            }
-        }
+        val runnable = ScheduledPayload(future, action)
         try {
             if (owned && delay == 0L) runnable.run()
             else {

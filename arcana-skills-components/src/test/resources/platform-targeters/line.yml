@@ -1,0 +1,8 @@
+schema: 2
+id: example_line
+effects:
+  - type: select_fixture
+    selector:
+      type: line
+      length: 12
+      width: 0.5

@@ -7,6 +7,10 @@ import org.bukkit.plugin.Plugin;
 
 /** Entry point for explicit casts, custom triggers and owned component extensions. */
 public interface SkillEngine {
+    /** General-actor extension API. Legacy engine implementations remain binary compatible. */
+    default com.keopsfenks.arcana.core.skills.platform.SkillPlatform platform() {
+        throw new UnsupportedOperationException("This skill engine does not expose the general invocation platform");
+    }
     CompletionStage<SkillResult> cast(String skillId, SkillContext context);
     CompletionStage<List<SkillResult>> trigger(String triggerId, SkillContext context);
     SkillRegistration registerEffect(Plugin owner, SkillEffect effect);

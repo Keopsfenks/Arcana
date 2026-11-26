@@ -1,0 +1,26 @@
+# Enable explicitly after reviewing the example for your server.
+schema: 2
+id: example_aura_periodic_buff
+enabled: false
+effects:
+  - type: apply_aura
+    name: example_periodic_buff
+    aura-type: buff
+    tags: [example]
+    duration: 10s
+    components:
+      - type: stat
+        stat: example_power
+        amount: 2
+        per-stack: true
+      - type: tick
+        interval: 20t
+        effects:
+          - type: add_variable
+            scope: actor
+            key: example_pulses
+            amount: 1
+    on-end:
+      - type: remove_variable
+        scope: actor
+        key: example_pulses

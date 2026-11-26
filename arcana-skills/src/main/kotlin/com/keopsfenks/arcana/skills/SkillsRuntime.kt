@@ -7,7 +7,12 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 
-class SkillsRuntime(private val plugin: ArcanaPlugin, val engine: DefaultSkillEngine, private val directory: Path) {
+class SkillsRuntime(
+    private val plugin: ArcanaPlugin,
+    val engine: DefaultSkillEngine,
+    private val directory: Path,
+    private val installCatalog: (DefaultSkillEngine, ArcanaPlugin) -> Unit = { _, _ -> }
+) {
     @Volatile var isStarted = false
         private set
     private var startupFinished = false
@@ -19,8 +24,7 @@ class SkillsRuntime(private val plugin: ArcanaPlugin, val engine: DefaultSkillEn
         if (isStarted) return
         try {
             copyExamples()
-            BuiltinComponents.install(engine, plugin)
-            BuiltinComponents.installTriggers(engine, plugin)
+            installCatalog(engine, plugin)
             plugin.server.pluginManager.registerEvents(listener, plugin)
             coordinator.initialize()
             isStarted = true

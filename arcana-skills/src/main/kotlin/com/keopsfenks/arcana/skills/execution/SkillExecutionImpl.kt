@@ -16,15 +16,18 @@ class SkillExecutionImpl(
     private val engine: DefaultSkillEngine,
     private val state: ExecutionState,
     private val context: SkillContext,
-    private val depth: Int
+    private val depth: Int,
+    private val platformFrame: com.keopsfenks.arcana.skills.platform.values.InvocationFrame? = null
 ) : SkillExecution {
+    private fun <T> track(work: ScheduledWork<T>) = state.track(platformFrame?.track(work) ?: work)
+    private fun checkActive() { state.checkActive(); platformFrame?.checkActive() }
     override fun getContext() = context
 
     override fun onTarget(target: SkillTarget, action: Function<LivingEntity, SkillResult>): CompletionStage<SkillResult> {
         val entity = if (target == SkillTarget.CASTER) context.caster else context.victim
         if (entity == null) return missing()
-        return victimRetirement(target, state.track(engine.scheduler.on(entity) {
-            state.checkActive()
+        return victimRetirement(target, track(engine.scheduler.on(entity) {
+            checkActive()
             if (if (entity is Player) !entity.isOnline else !entity.isValid) SkillResult.of(SkillResult.Status.NO_TARGET, "Target is unavailable")
             else action.apply(entity)
         }))
@@ -33,18 +36,18 @@ class SkillExecutionImpl(
     override fun atTarget(target: SkillTarget, action: Function<Location, SkillResult>): CompletionStage<SkillResult> {
         val entity = if (target == SkillTarget.CASTER) context.caster else context.victim
         if (entity == null) return missing()
-        val dispatched = state.track(engine.scheduler.on(entity) {
-            state.checkActive()
+        val dispatched = track(engine.scheduler.on(entity) {
+            checkActive()
             if (if (entity is Player) !entity.isOnline else !entity.isValid) null else entity.location.clone()
         }).thenCompose { location ->
             if (location == null) missing()
-            else state.track(engine.scheduler.at(location) { state.checkActive(); action.apply(location) })
+            else track(engine.scheduler.at(location) { checkActive(); action.apply(location) })
         }
         return victimRetirement(target, dispatched)
     }
 
-    override fun global(action: Runnable): CompletionStage<SkillResult> = state.track(engine.scheduler.global {
-        state.checkActive()
+    override fun global(action: Runnable): CompletionStage<SkillResult> = track(engine.scheduler.global {
+        checkActive()
         action.run()
         SkillResult.success()
     })
@@ -54,7 +57,8 @@ class SkillExecutionImpl(
         for (effect in effects) {
             result = result.thenCompose { previous ->
                 if (!previous.isSuccess) CompletableFuture.completedFuture(previous)
-                else state.track(engine.scheduler.on(context.caster) {
+                else track(engine.scheduler.on(context.caster) {
+                    platformFrame?.checkActive()
                     state.step()
                     effect.execute(this)
                 }).thenCompose { it.toCompletableFuture() }
@@ -65,10 +69,14 @@ class SkillExecutionImpl(
 
     override fun delay(ticks: Long): CompletionStage<SkillResult> {
         require(ticks in 0..1_728_000L) { "Delay must be between zero and 24 hours" }
-        return state.track(engine.scheduler.on(context.caster, ticks) { state.checkActive(); SkillResult.success() })
+        return track(engine.scheduler.on(context.caster, ticks) { checkActive(); SkillResult.success() })
     }
 
-    override fun cast(skillId: String): CompletionStage<SkillResult> = engine.runNested(skillId, context, state, depth + 1)
+    override fun cast(skillId: String): CompletionStage<SkillResult> {
+        val parent = context.getText("skill")
+        val resolved = if (':' !in skillId && ':' in parent) parent.substringBefore(':') + ":" + skillId else skillId
+        return engine.runNested(resolved, context, state, depth + 1, platformFrame)
+    }
     override fun format(text: String) = text.replace("{player}", context.getText("caster_name"))
         .replace("{target}", context.getText("target_name")).replace("{skill}", context.getText("skill"))
 
@@ -76,7 +84,7 @@ class SkillExecutionImpl(
 
     private fun victimRetirement(target: SkillTarget, result: CompletableFuture<SkillResult>): CompletableFuture<SkillResult> =
         result.handle { value, error ->
-            state.checkActive()
+            checkActive()
             if (error == null) value
             else {
                 var cause = error

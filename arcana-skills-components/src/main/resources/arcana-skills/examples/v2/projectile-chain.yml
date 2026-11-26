@@ -1,0 +1,9 @@
+schema: 2
+id: example_projectile_chain
+enabled: false
+effects:
+  - type: chain
+    radius: 8
+    jumps: 5
+    on-hit:
+      - {type: add_variable, scope: actor, key: example_chain_hits, amount: 1}
